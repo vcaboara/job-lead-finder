@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "job-lead-starter"
+version = "0.1.0"
+description = "Minimal, modular job-finder starter with Gemini template and CI"
+requires-python = ">=3.10"
+dependencies = [
+  "python-dotenv>=0.21.0"
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0","pre-commit","black","isort"]
+gemini = ["google-generativeai>=0.3.0"]
+
+[project.scripts]
+job-starter = "app.main:main"

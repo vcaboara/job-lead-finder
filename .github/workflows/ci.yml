@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image with test deps
+        run: |
+          docker build --pull --tag job-starter-ci --build-arg INSTALL_TEST_DEPS=true .
+
+      - name: Run tests inside container
+        run: |
+          docker run --rm job-starter-ci pytest -q
+
+      - name: Run health check inside container
+        run: |
+          docker run --rm job-starter-ci python -m app.main health
