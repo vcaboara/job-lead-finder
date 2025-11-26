@@ -54,32 +54,59 @@ class GeminiProvider:
             # Non-fatal: some SDKs may not need configure or may error here;
             # fallback to passing the key directly to client constructors.
             pass
-        # Default to a chat model; allow overriding
-        self.model = model or "models/chat-bison-001"
+        # Default to a modern model that supports google_search tool; allow overriding
+        self.model = model or "gemini-2.5-flash-preview-09-2025"
 
     def evaluate(self, job: Dict[str, Any], resume_text: str) -> Dict[str, Any]:
-        """Evaluate a job using the Gemini chat API.
+        """Evaluate a job using the Gemini client.
 
         Returns a dict with `score` (0-100) and `reasoning`.
         """
         prompt = (
-            "Evaluate the relevance of this job posting for the candidate.\n\n"
-            f"CANDIDATE PROFILE:\n{resume_text}\n\nJOB:\nTitle: {job.get('title')}\nCompany: {job.get('company')}\nLocation: {job.get('location')}\nDescription: {job.get('description')}\n\n"
-            "Return a short JSON object: {\"score\": <0-100>, \"reasoning\": \"...\"}"
+            "Evaluate the relevance of this job posting for the candidate. Return a JSON object.\n"
+            f"CANDIDATE PROFILE:\n{resume_text}\n\n"
+            f"JOB:\nTitle: {job.get('title', '')}\nCompany: {job.get('company', '')}\nLocation: {job.get('location', '')}\nDescription: {job.get('description', '')}\n\n"
+            "Return ONLY this JSON object: {\"score\": <0-100>, \"reasoning\": \"<string>\"}"
         )
 
-        # Use chat.create when available
         try:
-            out = genai.chat.create(model=self.model, messages=[{"role": "user", "content": prompt}])
-            # API response shapes can vary; try to extract text safely
-            text = ""
-            if hasattr(out, "candidates") and out.candidates:
-                text = out.candidates[0].content
-            elif hasattr(out, "message"):
-                text = getattr(out, "message").get("content", "")
+            # Try legacy client first
+            if genai_name == "google.genai" and hasattr(genai, "Client"):
+                client = genai.Client(api_key=self.api_key)
+                resp = client.models.generate_content(model=self.model, contents=prompt)
+                # Extract text from response
+                text = ""
+                try:
+                    if hasattr(resp, "candidates") and getattr(resp, "candidates"):
+                        cand = getattr(resp, "candidates")[0]
+                        if hasattr(cand, "content") and hasattr(cand.content, "parts") and cand.content.parts:
+                            text = getattr(cand.content.parts[0], "text", "")
+                        else:
+                            text = str(cand)
+                    elif hasattr(resp, "text"):
+                        text = getattr(resp, "text")
+                    else:
+                        text = str(resp)
+                except Exception:
+                    text = str(resp)
             else:
-                # Fallback to string conversion
-                text = str(out)
+                # Fallback for google.generativeai chat pattern
+                if hasattr(genai, "chat") and hasattr(genai.chat, "create"):
+                    try:
+                        if hasattr(genai, "configure"):
+                            genai.configure(api_key=self.api_key)
+                    except Exception:
+                        pass
+                    out = genai.chat.create(model=self.model, messages=[{"role": "user", "content": prompt}])
+                    text = ""
+                    if hasattr(out, "candidates") and out.candidates:
+                        text = out.candidates[0].content
+                    elif hasattr(out, "message"):
+                        text = getattr(out, "message").get("content", "")
+                    else:
+                        text = str(out)
+                else:
+                    return {"score": 50, "reasoning": "No supported call pattern for evaluation."}
 
             # Attempt to extract JSON substring
             import json
@@ -87,10 +114,12 @@ class GeminiProvider:
             start = text.find("{")
             end = text.rfind("}")
             if start != -1 and end != -1 and end > start:
-                payload = json.loads(text[start : end + 1])
-                return {"score": int(payload.get("score", 50)), "reasoning": payload.get("reasoning", "")}
+                try:
+                    payload = json.loads(text[start : end + 1])
+                    return {"score": int(payload.get("score", 50)), "reasoning": payload.get("reasoning", "")}
+                except Exception:
+                    pass
         except Exception:
-            # If any error, fall through to conservative default
             pass
         return {"score": 50, "reasoning": "Could not parse Gemini response; ensure API key and model are correct."}
 
@@ -101,10 +130,12 @@ class GeminiProvider:
         [{"title":..., "company":..., "location":..., "summary":..., "link":...}, ...]
         """
         prompt = (
-            "Find open job postings using Google Search that match the candidate profile and query. "
-            f"Return {count} results as a JSON array with keys: title, company, location, summary, link.\n\n"
-            f"CANDIDATE PROFILE:\n{resume_text}\n\nQUERY:\n{query}\n\n"
-            "Return only the JSON array and no additional text."
+            "You MUST use the google_search tool to find REAL job postings from the internet.\n"
+            "Find and return ONLY a JSON array of open job postings that match the candidate profile and query.\n"
+            f"Return EXACTLY {count} job objects with keys: title, company, location, summary, link.\n"
+            f"CANDIDATE PROFILE:\n{resume_text}\n\n"
+            f"QUERY:\n{query}\n\n"
+            "Return ONLY the JSON array. Do not include any other text, markdown, or formatting."
         )
 
         try:
@@ -165,14 +196,22 @@ class GeminiProvider:
                                     system_instruction="Please return only a JSON array of job objects.",
                                     tools=[{"google_search": {}}],
                                 )
-                            except Exception:
+                                if verbose:
+                                    print("gemini_provider: created GenerateContentConfig with google_search tool")
+                            except Exception as cfg_err:
+                                if verbose:
+                                    print(f"gemini_provider: GenerateContentConfig failed: {cfg_err}")
                                 cfg = None
                         except Exception:
                             cfg = None
 
                     if cfg is not None:
+                        if verbose:
+                            print(f"gemini_provider: calling generate_content with tool config on {use_model}")
                         resp = client.models.generate_content(model=use_model, contents=prompt, config=cfg)
                     else:
+                        if verbose:
+                            print(f"gemini_provider: calling generate_content WITHOUT tool config on {use_model}")
                         resp = client.models.generate_content(model=use_model, contents=prompt)
 
                     # Robustly extract text from various response shapes returned by the

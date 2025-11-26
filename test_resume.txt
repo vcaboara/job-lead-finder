@@ -1,0 +1,4 @@
+Senior Python Developer with 8+ years of experience.
+Skills: Python, FastAPI, Docker, Kubernetes, AWS, PostgreSQL, Redis, LLMs, OpenAI APIs.
+Experience: Designed and maintained microservices, built ML pipelines, led engineering teams.
+Interests: Remote work, startup environment, AI/ML projects.

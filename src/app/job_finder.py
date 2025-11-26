@@ -10,8 +10,16 @@ from .main import format_resume, fetch_jobs
 import os
 
 
-def generate_job_leads(query: str, resume_text: str, count: int = 5, model: str | None = None, verbose: bool = False) -> List[Dict[str, Any]]:
+def generate_job_leads(query: str, resume_text: str, count: int = 5, model: str | None = None, verbose: bool = False, evaluate: bool = False) -> List[Dict[str, Any]]:
     """Generate job leads. Use GeminiProvider.generate_job_leads when possible.
+
+    Args:
+        query: Job search query.
+        resume_text: Candidate's resume/profile text.
+        count: Number of leads to return.
+        model: Optional model name override.
+        verbose: Print verbose diagnostics.
+        evaluate: If True, score each job against the resume (0-100).
 
     Returns a list of job dicts. On failure returns empty list.
     """
@@ -27,6 +35,9 @@ def generate_job_leads(query: str, resume_text: str, count: int = 5, model: str 
         try:
             leads = provider.generate_job_leads(query, resume_text, count=count, model=model, verbose=verbose)
             print(f"job_finder: Gemini returned {len(leads)} leads")
+            # Evaluate each lead if requested
+            if evaluate:
+                leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
             return leads
         except Exception as e:
             # Provide diagnostics when verbose
@@ -50,11 +61,42 @@ def generate_job_leads(query: str, resume_text: str, count: int = 5, model: str 
             "link": j.get("link", ""),
         })
     print(f"job_finder: Fallback returned {len(leads)} leads")
+    # Evaluate each lead if requested
+    if evaluate and provider:
+        leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
     return leads
 
 
+def _evaluate_leads(leads: List[Dict[str, Any]], resume_text: str, provider: GeminiProvider, model: str | None = None, verbose: bool = False) -> List[Dict[str, Any]]:
+    """Evaluate each lead against resume and add score/reasoning."""
+    evaluated = []
+    for lead in leads:
+        try:
+            job_dict = {
+                "title": lead.get("title", ""),
+                "company": lead.get("company", ""),
+                "location": lead.get("location", ""),
+                "description": lead.get("summary", ""),
+            }
+            evaluation = provider.evaluate(job_dict, resume_text)
+            # Add evaluation to lead
+            lead["score"] = evaluation.get("score", 0)
+            lead["reasoning"] = evaluation.get("reasoning", "")
+        except Exception as e:
+            if verbose:
+                print(f"job_finder: evaluation failed for {lead.get('title', '?')}: {e}")
+            # Default to neutral score if evaluation fails
+            lead["score"] = 50
+            lead["reasoning"] = "Evaluation unavailable."
+        evaluated.append(lead)
+    return evaluated
+
+
 def save_to_file(leads: List[Dict[str, Any]], path: str) -> None:
+    """Save leads to JSON file (creates or overwrites)."""
     import json
 
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(leads, fh, indent=2)
+    print(f"job_finder: saved {len(leads)} leads to {path}")
+

@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "title": "Senior Software Engineer (Python), Data Platform",
+    "company": "Doximity",
+    "location": "Remote New York, NY",
+    "summary": "The Senior Software Engineer will enhance Doximity's data platforms, collaborating with data teams and implementing solutions to improve the data stack. Top Skills include Python, Apache Airflow, AWS, Docker, Kafka, and Kubernetes, aligning with distributed systems expertise.",
+    "link": "https://builtinnyc.com/jobs/remote-python-jobs",
+    "score": 97,
+    "reasoning": "This is an extremely relevant job posting. The candidate is a Senior Python Developer seeking a remote role, which perfectly matches the job title and location. Crucially, the job's required skills (Python, AWS, Docker, Kafka, Kubernetes) directly align with the candidate's explicit expertise in 'distributed systems' and data platform enhancement. The role is an ideal continuation of their senior technical track."
+  },
+  {
+    "title": "Backend Architect, Python, Django, Xarray",
+    "company": "niluk.app",
+    "location": "Nigeria \u2013 Remote",
+    "summary": "Senior Backend Architect with expertise in Python, Django, and Xarray to lead backend systems architecture and implementation. Responsible for designing scalable, reliable data-intensive applications. Required skills include Django, Docker, Kubernetes, and Microservices, which aligns with distributed systems.",
+    "link": "https://remoterocketship.com/remote-python-jobs/backend-architect-python-django-xarray-at-niluk-app/",
+    "score": 95,
+    "reasoning": "The relevance is extremely high. The candidate is a Senior Python/Django expert (5 years experience) seeking a remote role, which perfectly aligns with the job requirements for a Backend Architect specializing in Python and Django who can work remotely. The requirement for Docker, Kubernetes, and Microservices is a direct match for the candidate's expertise in 'distributed systems' and architectural leadership."
+  }
+]

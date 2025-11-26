@@ -103,11 +103,12 @@ def build_parser():
     # Add 'find' command to generate job leads
     find_p = sub.add_parser("find", help="Generate job leads (uses Gemini when available)")
     find_p.add_argument("--query", "-q", required=True, help="Query to search for")
-    find_p.add_argument("--resume", help="Resume text to include in prompts", default=None)
+    find_p.add_argument("--resume", help="Resume text or path to file; used for evaluation", default=None)
     find_p.add_argument("--count", "-n", type=int, default=5, help="Number of leads to request")
     find_p.add_argument("--model", "-m", help="Optional model name to request (overrides default)")
+    find_p.add_argument("--evaluate", action="store_true", help="Score each job against resume (requires --resume)")
     find_p.add_argument("--verbose", "-v", action="store_true", help="Print raw AI response and debug info")
-    find_p.add_argument("--save", "-o", help="Optional file path to save results (JSON)")
+    find_p.add_argument("--save", "-o", help="Optional file path to save results (JSON); defaults to leads.json")
     sub_map["find"] = find_p
 
     probe_p = sub.add_parser("probe", help="Run a simple Gemini probe prompt and print raw response")
@@ -142,13 +143,37 @@ def main(argv=None):
         # lazy import to avoid optional deps at module import time
         from .job_finder import generate_job_leads, save_to_file
 
-        resume_text = args.resume or format_resume(args.skills if hasattr(args, "skills") else [], [], [], None)
-        leads = generate_job_leads(args.query, resume_text, count=args.count, model=getattr(args, "model", None), verbose=getattr(args, "verbose", False))
+        # Handle resume: accept text or read from file
+        resume_text = None
+        if args.resume:
+            if os.path.isfile(args.resume):
+                with open(args.resume, "r", encoding="utf-8") as fh:
+                    resume_text = fh.read()
+            else:
+                # Assume it's inline text
+                resume_text = args.resume
+        if not resume_text:
+            # Default placeholder
+            resume_text = "No resume provided."
+
+        # Generate leads with optional evaluation
+        evaluate = getattr(args, "evaluate", False)
+        leads = generate_job_leads(
+            args.query,
+            resume_text,
+            count=args.count,
+            model=getattr(args, "model", None),
+            verbose=getattr(args, "verbose", False),
+            evaluate=evaluate,
+        )
+
         import json
 
         print(json.dumps({"query": args.query, "leads": leads}, indent=2))
-        if args.save:
-            save_to_file(leads, args.save)
+
+        # Save to file (default: leads.json)
+        save_path = args.save or "leads.json"
+        save_to_file(leads, save_path)
         return 0
     elif args.cmd == "probe":
         from .gemini_provider import simple_gemini_query
