@@ -6,13 +6,19 @@ from unittest.mock import Mock, patch, MagicMock
 from app import gemini_provider
 
 
-def test_gemini_provider_fallback_when_tool_returns_zero():
-    """Test that the provider retries without tools when google_search returns 0 jobs."""
-    # Skip if no SDK or key
+@pytest.fixture
+def gemini_sdk_or_skip():
+    """Fixture to check for SDK and API key availability, skip if missing."""
     genai = getattr(gemini_provider, "genai", None)
     key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if genai is None or not key:
         pytest.skip("Gemini SDK or API key not available; skipping integration test")
+    return genai, key
+
+
+def test_gemini_provider_fallback_when_tool_returns_zero(gemini_sdk_or_skip):
+    """Test that the provider retries without tools when google_search returns 0 jobs."""
+    genai, key = gemini_sdk_or_skip
 
     # Mock the client to simulate tool call returning empty, then fallback succeeding
     with patch.object(genai, "Client") as MockClient:
@@ -40,12 +46,9 @@ def test_gemini_provider_fallback_when_tool_returns_zero():
         assert jobs[0]["title"] == "Test Job"
 
 
-def test_gemini_provider_no_fallback_when_tool_succeeds():
+def test_gemini_provider_no_fallback_when_tool_succeeds(gemini_sdk_or_skip):
     """Test that fallback is not triggered when tool call returns results."""
-    genai = getattr(gemini_provider, "genai", None)
-    key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    if genai is None or not key:
-        pytest.skip("Gemini SDK or API key not available; skipping integration test")
+    genai, key = gemini_sdk_or_skip
 
     with patch.object(genai, "Client") as MockClient:
         mock_client_instance = Mock()
@@ -64,12 +67,9 @@ def test_gemini_provider_no_fallback_when_tool_succeeds():
         assert jobs[0]["title"] == "Tool Job"
 
 
-def test_gemini_provider_returns_empty_when_both_fail():
+def test_gemini_provider_returns_empty_when_both_fail(gemini_sdk_or_skip):
     """Test that provider returns empty list when both tool and fallback fail."""
-    genai = getattr(gemini_provider, "genai", None)
-    key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
-    if genai is None or not key:
-        pytest.skip("Gemini SDK or API key not available; skipping integration test")
+    genai, key = gemini_sdk_or_skip
 
     with patch.object(genai, "Client") as MockClient:
         mock_client_instance = Mock()

@@ -411,11 +411,11 @@ class GeminiProvider:
                     client = genai.Client(api_key=self.api_key)
                     resp = client.models.generate_content(model=use_model, contents=simple_prompt)
                     text2 = getattr(resp, "text", str(resp))
-                    s = text2.find("[")
-                    e = text2.rfind("]")
-                    if s != -1 and e != -1 and e > s:
+                    start = text2.find("[")
+                    end = text2.rfind("]")
+                    if start != -1 and end != -1 and end > start:
                         try:
-                            payload = json.loads(text2[s : e + 1])
+                            payload = json.loads(text2[start : end + 1])
                             if isinstance(payload, list):
                                 jobs = payload
                         except Exception:
