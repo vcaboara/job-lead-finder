@@ -387,10 +387,44 @@ class GeminiProvider:
 
             start = text.find("[")
             end = text.rfind("]")
+            jobs = []
             if start != -1 and end != -1 and end > start:
-                payload = json.loads(text[start : end + 1])
-                if isinstance(payload, list):
-                    return payload
+                try:
+                    payload = json.loads(text[start : end + 1])
+                    if isinstance(payload, list):
+                        jobs = payload
+                except Exception:
+                    jobs = []
+
+            # Fallback: if tool-enabled call returned 0 jobs, retry without tools
+            if not jobs and hasattr(genai, "Client"):
+                if verbose:
+                    print("gemini_provider: tool call returned 0 jobs; retrying without tools")
+                try:
+                    simple_prompt = (
+                        "Generate a JSON array of job postings based on this profile and query.\n"
+                        f"Return EXACTLY {count} job objects with keys: title, company, location, summary, link.\n"
+                        f"CANDIDATE PROFILE:\n{resume_text}\n\n"
+                        f"QUERY:\n{query}\n\n"
+                        "Return ONLY the JSON array, no markdown or other text."
+                    )
+                    client = genai.Client(api_key=self.api_key)
+                    resp = client.models.generate_content(model=use_model, contents=simple_prompt)
+                    text2 = getattr(resp, "text", str(resp))
+                    s = text2.find("[")
+                    e = text2.rfind("]")
+                    if s != -1 and e != -1 and e > s:
+                        try:
+                            payload = json.loads(text2[s : e + 1])
+                            if isinstance(payload, list):
+                                jobs = payload
+                        except Exception:
+                            pass
+                except Exception as fallback_err:
+                    if verbose:
+                        print(f"gemini_provider: fallback failed: {fallback_err}")
+
+            return jobs
         except Exception as e:
             if verbose:
                 import traceback
