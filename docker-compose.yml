@@ -12,3 +12,19 @@ services:
     # Keep container running for interactive execs; use `docker compose run` for one-off commands.
     command: tail -f /dev/null
     tty: true
+
+  ui:
+    build:
+      context: .
+      args:
+        INSTALL_TEST_DEPS: "false"
+        INSTALL_GEMINI: "true"
+    volumes:
+      - ./:/app:delegated
+    working_dir: /app
+    ports:
+      - "8000:8000"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    command: python -m uvicorn app.ui_server:app --host 0.0.0.0 --port 8000
+    tty: true
