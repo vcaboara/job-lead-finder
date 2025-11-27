@@ -161,45 +161,124 @@ class TestGeminiCliMain:
                     gemini_cli.main()
 
 
-class TestGeminiCliArguments:
-    """Tests for argument parsing in gemini_cli."""
+class TestGeminiCliIntegration:
+    """Integration tests that mock the Gemini client and verify end-to-end behavior."""
 
-    def test_prompt_short_form(self):
-        """Test -p short form for prompt."""
-        test_args = ["gemini_cli.py", "-p", "test prompt", "--key", "test-key"]
-        import argparse
+    @pytest.fixture
+    def mock_gemini_setup(self):
+        """Create mock Gemini client setup for integration tests."""
+        mock_genai = MagicMock()
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "API response"
+        mock_response.candidates = None
+        mock_client.models.generate_content.return_value = mock_response
+        mock_genai.Client.return_value = mock_client
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--prompt", "-p", required=True)
-        parser.add_argument("--key", "-k", default=None)
+        mock_google = MagicMock()
+        mock_google.genai = mock_genai
 
-        args = parser.parse_args(test_args[1:])
-        assert args.prompt == "test prompt"
+        return {
+            "genai": mock_genai,
+            "client": mock_client,
+            "response": mock_response,
+            "google": mock_google,
+        }
 
-    def test_model_short_form(self):
-        """Test -m short form for model."""
-        test_args = ["gemini_cli.py", "--prompt", "test", "-m", "custom-model", "--key", "test-key"]
-        import argparse
+    def test_cli_prompt_short_form_calls_api(self, mock_gemini_setup):
+        """Test -p short form properly sends prompt to API."""
+        test_args = ["gemini_cli.py", "-p", "test prompt", "-k", "test-key"]
+        mocks = mock_gemini_setup
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--prompt", "-p", required=True)
-        parser.add_argument("--model", "-m", default="default")
-        parser.add_argument("--key", "-k", default=None)
+        with patch("sys.argv", test_args):
+            with patch.dict("sys.modules", {"google": mocks["google"], "google.genai": mocks["genai"]}):
+                import importlib
 
-        args = parser.parse_args(test_args[1:])
-        assert args.model == "custom-model"
+                from app import gemini_cli
 
-    def test_key_short_form(self):
-        """Test -k short form for key."""
-        test_args = ["gemini_cli.py", "--prompt", "test", "-k", "my-key"]
-        import argparse
+                importlib.reload(gemini_cli)
+                gemini_cli.main()
 
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--prompt", "-p", required=True)
-        parser.add_argument("--key", "-k", default=None)
+                # Verify the API was called with the prompt
+                mocks["genai"].Client.assert_called_once_with(api_key="test-key")
+                mocks["client"].models.generate_content.assert_called_once()
+                call_kwargs = mocks["client"].models.generate_content.call_args
+                assert call_kwargs.kwargs.get("contents") == "test prompt"
 
-        args = parser.parse_args(test_args[1:])
-        assert args.key == "my-key"
+    def test_cli_model_short_form_calls_api_with_model(self, mock_gemini_setup):
+        """Test -m short form properly sets model for API call."""
+        test_args = ["gemini_cli.py", "-p", "test", "-m", "custom-model", "-k", "test-key"]
+        mocks = mock_gemini_setup
+
+        with patch("sys.argv", test_args):
+            with patch.dict("sys.modules", {"google": mocks["google"], "google.genai": mocks["genai"]}):
+                import importlib
+
+                from app import gemini_cli
+
+                importlib.reload(gemini_cli)
+                gemini_cli.main()
+
+                # Verify the API was called with the custom model
+                mocks["client"].models.generate_content.assert_called_once()
+                call_kwargs = mocks["client"].models.generate_content.call_args
+                assert call_kwargs.kwargs.get("model") == "custom-model"
+
+    def test_cli_key_short_form_configures_client(self, mock_gemini_setup):
+        """Test -k short form properly configures API client with key."""
+        test_args = ["gemini_cli.py", "-p", "test", "-k", "my-api-key"]
+        mocks = mock_gemini_setup
+
+        with patch("sys.argv", test_args):
+            with patch.dict("sys.modules", {"google": mocks["google"], "google.genai": mocks["genai"]}):
+                import importlib
+
+                from app import gemini_cli
+
+                importlib.reload(gemini_cli)
+                gemini_cli.main()
+
+                # Verify the client was configured with the API key
+                mocks["genai"].Client.assert_called_once_with(api_key="my-api-key")
+
+    def test_cli_no_tool_flag_disables_search_tool(self, mock_gemini_setup):
+        """Test --no-tool flag prevents google_search tool from being configured."""
+        test_args = ["gemini_cli.py", "-p", "test", "-k", "test-key", "--no-tool"]
+        mocks = mock_gemini_setup
+        mock_types = MagicMock()
+        mocks["genai"].types = mock_types
+
+        with patch("sys.argv", test_args):
+            with patch.dict("sys.modules", {"google": mocks["google"], "google.genai": mocks["genai"]}):
+                import importlib
+
+                from app import gemini_cli
+
+                importlib.reload(gemini_cli)
+                gemini_cli.main()
+
+                # Verify GenerateContentConfig was NOT called (no tool config)
+                mock_types.GenerateContentConfig.assert_not_called()
+
+    def test_cli_raw_file_writes_output(self, mock_gemini_setup, tmp_path):
+        """Test --raw-file writes response to specified file."""
+        output_file = tmp_path / "output.txt"
+        test_args = ["gemini_cli.py", "-p", "test", "-k", "test-key", "--raw-file", str(output_file)]
+        mocks = mock_gemini_setup
+
+        with patch("sys.argv", test_args):
+            with patch.dict("sys.modules", {"google": mocks["google"], "google.genai": mocks["genai"]}):
+                import importlib
+
+                from app import gemini_cli
+
+                importlib.reload(gemini_cli)
+                gemini_cli.main()
+
+        # Verify the file was written
+        assert output_file.exists()
+        content = output_file.read_text()
+        assert "MagicMock" in content  # repr of mock response
 
 
 class TestGeminiCliSDKSelection:
