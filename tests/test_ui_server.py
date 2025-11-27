@@ -238,6 +238,15 @@ class TestIndexEndpoint:
         assert "query" in response.text.lower()
         assert "search" in response.text.lower()
 
+    def test_index_template_packaged_correctly(self, client):
+        """Test that HTML template is properly packaged and accessible."""
+        response = client.get("/")
+        assert response.status_code == 200
+        # Ensure we get actual HTML content, not 404 or 500
+        assert len(response.text) > 1000
+        assert "<!DOCTYPE html>" in response.text
+        assert "</html>" in response.text
+
 
 class TestAppMetadata:
     """Tests for app metadata and configuration."""
