@@ -1,5 +1,6 @@
 """Comprehensive tests for gemini_cli module."""
 
+import importlib
 import os
 from unittest.mock import MagicMock, patch
 
@@ -14,6 +15,40 @@ class TestGeminiCliMain:
         """Mock the legacy google.genai package."""
         with patch.dict("sys.modules", {"google.genai": MagicMock()}):
             yield
+
+    @pytest.fixture
+    def mock_genai_setup(self):
+        """Create a mock genai setup that properly patches 'from google import genai'."""
+        mock_genai = MagicMock()
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "test response"
+        mock_response.candidates = None
+        mock_client.models.generate_content.return_value = mock_response
+        mock_genai.Client.return_value = mock_client
+
+        # Create a proper mock structure for "from google import genai"
+        mock_google = MagicMock()
+        mock_google.genai = mock_genai
+
+        return {
+            "mock_genai": mock_genai,
+            "mock_client": mock_client,
+            "mock_response": mock_response,
+            "mock_google": mock_google,
+        }
+
+    def _run_cli_with_mock(self, mock_genai_setup):
+        """Helper to import and reload gemini_cli with the mock setup."""
+        mock_google = mock_genai_setup["mock_google"]
+        mock_genai = mock_genai_setup["mock_genai"]
+
+        with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
+            from app import gemini_cli
+
+            importlib.reload(gemini_cli)
+            gemini_cli.main()
+            return mock_genai
 
     def test_cli_requires_prompt(self):
         """Test CLI fails without --prompt argument."""
@@ -35,95 +70,32 @@ class TestGeminiCliMain:
                     gemini_cli.main()
                 assert exc.value.code == 2
 
-    def test_cli_uses_key_from_env(self):
+    def test_cli_uses_key_from_env(self, mock_genai_setup):
         """Test CLI uses GEMINI_API_KEY from environment."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt"]
 
         with patch("sys.argv", test_args):
             with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
-                # Mock the genai module
-                mock_genai = MagicMock()
-                mock_client = MagicMock()
-                mock_response = MagicMock()
-                mock_response.text = "test response"
-                mock_response.candidates = None
-                mock_client.models.generate_content.return_value = mock_response
-                mock_genai.Client.return_value = mock_client
+                mock_genai = self._run_cli_with_mock(mock_genai_setup)
+                mock_genai.Client.assert_called_once_with(api_key="test-key")
 
-                # Create a proper mock structure for "from google import genai"
-                mock_google = MagicMock()
-                mock_google.genai = mock_genai
-
-                with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
-                    import importlib
-
-                    from app import gemini_cli
-
-                    importlib.reload(gemini_cli)
-                    gemini_cli.main()
-
-                    # Verify the Client was called with the env key
-                    mock_genai.Client.assert_called_once_with(api_key="test-key")
-
-    def test_cli_accepts_key_argument(self):
+    def test_cli_accepts_key_argument(self, mock_genai_setup):
         """Test CLI accepts --key argument."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "provided-key"]
 
         with patch("sys.argv", test_args):
-            # Mock the genai module
-            mock_genai = MagicMock()
-            mock_client = MagicMock()
-            mock_response = MagicMock()
-            mock_response.text = "test response"
-            mock_response.candidates = None
-            mock_client.models.generate_content.return_value = mock_response
-            mock_genai.Client.return_value = mock_client
+            mock_genai = self._run_cli_with_mock(mock_genai_setup)
+            mock_genai.Client.assert_called_once_with(api_key="provided-key")
 
-            # Create a proper mock structure for "from google import genai"
-            mock_google = MagicMock()
-            mock_google.genai = mock_genai
-
-            with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
-                import importlib
-
-                from app import gemini_cli
-
-                importlib.reload(gemini_cli)
-                gemini_cli.main()
-
-                # Verify the Client was called with the provided key
-                mock_genai.Client.assert_called_once_with(api_key="provided-key")
-
-    def test_cli_uses_google_api_key_fallback(self):
+    def test_cli_uses_google_api_key_fallback(self, mock_genai_setup):
         """Test CLI falls back to GOOGLE_API_KEY if GEMINI_API_KEY not set."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt"]
 
         with patch("sys.argv", test_args):
             # Only set GOOGLE_API_KEY, not GEMINI_API_KEY
             with patch.dict(os.environ, {"GOOGLE_API_KEY": "fallback-key"}, clear=True):
-                # Mock the genai module
-                mock_genai = MagicMock()
-                mock_client = MagicMock()
-                mock_response = MagicMock()
-                mock_response.text = "test response"
-                mock_response.candidates = None
-                mock_client.models.generate_content.return_value = mock_response
-                mock_genai.Client.return_value = mock_client
-
-                # Create a proper mock structure for "from google import genai"
-                mock_google = MagicMock()
-                mock_google.genai = mock_genai
-
-                with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
-                    import importlib
-
-                    from app import gemini_cli
-
-                    importlib.reload(gemini_cli)
-                    gemini_cli.main()
-
-                    # Verify the Client was called with the fallback key
-                    mock_genai.Client.assert_called_once_with(api_key="fallback-key")
+                mock_genai = self._run_cli_with_mock(mock_genai_setup)
+                mock_genai.Client.assert_called_once_with(api_key="fallback-key")
 
     def test_cli_model_default(self):
         """Test CLI uses default model if not specified."""
