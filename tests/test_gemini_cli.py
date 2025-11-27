@@ -231,11 +231,9 @@ class TestGeminiCliSDKSelection:
 class TestGeminiCliOutput:
     """Tests for CLI output handling."""
 
-    def test_cli_prints_sdk_name(self, capsys):
-        """Test CLI prints which SDK is being used."""
-        test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key"]
-
-        # Create a mock genai module
+    @pytest.fixture
+    def mock_genai_module(self):
+        """Create a mock genai module with client and response."""
         mock_genai = MagicMock()
         mock_client = MagicMock()
         mock_response = MagicMock()
@@ -244,11 +242,16 @@ class TestGeminiCliOutput:
         mock_client.models.generate_content.return_value = mock_response
         mock_genai.Client.return_value = mock_client
         mock_genai.types = MagicMock()
+        return mock_genai
+
+    def test_cli_prints_sdk_name(self, capsys, mock_genai_module):
+        """Test CLI prints which SDK is being used."""
+        test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key"]
 
         with patch("sys.argv", test_args):
             with patch.dict(
                 "sys.modules",
-                {"google": MagicMock(), "google.genai": mock_genai},
+                {"google": MagicMock(), "google.genai": mock_genai_module},
             ):
                 import importlib
 
@@ -260,25 +263,15 @@ class TestGeminiCliOutput:
         captured = capsys.readouterr()
         assert "Using SDK: google.genai" in captured.out
 
-    def test_cli_writes_raw_file_if_specified(self):
+    def test_cli_writes_raw_file_if_specified(self, mock_genai_module):
         """Test CLI writes raw response to file when --raw-file is provided."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key", "--raw-file", "output.txt"]
-
-        # Create a mock genai module
-        mock_genai = MagicMock()
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.candidates = None
-        mock_response.text = "test response"
-        mock_client.models.generate_content.return_value = mock_response
-        mock_genai.Client.return_value = mock_client
-        mock_genai.types = MagicMock()
 
         m = mock_open()
         with patch("sys.argv", test_args):
             with patch.dict(
                 "sys.modules",
-                {"google": MagicMock(), "google.genai": mock_genai},
+                {"google": MagicMock(), "google.genai": mock_genai_module},
             ):
                 with patch("builtins.open", m):
                     import importlib
