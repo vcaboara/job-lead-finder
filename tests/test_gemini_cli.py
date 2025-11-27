@@ -16,6 +16,20 @@ class TestGeminiCliMain:
         with patch.dict("sys.modules", {"google.genai": MagicMock()}):
             yield
 
+    @pytest.fixture
+    def clear_module_cache(self):
+        """Clear cached google/genai modules to ensure fresh imports."""
+        # Clear any cached google/genai modules
+        modules_to_remove = [k for k in sys.modules.keys() if "google" in k or "genai" in k]
+        for mod in modules_to_remove:
+            del sys.modules[mod]
+
+        # Also remove app.gemini_cli so it reimports google.genai from our mock
+        if "app.gemini_cli" in sys.modules:
+            del sys.modules["app.gemini_cli"]
+
+        yield
+
     def test_cli_requires_prompt(self):
         """Test CLI fails without --prompt argument."""
         with patch("sys.argv", ["gemini_cli.py"]):
@@ -55,18 +69,9 @@ class TestGeminiCliMain:
                     # We can verify the key is read
                     assert os.getenv("GEMINI_API_KEY") == "test-key"
 
-    def test_cli_accepts_key_argument(self):
+    def test_cli_accepts_key_argument(self, clear_module_cache):
         """Test CLI accepts --key argument and passes it to Gemini client."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "provided-key"]
-
-        # Clear any cached google/genai modules
-        modules_to_remove = [k for k in sys.modules.keys() if "google" in k or "genai" in k]
-        for mod in modules_to_remove:
-            del sys.modules[mod]
-
-        # Also remove app.gemini_cli so it reimports google.genai from our mock
-        if "app.gemini_cli" in sys.modules:
-            del sys.modules["app.gemini_cli"]
 
         # Mock the genai module
         mock_genai = MagicMock()
@@ -162,18 +167,9 @@ class TestGeminiCliMain:
             args = parser.parse_args(test_args[1:])
             assert args.raw_file == "output.txt"
 
-    def test_cli_exits_if_no_sdk_installed(self):
+    def test_cli_exits_if_no_sdk_installed(self, clear_module_cache):
         """Test CLI exits gracefully if no SDK is installed."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key"]
-
-        # Clear any cached google/genai modules
-        modules_to_remove = [k for k in sys.modules.keys() if "google" in k or "genai" in k]
-        for mod in modules_to_remove:
-            del sys.modules[mod]
-
-        # Also remove app.gemini_cli so it reimports google.genai from our mock
-        if "app.gemini_cli" in sys.modules:
-            del sys.modules["app.gemini_cli"]
 
         with patch("sys.argv", test_args):
             # Mock both SDK imports to fail
