@@ -77,9 +77,34 @@ class TestGeminiCliMain:
         test_args = ["gemini_cli.py", "--prompt", "test prompt"]
 
         with patch("sys.argv", test_args):
-            with patch.dict(os.environ, {"GOOGLE_API_KEY": "fallback-key"}):
-                # Should use GOOGLE_API_KEY as fallback
-                assert os.getenv("GOOGLE_API_KEY") == "fallback-key"
+            # Set GOOGLE_API_KEY but NOT GEMINI_API_KEY
+            env_vars = {"GOOGLE_API_KEY": "fallback-key"}
+            with patch.dict(os.environ, env_vars, clear=True):
+                # Mock the genai module at import time
+                mock_genai = MagicMock()
+                mock_client = MagicMock()
+                mock_response = MagicMock()
+                mock_response.text = "test response"
+                mock_response.candidates = None
+                mock_client.models.generate_content.return_value = mock_response
+                mock_genai.Client.return_value = mock_client
+
+                # Create a mock google module with genai attribute
+                mock_google = MagicMock()
+                mock_google.genai = mock_genai
+
+                import sys
+
+                # Patch sys.modules before calling main
+                with patch.dict(
+                    sys.modules, {"google": mock_google, "google.genai": mock_genai}
+                ):
+                    from app import gemini_cli
+
+                    gemini_cli.main()
+
+                    # Verify Client was called with the fallback key
+                    mock_genai.Client.assert_called_once_with(api_key="fallback-key")
 
     def test_cli_model_default(self):
         """Test CLI uses default model if not specified."""
