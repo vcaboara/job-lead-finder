@@ -37,10 +37,12 @@ class TestGeminiCliMain:
 
     def test_cli_uses_key_from_env(self):
         """Test CLI uses GEMINI_API_KEY from environment."""
+        import importlib
+
         test_args = ["gemini_cli.py", "--prompt", "test prompt"]
 
         with patch("sys.argv", test_args):
-            with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}):
+            with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
                 # Mock the genai module
                 mock_genai = MagicMock()
                 mock_client = MagicMock()
@@ -49,10 +51,20 @@ class TestGeminiCliMain:
                 mock_client.models.generate_content.return_value = mock_response
                 mock_genai.Client.return_value = mock_client
 
-                with patch.dict("sys.modules", {"google.genai": mock_genai, "google": MagicMock()}):
-                    # This should not raise an exception
-                    # We can verify the key is read
-                    assert os.getenv("GEMINI_API_KEY") == "test-key"
+                # Create mock google package with genai attribute
+                mock_google = MagicMock()
+                mock_google.genai = mock_genai
+
+                with patch.dict(
+                    "sys.modules", {"google": mock_google, "google.genai": mock_genai}
+                ):
+                    from app import gemini_cli
+
+                    importlib.reload(gemini_cli)
+                    gemini_cli.main()
+
+                    # Verify the Client was called with the API key from environment
+                    mock_genai.Client.assert_called_once_with(api_key="test-key")
 
     def test_cli_accepts_key_argument(self):
         """Test CLI accepts --key argument."""
