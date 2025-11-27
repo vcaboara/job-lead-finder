@@ -19,8 +19,10 @@ class TestGeminiCliMain:
     @pytest.fixture
     def clear_module_cache(self):
         """Clear cached google/genai modules to ensure fresh imports."""
-        # Clear any cached google/genai modules
-        modules_to_remove = [k for k in sys.modules.keys() if "google" in k or "genai" in k]
+        # Clear any cached google.genai modules (using prefix match to avoid false positives)
+        modules_to_remove = [
+            k for k in sys.modules.keys() if k.startswith("google.") or k == "google"
+        ]
         for mod in modules_to_remove:
             del sys.modules[mod]
 
@@ -73,15 +75,17 @@ class TestGeminiCliMain:
         """Test CLI accepts --key argument and passes it to Gemini client."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "provided-key"]
 
-        # Mock the genai module
+        # Mock the genai module with minimal setup to verify Client initialization
         mock_genai = MagicMock()
         mock_client = MagicMock()
         mock_response = MagicMock()
+        # Set candidates to None to trigger the text attribute fallback path in gemini_cli
         mock_response.candidates = None
         mock_response.text = "test response"
         mock_client.models.generate_content.return_value = mock_response
         mock_genai.Client.return_value = mock_client
-        mock_genai.types = None  # Disable tool configuration
+        # Set types to None to skip tool configuration in gemini_cli.main()
+        mock_genai.types = None
 
         mock_google = MagicMock()
         mock_google.genai = mock_genai
