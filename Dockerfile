@@ -17,7 +17,7 @@ RUN pip install --upgrade pip setuptools
 # Install package; optionally install test deps when building for CI
 RUN pip install --no-cache-dir . \
     && pip install --no-cache-dir fastapi uvicorn[standard] httpx \
-    && if [ "${INSTALL_TEST_DEPS}" = "true" ]; then pip install --no-cache-dir pytest; fi \
+    && if [ "${INSTALL_TEST_DEPS}" = "true" ]; then pip install --no-cache-dir pytest pytest-cov; fi \
     && if [ "${INSTALL_GEMINI}" = "true" ]; then pip install --no-cache-dir google-genai; fi
 
 CMD ["python", "-m", "app.main", "health"]
