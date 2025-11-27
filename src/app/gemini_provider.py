@@ -6,7 +6,7 @@ clear errors when the dependency or API key is missing.
 """
 
 import os
-from typing import Dict, Any
+from typing import Any, Dict
 
 # Support either the newer `google.generativeai` package or the older
 # `google.genai` package (legacy). Try to import both and prefer the
@@ -63,9 +63,13 @@ class GeminiProvider:
         Returns a dict with `score` (0-100) and `reasoning`.
         """
         prompt = (
-            "Evaluate the relevance of this job posting for the candidate. Return a JSON object.\n"
+            "Evaluate the relevance of this job posting for the candidate. "
+            "Return a JSON object.\n"
             f"CANDIDATE PROFILE:\n{resume_text}\n\n"
-            f"JOB:\nTitle: {job.get('title', '')}\nCompany: {job.get('company', '')}\nLocation: {job.get('location', '')}\nDescription: {job.get('description', '')}\n\n"
+            f"JOB:\nTitle: {job.get('title', '')}\n"
+            f"Company: {job.get('company', '')}\n"
+            f"Location: {job.get('location', '')}\n"
+            f"Description: {job.get('description', '')}\n\n"
             'Return ONLY this JSON object: {"score": <0-100>, "reasoning": "<string>"}'
         )
 
@@ -132,7 +136,7 @@ class GeminiProvider:
         [{"title":..., "company":..., "location":..., "summary":..., "link":...}, ...]
         """
         prompt = (
-            "You MUST use the google_search tool to find REAL job postings from the internet.\n"
+            "You MUST use the google_search tool to find REAL LIVE job postings from the internet.\n"
             "Find and return ONLY a JSON array of open job postings that match the candidate profile and query.\n"
             f"Return EXACTLY {count} job objects with keys: title, company, location, summary, link.\n"
             f"CANDIDATE PROFILE:\n{resume_text}\n\n"
@@ -157,8 +161,8 @@ class GeminiProvider:
                     )
                     # Also write a full dir() and repr() to a timestamped file for deeper inspection
                     try:
-                        import time
                         import os
+                        import time
 
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
@@ -289,7 +293,8 @@ class GeminiProvider:
                             # streaming not available or failed; continue
                             pass
                     if verbose:
-                        import time, traceback
+                        import time
+                        import traceback
 
                         ts = int(time.time())
                         fname = f".last_gemini_response_{ts}.txt"
@@ -344,8 +349,9 @@ class GeminiProvider:
                     text = str(out)
                 raw_response = str(out)
                 if verbose:
-                    import time, traceback
                     import os
+                    import time
+                    import traceback
 
                     ts = int(time.time())
                     os.makedirs("logs", exist_ok=True)

@@ -17,18 +17,12 @@ services:
     tty: true
 
   ui:
+    extends:
+      app
     build:
-      context: .
       args:
         INSTALL_TEST_DEPS: "false"
-        INSTALL_GEMINI: "true"
-    volumes:
-      - ./:/app:delegated
-    working_dir: /app
     ports:
       - "8000:8000"
-    environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
     command: python -m uvicorn app.ui_server:app --host 0.0.0.0 --port 8000
     tty: true
