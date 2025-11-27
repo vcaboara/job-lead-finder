@@ -1,7 +1,9 @@
 # pre-commit configuration for code quality
 # Install: pip install pre-commit
-# Setup: pre-commit install
+# Setup: pre-commit install && pre-commit install --hook-type pre-push
 # Run manually: pre-commit run --all-files
+# Skip hooks for WIP commits: git commit --no-verify
+# Note: Tests run on pre-push (not pre-commit) for faster development
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -43,5 +45,5 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        args: [tests/, -v, --tb=short]
-        stages: [pre-commit]
+        args: [tests/, -v, --tb=short, -x]
+        stages: [pre-push]
