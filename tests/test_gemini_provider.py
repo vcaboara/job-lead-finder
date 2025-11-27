@@ -1,4 +1,5 @@
 import os
+
 import pytest
 
 from app import gemini_provider
