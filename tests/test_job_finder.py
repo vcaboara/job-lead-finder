@@ -172,8 +172,10 @@ class TestEvaluateLeads:
 
         # First lead should be evaluated
         assert result[0]["score"] == 80
-        # Second lead should be present but without score (exception handled)
+        # Second lead should have default score due to evaluation failure
         assert len(result) == 2
+        assert result[1]["score"] == 50
+        assert result[1]["reasoning"] == "Evaluation unavailable."
 
 
 class TestSaveToFile:
