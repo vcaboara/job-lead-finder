@@ -21,9 +21,27 @@ def fetch_jobs(query: str):
     For now this returns a small hard-coded list similar to previous demos.
     """
     sample = [
-        {"id": "1", "title": "Senior Python Developer", "company": "TechCorp", "location": "Remote", "description": "Python, Django, Docker, AWS"},
-        {"id": "2", "title": "DevOps Engineer", "company": "CloudServices", "location": "Austin, TX", "description": "Kubernetes, Terraform, AWS, CI/CD"},
-        {"id": "3", "title": "ML Engineer", "company": "AI Systems", "location": "New York, NY", "description": "Python, TensorFlow, LLM experience"},
+        {
+            "id": "1",
+            "title": "Senior Python Developer",
+            "company": "TechCorp",
+            "location": "Remote",
+            "description": "Python, Django, Docker, AWS",
+        },
+        {
+            "id": "2",
+            "title": "DevOps Engineer",
+            "company": "CloudServices",
+            "location": "Austin, TX",
+            "description": "Kubernetes, Terraform, AWS, CI/CD",
+        },
+        {
+            "id": "3",
+            "title": "ML Engineer",
+            "company": "AI Systems",
+            "location": "New York, NY",
+            "description": "Python, TensorFlow, LLM experience",
+        },
     ]
     q = query.lower()
     return [j for j in sample if q in j["title"].lower() or q in j["description"].lower()]
@@ -86,9 +104,9 @@ def build_parser():
 
     search = sub.add_parser("search")
     search.add_argument("--query", "-q", required=True)
-    search.add_argument("--skills", "-s", nargs="*", default=["Python", "Docker"]) 
-    search.add_argument("--roles", "-r", nargs="*", default=["Engineer"]) 
-    search.add_argument("--locations", "-l", nargs="*", default=["Remote"]) 
+    search.add_argument("--skills", "-s", nargs="*", default=["Python", "Docker"])
+    search.add_argument("--roles", "-r", nargs="*", default=["Engineer"])
+    search.add_argument("--locations", "-l", nargs="*", default=["Remote"])
     search.add_argument("--provider", "-p", choices=["mock", "gemini"], default="mock")
     search.add_argument("--resume", help="Optional free-text resume to include in evaluation", default=None)
     sub_map["search"] = search
@@ -178,9 +196,14 @@ def main(argv=None):
     elif args.cmd == "probe":
         from .gemini_provider import simple_gemini_query
 
-        prompt = args.prompt or "Return a JSON array with one example job: [{\"title\": \"Test\", \"company\": \"X\", \"summary\": \"S\", \"url\": \"http://example.com\"}]"
+        prompt = (
+            args.prompt
+            or 'Return a JSON array with one example job: [{"title": "Test", "company": "X", "summary": "S", "url": "http://example.com"}]'
+        )
         try:
-            resp = simple_gemini_query(prompt, model=getattr(args, "model", None), verbose=getattr(args, "verbose", False))
+            resp = simple_gemini_query(
+                prompt, model=getattr(args, "model", None), verbose=getattr(args, "verbose", False)
+            )
             print("--- RAW RESPONSE ---")
             print(resp)
             return 0

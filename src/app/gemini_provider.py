@@ -66,7 +66,7 @@ class GeminiProvider:
             "Evaluate the relevance of this job posting for the candidate. Return a JSON object.\n"
             f"CANDIDATE PROFILE:\n{resume_text}\n\n"
             f"JOB:\nTitle: {job.get('title', '')}\nCompany: {job.get('company', '')}\nLocation: {job.get('location', '')}\nDescription: {job.get('description', '')}\n\n"
-            "Return ONLY this JSON object: {\"score\": <0-100>, \"reasoning\": \"<string>\"}"
+            'Return ONLY this JSON object: {"score": <0-100>, "reasoning": "<string>"}'
         )
 
         try:
@@ -123,7 +123,9 @@ class GeminiProvider:
             pass
         return {"score": 50, "reasoning": "Could not parse Gemini response; ensure API key and model are correct."}
 
-    def generate_job_leads(self, query: str, resume_text: str, count: int = 5, model: str | None = None, verbose: bool = False) -> list[Dict[str, Any]]:
+    def generate_job_leads(
+        self, query: str, resume_text: str, count: int = 5, model: str | None = None, verbose: bool = False
+    ) -> list[Dict[str, Any]]:
         """Generate job leads using Gemini and attempt to return a list of job dicts.
 
         The method asks the model to return a JSON array matching a simple schema:
@@ -149,13 +151,18 @@ class GeminiProvider:
                     print("gemini_provider: has Client?", hasattr(genai, "Client"))
                     print("gemini_provider: has chat?", hasattr(genai, "chat"))
                     chat_obj = getattr(genai, "chat", None)
-                    print("gemini_provider: chat.create exists?", hasattr(chat_obj, "create") if chat_obj is not None else False)
+                    print(
+                        "gemini_provider: chat.create exists?",
+                        hasattr(chat_obj, "create") if chat_obj is not None else False,
+                    )
                     # Also write a full dir() and repr() to a timestamped file for deeper inspection
                     try:
                         import time
+                        import os
 
                         ts = int(time.time())
-                        fname_dir = f".last_gemini_dir_{ts}.txt"
+                        os.makedirs("logs", exist_ok=True)
+                        fname_dir = f"logs/gemini_dir_{ts}.txt"
                         try:
                             with open(fname_dir, "w", encoding="utf-8") as fh:
                                 fh.write(f"genai_name: {genai_name}\n\n")
@@ -259,7 +266,11 @@ class GeminiProvider:
                                     # chunk may have .candidates or .text
                                     if hasattr(chunk, "candidates") and getattr(chunk, "candidates"):
                                         cand = getattr(chunk, "candidates")[0]
-                                        if hasattr(cand, "content") and hasattr(cand.content, "parts") and cand.content.parts:
+                                        if (
+                                            hasattr(cand, "content")
+                                            and hasattr(cand.content, "parts")
+                                            and cand.content.parts
+                                        ):
                                             part_text = getattr(cand.content.parts[0], "text", "")
                                             stream_text += part_text
                                         else:
@@ -301,7 +312,10 @@ class GeminiProvider:
                                 try:
                                     if hasattr(resp, attr):
                                         val = getattr(resp, attr)
-                                        print(f"gemini_provider: resp.{attr} -> type={type(val)} repr_preview=", repr(val)[:200])
+                                        print(
+                                            f"gemini_provider: resp.{attr} -> type={type(val)} repr_preview=",
+                                            repr(val)[:200],
+                                        )
                                     else:
                                         print(f"gemini_provider: resp has no attribute {attr}")
                                 except Exception:
@@ -331,9 +345,13 @@ class GeminiProvider:
                 raw_response = str(out)
                 if verbose:
                     import time, traceback
+                    import os
 
                     ts = int(time.time())
-                    fname = f".last_gemini_response_{ts}.txt"
+                    os.makedirs("logs", exist_ok=True)
+                    fname = f"logs/gemini_response_{ts}.txt"
+                    os.makedirs("logs", exist_ok=True)
+                    fname = f"logs/gemini_response_{ts}.txt"
                     print("gemini_provider: used chat.create; model=", use_model)
                     try:
                         preview = raw_response[:4000] + "\n...\n" if len(raw_response) > 4000 else raw_response
@@ -437,7 +455,9 @@ class GeminiProvider:
         return []
 
 
-def simple_gemini_query(prompt: str, api_key: str | None = None, model: str | None = None, verbose: bool = False) -> str:
+def simple_gemini_query(
+    prompt: str, api_key: str | None = None, model: str | None = None, verbose: bool = False
+) -> str:
     """Run a simple prompt against the available Gemini SDK and return a raw string response.
 
     This helper attempts multiple SDK call shapes:
@@ -509,7 +529,12 @@ def simple_gemini_query(prompt: str, api_key: str | None = None, model: str | No
                 tried.append(fn_name)
                 fn = getattr(genai, fn_name)
                 # try common kwarg names
-                for kwargs in ({"model": use_model, "prompt": prompt}, {"model": use_model, "contents": prompt}, {"model": use_model, "contents": [prompt]}, {"prompt": prompt}):
+                for kwargs in (
+                    {"model": use_model, "prompt": prompt},
+                    {"model": use_model, "contents": prompt},
+                    {"model": use_model, "contents": [prompt]},
+                    {"prompt": prompt},
+                ):
                     try:
                         resp = fn(**kwargs)
                         if verbose:

@@ -1,144 +1,120 @@
-# Job Lead Finder — Minimal Starter
+# Job Lead Finder
 
-This repository is a minimal starter for a modular job-finding + evaluation tool.
+AI-powered job search tool with Gemini integration, link validation, and FastAPI dashboard.
 
-Key features:
-- Minimal CLI: `src/app/main.py`
-- Gemini provider template: `src/app/gemini_provider.py`
-- Dockerfile for deterministic builds
-- GitHub Actions CI workflow to build and run tests
+## Features
 
-To build and run locally:
+- **CLI**: Find and evaluate job leads from the command line
+- **Web UI**: FastAPI dashboard at http://localhost:8000
+- **AI Evaluation**: Gemini-powered job matching with fallback when tools unavailable
+- **Link Validation**: Verify job application URLs (detect 404s, 403s, redirects)
+- **Docker**: Fully containerized with compose setup
+- **CI**: Automated testing with GitHub Actions
 
-1. Create virtualenv and install:
+## Quick Start
 
+### Setup
+
+1. **Clone and install**:
+   ```powershell
+   python -m venv .venv
+   .venv\Scripts\Activate.ps1
+   pip install -e .[gemini]
+   ```
+
+2. **Configure API key** (create `.env` file):
+   ```
+   GEMINI_API_KEY=your-key-here
+   GOOGLE_API_KEY=your-key-here
+   ```
+
+3. **Get your API key**: https://aistudio.google.com/app/apikey
+
+### CLI Usage
+
+**Find jobs**:
 ```powershell
-python -m venv .venv; .\.venv\Scripts\Activate.ps1; pip install -e .
+python -m app.main find -q "remote python developer" --resume "Senior Python dev, Django, FastAPI" -n 5
 ```
 
-2. Run health check:
+**With link validation and evaluation**:
+```powershell
+python -m app.main find -q "remote python" --resume "Your resume" -n 3 --validate-links --evaluate --verbose
+```
 
+**Health check**:
 ```powershell
 python -m app.main health
 ```
 
-3. Run a sample search:
+### Web UI
 
+**Start the UI**:
 ```powershell
-python -m app.main search -q python -s Python Docker
+docker compose up ui
 ```
 
-To enable Gemini provider, set `GOOGLE_API_KEY` and install optional extras:
+Open http://localhost:8000 in your browser.
 
+## Docker Usage
+
+**CLI in Docker**:
 ```powershell
-pip install .[gemini]
-$env:GOOGLE_API_KEY = '...'
+docker compose run --rm app python -m app.main find -q "python" --resume "Your resume" -n 3
 ```
 
-**App Reference**
-
-- **Module**: `app.main`
-	- `format_resume(skills, roles, locations, text=None)` -> `str`
-		- Build a short resume summary used by providers.
-	- `fetch_jobs(query)` -> `list[dict]`
-		- Minimal built-in job fetcher (sample/hard-coded). Replace with real sources.
-	- `run_search(args)` -> exit code
-		- Orchestrates fetching jobs, selecting an evaluation provider (mock or Gemini), and prints JSON results.
-	- `main()` / CLI
-		- Commands:
-			- `health` : print `ok` and exit 0.
-			- `search` : evaluate jobs for a query.
-				- Flags:
-					- `--query, -q` (required): query string to search job titles/descriptions.
-					- `--skills, -s` (optional): list of skills to use for basic scoring (default: `Python Docker`).
-					- `--roles, -r` (optional): desired roles (default: `Engineer`).
-					- `--locations, -l` (optional): desired locations (default: `Remote`).
-					- `--provider, -p` (optional): `mock` (default) or `gemini` — selects evaluator.
-					- `--resume` : optional free-text resume to include in evaluation prompt.
-
-**Docker & CI**
-
-- The GitHub Actions CI builds a Docker image using the repository `Dockerfile`, passing `INSTALL_TEST_DEPS=true`, and runs `pytest` inside the container. This ensures CI runs in the exact same environment as local Docker runs.
-- `docker-compose.yml` builds the same image locally and mounts the repository into `/app` so you can iterate without rebuilding.
-
-Examples (local Docker usage):
-
-Build the image locally (same as CI):
-
+**Run tests**:
 ```powershell
-docker build --tag job-starter-ci --build-arg INSTALL_TEST_DEPS=true .
+docker compose run --rm app python -m pytest -v
 ```
 
-Run tests in Docker (same as CI):
-
+**Build and run UI**:
 ```powershell
-docker run --rm job-starter-ci pytest -q
+docker compose up ui -d
 ```
 
-Run the health command inside Docker:
+## Development
 
+**Format code**:
 ```powershell
-docker run --rm job-starter-ci python -m app.main health
+python -m black src/ tests/ --line-length 120
+python -m isort src/ tests/
 ```
 
-Run interactively with docker-compose (container stays running):
-
+**Install pre-commit hooks**:
 ```powershell
-docker compose up -d --build
-docker compose run --rm app pytest -q
-docker compose run --rm app python -m app.main search -q python -s Python Docker
-docker compose down
+pre-commit install
 ```
 
-Notes:
-- Deleting the `venv` will not remove any source changes; your code and the added files are committed to the repository and included in the `archive/` backup.
-- To enable the real Gemini provider, set `GOOGLE_API_KEY` and install extras: `pip install .[gemini]`.
-
-Full CLI help
-
-Top-level help (run `python -m app.main -h`):
-
-```text
-usage: job-starter [-h] {search,health,help} ...
-
-positional arguments:
-	{search,health,help}
-		help                Show full help or help for a specific subcommand
-
-options:
-	-h, --help            show this help message and exit
-```
-
-`search` subcommand help (run `python -m app.main help search`):
-
-```text
-usage: job-starter search [-h] --query QUERY [--skills [SKILLS ...]] [--roles [ROLES ...]] [--locations [LOCATIONS ...]] [--provider {mock,gemini}]
-													[--resume RESUME]
-
-options:
-	-h, --help            show this help message and exit
-	--query, -q QUERY
-	--skills, -s [SKILLS ...]
-	--roles, -r [ROLES ...]
-	--locations, -l [LOCATIONS ...]
-	--provider, -p {mock,gemini}
-	--resume RESUME       Optional free-text resume to include in evaluation
-```
-
-Local Python (no install)
-
-If you prefer to run the CLI locally without installing the package into a virtualenv, set `PYTHONPATH` so Python can find the `src/` package:
-
-PowerShell:
-
+**Run all tests**:
 ```powershell
-$env:PYTHONPATH = "src"
-python -m app.main health
+pytest -v
 ```
 
-Or (POSIX):
+## Project Structure
 
-```bash
-PYTHONPATH=src python -m app.main health
 ```
+src/app/
+├── main.py              # CLI entry point
+├── job_finder.py        # Orchestration logic
+├── gemini_provider.py   # AI provider with fallback
+├── link_validator.py    # URL validation
+└── ui_server.py         # FastAPI dashboard
+
+tests/
+├── test_job_finder.py
+├── test_provider_fallback.py
+└── ...
+```
+
+## Configuration
+
+- **`.env`**: API keys (gitignored)
+- **`pyproject.toml`**: Dependencies and tool config
+- **`docker-compose.yml`**: Service definitions
+- **`CODEOWNERS`**: Code review assignments
+
+## License
+
+MIT
 

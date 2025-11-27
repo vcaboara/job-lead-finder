@@ -12,8 +12,22 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7.0","pre-commit","black","isort"]
+dev = ["pytest>=7.0","pre-commit","black","isort","autopep8>=2.0.0"]
 gemini = ["google-generativeai>=0.3.0"]
 
 [project.scripts]
 job-starter = "app.main:main"
+
+[tool.autopep8]
+max_line_length = 120
+in-place = true
+recursive = true
+aggressive = 1
+
+[tool.black]
+line-length = 120
+target-version = ['py310', 'py311']
+
+[tool.isort]
+profile = "black"
+line_length = 120

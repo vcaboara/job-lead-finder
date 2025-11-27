@@ -1,4 +1,5 @@
 """FastAPI UI server for job lead finder."""
+
 import json
 import os
 from pathlib import Path

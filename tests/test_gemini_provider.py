@@ -13,6 +13,8 @@ def test_gemini_provider_skipped_if_missing():
 
     prov = gemini_provider.GeminiProvider()
     # Use a tiny fake job and resume; don't assert on score value (networked)
-    out = prov.evaluate({"title": "Test", "company": "X", "location": "Remote", "description": "Python"}, "Skills: Python")
+    out = prov.evaluate(
+        {"title": "Test", "company": "X", "location": "Remote", "description": "Python"}, "Skills: Python"
+    )
     assert isinstance(out, dict)
     assert "score" in out and "reasoning" in out

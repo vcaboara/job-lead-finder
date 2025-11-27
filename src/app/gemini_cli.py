@@ -6,6 +6,7 @@ Usage:
 The script prefers the legacy `google.genai` package when present and will
 attempt the `google.generativeai` chat path as a fallback.
 """
+
 import argparse
 import os
 import json
@@ -15,10 +16,16 @@ import sys
 def main():
     p = argparse.ArgumentParser(description="Simple Gemini CLI with web-search tool support")
     p.add_argument("--prompt", "-p", required=True, help="Prompt to send to Gemini")
-    p.add_argument("--model", "-m", default=os.getenv("GEMINI_MODEL") or "gemini-2.5-flash-preview-09-2025", help="Model name")
+    p.add_argument(
+        "--model", "-m", default=os.getenv("GEMINI_MODEL") or "gemini-2.5-flash-preview-09-2025", help="Model name"
+    )
     p.add_argument("--key", "-k", default=None, help="Gemini API key (overrides GEMINI_API_KEY/GOOGLE_API_KEY)")
     p.add_argument("--raw-file", default=None, help="Write raw repr(response) to this file")
-    p.add_argument("--no-tool", action="store_true", help="Do not request use of the google_search tool (useful if key lacks tool access)")
+    p.add_argument(
+        "--no-tool",
+        action="store_true",
+        help="Do not request use of the google_search tool (useful if key lacks tool access)",
+    )
     args = p.parse_args()
 
     key = args.key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")

@@ -43,8 +43,7 @@ Thumbs.db
 .dockerignore
 
 # Generated debug files
-.last_gemini_dir_*.txt
-.last_gemini_response_*.txt
+logs/
 
 # Local test artifacts
 /tests/.cache/

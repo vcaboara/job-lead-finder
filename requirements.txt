@@ -1,0 +1,5 @@
+fastapi
+uvicorn
+google-generativeai
+httpx
+beautifulsoup4
