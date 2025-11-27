@@ -1,7 +1,7 @@
 """Comprehensive tests for gemini_cli module."""
 
 import os
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, mock_open, patch
 
 import pytest
 
@@ -233,12 +233,63 @@ class TestGeminiCliOutput:
 
     def test_cli_prints_sdk_name(self, capsys):
         """Test CLI prints which SDK is being used."""
-        # This test verifies the CLI provides feedback about which SDK it's using
-        # In actual usage, output like "Using SDK: google.genai" should appear
-        pass  # Requires full integration test
+        test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key"]
+
+        # Create a mock genai module
+        mock_genai = MagicMock()
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.candidates = None
+        mock_response.text = "test response"
+        mock_client.models.generate_content.return_value = mock_response
+        mock_genai.Client.return_value = mock_client
+        mock_genai.types = MagicMock()
+
+        with patch("sys.argv", test_args):
+            with patch.dict(
+                "sys.modules",
+                {"google": MagicMock(), "google.genai": mock_genai},
+            ):
+                import importlib
+
+                from app import gemini_cli
+
+                importlib.reload(gemini_cli)
+                gemini_cli.main()
+
+        captured = capsys.readouterr()
+        assert "Using SDK: google.genai" in captured.out
 
     def test_cli_writes_raw_file_if_specified(self):
         """Test CLI writes raw response to file when --raw-file is provided."""
-        # This test would require mocking file writes
-        # Verifies that --raw-file argument causes output to be written
-        pass  # Requires integration test with file mocking
+        test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key", "--raw-file", "output.txt"]
+
+        # Create a mock genai module
+        mock_genai = MagicMock()
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.candidates = None
+        mock_response.text = "test response"
+        mock_client.models.generate_content.return_value = mock_response
+        mock_genai.Client.return_value = mock_client
+        mock_genai.types = MagicMock()
+
+        m = mock_open()
+        with patch("sys.argv", test_args):
+            with patch.dict(
+                "sys.modules",
+                {"google": MagicMock(), "google.genai": mock_genai},
+            ):
+                with patch("builtins.open", m):
+                    import importlib
+
+                    from app import gemini_cli
+
+                    importlib.reload(gemini_cli)
+                    gemini_cli.main()
+
+        # Verify that open was called with the correct filename
+        m.assert_called_once_with("output.txt", "w", encoding="utf-8")
+        # Verify write was called
+        handle = m()
+        handle.write.assert_called_once()
