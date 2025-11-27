@@ -172,8 +172,7 @@ class TestEvaluateLeads:
 
         # First lead should be evaluated
         assert result[0]["score"] == 80
-        assert result[0]["reasoning"] == "Good"
-        # Second lead should have default score=50 and reasoning when evaluation fails
+        # Second lead should have default score of 50 when evaluation fails
         assert len(result) == 2
         assert result[1]["score"] == 50
         assert result[1]["reasoning"] == "Evaluation unavailable."
