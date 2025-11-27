@@ -1,6 +1,7 @@
 """Comprehensive tests for gemini_cli module."""
 
 import os
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -93,9 +94,7 @@ class TestGeminiCliMain:
                 mock_google = MagicMock()
                 mock_google.genai = mock_genai
 
-                import sys
-
-                # Patch sys.modules before calling main
+                # Patch sys.modules before calling main so the import uses our mock
                 with patch.dict(
                     sys.modules, {"google": mock_google, "google.genai": mock_genai}
                 ):
