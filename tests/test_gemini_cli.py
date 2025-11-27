@@ -1,7 +1,7 @@
 """Comprehensive tests for gemini_cli module."""
 
 import os
-from unittest.mock import MagicMock, mock_open, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
