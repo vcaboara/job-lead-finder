@@ -42,6 +42,5 @@ repos:
         entry: python -m pytest
         language: system
         pass_filenames: false
-        always_run: true
         args: [tests/, -v, --tb=short]
         stages: [pre-commit]
