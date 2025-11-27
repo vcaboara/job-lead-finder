@@ -1,5 +1,6 @@
 """Comprehensive tests for gemini_cli module."""
 
+import importlib
 import os
 from unittest.mock import MagicMock, patch
 
@@ -49,23 +50,20 @@ class TestGeminiCliMain:
                 mock_client.models.generate_content.return_value = mock_response
                 mock_genai.Client.return_value = mock_client
 
-                # Create a mock google module with genai as an attribute
+                # Create mock google package with genai attribute
                 mock_google = MagicMock()
                 mock_google.genai = mock_genai
 
-                with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
-                    import importlib
-                    import sys
-
-                    # Remove cached module if present
-                    if "app.gemini_cli" in sys.modules:
-                        del sys.modules["app.gemini_cli"]
-
+                with patch.dict(
+                    "sys.modules", {"google": mock_google, "google.genai": mock_genai}
+                ):
                     from app import gemini_cli
 
+                    # Reload to ensure the module picks up the mocked sys.modules
+                    importlib.reload(gemini_cli)
                     gemini_cli.main()
 
-                    # Verify Client was called with the key from environment
+                    # Verify the Client was called with the API key from environment
                     mock_genai.Client.assert_called_once_with(api_key="test-key")
 
     def test_cli_accepts_key_argument(self):
