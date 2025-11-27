@@ -18,7 +18,18 @@ jobs:
 
       - name: Run tests inside container
         run: |
-          docker run --rm job-starter-ci pytest -q
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace job-starter-ci pytest -q --cov=app --cov-report=xml:/workspace/coverage.xml --cov-report=term
+
+      - name: Verify coverage file
+        run: ls -la coverage.xml
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          if-no-files-found: warn
 
       - name: Run health check inside container
         run: |

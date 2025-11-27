@@ -20,7 +20,10 @@ dist/
 # Pytest
 .pytest_cache/
 nosetests.xml
+# Coverage reports
 coverage.xml
+.coverage
+htmlcov/
 *.cover
 .coverage
 
@@ -44,6 +47,7 @@ Thumbs.db
 
 # Generated debug files
 logs/
+.last_gemini_response_*.txt
 
 # Local test artifacts
 /tests/.cache/
