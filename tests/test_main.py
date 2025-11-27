@@ -1,4 +1,4 @@
-from app.main import fetch_jobs, format_resume
+from app.main import format_resume, fetch_jobs
 
 
 def test_format_resume_basic():
