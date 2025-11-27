@@ -29,19 +29,19 @@ class TestValidateLink:
         assert result["valid"] is False
         assert result["error"] == "Invalid URL format"
 
+    @pytest.mark.skipif(not REQUESTS_AVAILABLE, reason="requests library not installed")
     def test_validate_link_adds_https_prefix(self):
         """Test that URLs without scheme get https:// added."""
-        with patch("app.link_validator.REQUESTS_AVAILABLE", True):
-            with patch("app.link_validator.requests") as mock_requests:
-                mock_resp = Mock()
-                mock_resp.status_code = 200
-                mock_resp.url = "https://example.com"
-                mock_requests.head.return_value = mock_resp
+        with patch("app.link_validator.requests") as mock_requests:
+            mock_resp = Mock()
+            mock_resp.status_code = 200
+            mock_resp.url = "https://example.com"
+            mock_requests.head.return_value = mock_resp
 
-                result = validate_link("example.com")
-                # Should have called with https:// prefix
-                mock_requests.head.assert_called_once()
-                assert result["valid"] is True
+            result = validate_link("example.com")
+            # Should have called with https:// prefix
+            mock_requests.head.assert_called_once()
+            assert result["valid"] is True
 
     @pytest.mark.skipif(not REQUESTS_AVAILABLE, reason="requests library not installed")
     def test_validate_link_success_200(self):
