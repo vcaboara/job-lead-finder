@@ -1,8 +1,9 @@
 """Tests for the gemini_provider fallback logic."""
 
 import os
+from unittest.mock import Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
 
 from app import gemini_provider
 
@@ -32,7 +33,10 @@ def test_gemini_provider_fallback_when_tool_returns_zero(gemini_sdk_or_skip):
 
         # Second call (fallback without tools) returns jobs
         mock_resp2 = Mock()
-        mock_resp2.text = '[{"title": "Test Job", "company": "TestCo", "location": "Remote", "summary": "A test", "link": "http://test.com"}]'
+        mock_resp2.text = (
+            '[{"title": "Test Job", "company": "TestCo", "location": "Remote", '
+            '"summary": "A test", "link": "http://test.com"}]'
+        )
 
         # Setup generate_content to return different responses
         mock_client_instance.models.generate_content.side_effect = [mock_resp1, mock_resp2]
@@ -57,7 +61,10 @@ def test_gemini_provider_no_fallback_when_tool_succeeds(gemini_sdk_or_skip):
 
         # First call (with tools) returns jobs
         mock_resp = Mock()
-        mock_resp.text = '[{"title": "Tool Job", "company": "ToolCo", "location": "Remote", "summary": "From tool", "link": "http://tool.com"}]'
+        mock_resp.text = (
+            '[{"title": "Tool Job", "company": "ToolCo", "location": "Remote", '
+            '"summary": "From tool", "link": "http://tool.com"}]'
+        )
         mock_client_instance.models.generate_content.return_value = mock_resp
 
         prov = gemini_provider.GeminiProvider(api_key=key)
