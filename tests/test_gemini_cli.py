@@ -1,6 +1,7 @@
 """Comprehensive tests for gemini_cli module."""
 
 import os
+import sys
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -55,22 +56,39 @@ class TestGeminiCliMain:
                     assert os.getenv("GEMINI_API_KEY") == "test-key"
 
     def test_cli_accepts_key_argument(self):
-        """Test CLI accepts --key argument."""
+        """Test CLI accepts --key argument and passes it to Gemini client."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "provided-key"]
 
-        with patch("sys.argv", test_args):
-            # Mock the genai module
-            mock_genai = MagicMock()
-            mock_client = MagicMock()
-            mock_response = MagicMock()
-            mock_response.text = "test response"
-            mock_client.models.generate_content.return_value = mock_response
-            mock_genai.Client.return_value = mock_client
+        # Clear any cached google/genai modules
+        modules_to_remove = [k for k in sys.modules.keys() if "google" in k or "genai" in k]
+        for mod in modules_to_remove:
+            del sys.modules[mod]
 
-            with patch.dict("sys.modules", {"google.genai": mock_genai, "google": MagicMock()}):
-                # Argument parsing is tested by argparse
-                # In real execution it would use this key
-                pass
+        # Also remove app.gemini_cli so it reimports google.genai from our mock
+        if "app.gemini_cli" in sys.modules:
+            del sys.modules["app.gemini_cli"]
+
+        # Mock the genai module
+        mock_genai = MagicMock()
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.candidates = None
+        mock_response.text = "test response"
+        mock_client.models.generate_content.return_value = mock_response
+        mock_genai.Client.return_value = mock_client
+        mock_genai.types = None  # Disable tool configuration
+
+        mock_google = MagicMock()
+        mock_google.genai = mock_genai
+
+        with patch("sys.argv", test_args):
+            with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
+                from app import gemini_cli
+
+                gemini_cli.main()
+
+                # Verify the Client was initialized with the provided key
+                mock_genai.Client.assert_called_once_with(api_key="provided-key")
 
     def test_cli_uses_google_api_key_fallback(self):
         """Test CLI falls back to GOOGLE_API_KEY if GEMINI_API_KEY not set."""
@@ -148,16 +166,21 @@ class TestGeminiCliMain:
         """Test CLI exits gracefully if no SDK is installed."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key"]
 
+        # Clear any cached google/genai modules
+        modules_to_remove = [k for k in sys.modules.keys() if "google" in k or "genai" in k]
+        for mod in modules_to_remove:
+            del sys.modules[mod]
+
+        # Also remove app.gemini_cli so it reimports google.genai from our mock
+        if "app.gemini_cli" in sys.modules:
+            del sys.modules["app.gemini_cli"]
+
         with patch("sys.argv", test_args):
             # Mock both SDK imports to fail
             with patch.dict("sys.modules", {"google.genai": None, "google.generativeai": None}):
                 with pytest.raises(SystemExit):
-                    # Force reimport to trigger SDK check
-                    import importlib
-
                     from app import gemini_cli
 
-                    importlib.reload(gemini_cli)
                     gemini_cli.main()
 
 
