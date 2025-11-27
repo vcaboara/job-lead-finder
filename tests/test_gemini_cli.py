@@ -1,5 +1,6 @@
 """Comprehensive tests for gemini_cli module."""
 
+import importlib
 import os
 from unittest.mock import MagicMock, patch
 
@@ -37,8 +38,6 @@ class TestGeminiCliMain:
 
     def test_cli_uses_key_from_env(self):
         """Test CLI uses GEMINI_API_KEY from environment."""
-        import importlib
-
         test_args = ["gemini_cli.py", "--prompt", "test prompt"]
 
         with patch("sys.argv", test_args):
@@ -60,6 +59,7 @@ class TestGeminiCliMain:
                 ):
                     from app import gemini_cli
 
+                    # Reload to ensure the module picks up the mocked sys.modules
                     importlib.reload(gemini_cli)
                     gemini_cli.main()
 
