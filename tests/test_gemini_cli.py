@@ -233,13 +233,13 @@ class TestGeminiCliSDKSelection:
             "google.generativeai": MagicMock(),
         }):
             from app import gemini_cli
-            with patch("google.generativeai.GenerativeModel") as mock_model:
-                mock_model.return_value.generate_content.return_value.text = "response"
+            with patch("google.generativeai.chat.create") as mock_create:
+                mock_create.return_value.text = "response"
                 test_args = ["gemini_cli.py", "--prompt", "test", "--key", "test-key"]
                 with patch("sys.argv", test_args):
                     gemini_cli.main()
-                # Check that google.generativeai was used
-                assert mock_model.called
+                # Check that google.generativeai.chat.create was used
+                assert mock_create.called
                 out = capsys.readouterr().out
                 assert "google.generativeai" in out or "generativeai" in out
 class TestGeminiCliOutput:
