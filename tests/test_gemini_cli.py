@@ -205,29 +205,43 @@ class TestGeminiCliArguments:
 class TestGeminiCliSDKSelection:
     """Tests for SDK selection logic in gemini_cli."""
 
-    def test_prefers_legacy_genai_package(self):
-        """Test that legacy google.genai is preferred over google.generativeai."""
-        # This is more of a documentation test since the actual logic is in the module
-        # We can verify the import order in the code
-        import inspect
+    def test_prefers_legacy_genai_package_at_runtime(self, capsys):
+        """Test that legacy google.genai is preferred over google.generativeai at runtime."""
+        # Patch sys.modules to make google.genai available and google.generativeai unavailable
+        with patch.dict("sys.modules", {
+            "google.genai": MagicMock(),
+            "google.generativeai": MagicMock(),
+        }):
+            # Patch the genai SDK to have a mock method we can check
+            from app import gemini_cli
+            # Patch the genai SDK's method used in main
+            with patch("google.genai.GenerativeModel") as mock_model:
+                mock_model.return_value.generate_content.return_value.text = "response"
+                test_args = ["gemini_cli.py", "--prompt", "test", "--key", "test-key"]
+                with patch("sys.argv", test_args):
+                    gemini_cli.main()
+                # Check that google.genai was used
+                assert mock_model.called
+                out = capsys.readouterr().out
+                assert "google.genai" in out or "genai" in out
 
-        from app import gemini_cli
-
-        source = inspect.getsource(gemini_cli.main)
-        # Check that google.genai is tried first
-        assert "from google import genai" in source or "google.genai" in source
-
-    def test_falls_back_to_generativeai(self):
-        """Test fallback to google.generativeai if legacy not available."""
-        import inspect
-
-        from app import gemini_cli
-
-        source = inspect.getsource(gemini_cli.main)
-        # Check that fallback exists
-        assert "google.generativeai" in source
-
-
+    def test_falls_back_to_generativeai_at_runtime(self, capsys):
+        """Test fallback to google.generativeai if legacy not available at runtime."""
+        # Patch sys.modules to make google.genai unavailable and google.generativeai available
+        with patch.dict("sys.modules", {
+            "google.genai": None,
+            "google.generativeai": MagicMock(),
+        }):
+            from app import gemini_cli
+            with patch("google.generativeai.GenerativeModel") as mock_model:
+                mock_model.return_value.generate_content.return_value.text = "response"
+                test_args = ["gemini_cli.py", "--prompt", "test", "--key", "test-key"]
+                with patch("sys.argv", test_args):
+                    gemini_cli.main()
+                # Check that google.generativeai was used
+                assert mock_model.called
+                out = capsys.readouterr().out
+                assert "google.generativeai" in out or "generativeai" in out
 class TestGeminiCliOutput:
     """Tests for CLI output handling."""
 
