@@ -215,13 +215,13 @@ class TestGeminiCliSDKSelection:
             # Patch the genai SDK to have a mock method we can check
             from app import gemini_cli
             # Patch the genai SDK's method used in main
-            with patch("google.genai.GenerativeModel") as mock_model:
-                mock_model.return_value.generate_content.return_value.text = "response"
+            with patch("google.genai.Client") as mock_client:
+                mock_client.return_value.models.generate_content.return_value.text = "response"
                 test_args = ["gemini_cli.py", "--prompt", "test", "--key", "test-key"]
                 with patch("sys.argv", test_args):
                     gemini_cli.main()
                 # Check that google.genai was used
-                assert mock_model.called
+                assert mock_client.called
                 out = capsys.readouterr().out
                 assert "google.genai" in out or "genai" in out
 
