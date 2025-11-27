@@ -242,17 +242,63 @@ class TestGeminiCliSDKSelection:
                 assert mock_model.called
                 out = capsys.readouterr().out
                 assert "google.generativeai" in out or "generativeai" in out
+
+
 class TestGeminiCliOutput:
     """Tests for CLI output handling."""
 
     def test_cli_prints_sdk_name(self, capsys):
         """Test CLI prints which SDK is being used."""
-        # This test verifies the CLI provides feedback about which SDK it's using
-        # In actual usage, output like "Using SDK: google.genai" should appear
-        pass  # Requires full integration test
+        import importlib
 
-    def test_cli_writes_raw_file_if_specified(self):
+        # Mock the google.genai module to simulate SDK availability
+        mock_genai = MagicMock()
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "test response"
+        mock_response.candidates = []
+        mock_client.models.generate_content.return_value = mock_response
+        mock_genai.Client.return_value = mock_client
+
+        test_args = ["gemini_cli.py", "--prompt", "test", "--key", "test-key"]
+
+        with patch("sys.argv", test_args):
+            with patch.dict("sys.modules", {"google.genai": mock_genai, "google": MagicMock()}):
+                from app import gemini_cli
+
+                importlib.reload(gemini_cli)
+                gemini_cli.main()
+
+        captured = capsys.readouterr()
+        # Verify the SDK name is printed in the output
+        assert "Using SDK:" in captured.out
+
+    def test_cli_writes_raw_file_if_specified(self, tmp_path):
         """Test CLI writes raw response to file when --raw-file is provided."""
-        # This test would require mocking file writes
-        # Verifies that --raw-file argument causes output to be written
-        pass  # Requires integration test with file mocking
+        import importlib
+
+        # Create a temporary file path for raw output
+        raw_file = tmp_path / "raw_output.txt"
+
+        # Mock the google.genai module
+        mock_genai = MagicMock()
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "test response"
+        mock_response.candidates = []
+        mock_client.models.generate_content.return_value = mock_response
+        mock_genai.Client.return_value = mock_client
+
+        test_args = ["gemini_cli.py", "--prompt", "test", "--key", "test-key", "--raw-file", str(raw_file)]
+
+        with patch("sys.argv", test_args):
+            with patch.dict("sys.modules", {"google.genai": mock_genai, "google": MagicMock()}):
+                from app import gemini_cli
+
+                importlib.reload(gemini_cli)
+                gemini_cli.main()
+
+        # Verify the raw file was created and has content
+        assert raw_file.exists()
+        content = raw_file.read_text()
+        assert len(content) > 0
