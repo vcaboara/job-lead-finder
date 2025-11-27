@@ -48,7 +48,7 @@ class ConfigResponse(BaseModel):
 def index():
     html_path = Path(__file__).parent / "templates" / "index.html"
     try:
-        return html_path.read_text(encoding="utf-8")
+        return HTMLResponse(html_path.read_text(encoding="utf-8"))
     except Exception:
         raise HTTPException(status_code=500, detail="UI template not found")
 

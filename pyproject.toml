@@ -37,3 +37,9 @@ testpaths = ["tests"]
 
 [tool.flake8]
 max-line-length = 130
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+"app" = ["templates/*.html"]
