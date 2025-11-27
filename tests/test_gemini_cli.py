@@ -64,13 +64,27 @@ class TestGeminiCliMain:
             mock_client = MagicMock()
             mock_response = MagicMock()
             mock_response.text = "test response"
+            mock_response.candidates = None
             mock_client.models.generate_content.return_value = mock_response
             mock_genai.Client.return_value = mock_client
 
-            with patch.dict("sys.modules", {"google.genai": mock_genai, "google": MagicMock()}):
-                # Argument parsing is tested by argparse
-                # In real execution it would use this key
-                pass
+            # Create a mock google module with genai attribute
+            mock_google = MagicMock()
+            mock_google.genai = mock_genai
+
+            with patch.dict(
+                "sys.modules", {"google": mock_google, "google.genai": mock_genai}
+            ):
+                import importlib
+
+                from app import gemini_cli
+
+                importlib.reload(gemini_cli)
+                # Call main() - should not raise an exception
+                gemini_cli.main()
+
+                # Verify that Client was called with the provided key
+                mock_genai.Client.assert_called_once_with(api_key="provided-key")
 
     def test_cli_uses_google_api_key_fallback(self):
         """Test CLI falls back to GOOGLE_API_KEY if GEMINI_API_KEY not set."""
