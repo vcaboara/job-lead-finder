@@ -286,7 +286,7 @@
                 <form id="searchForm">
                     <div class="form-group">
                         <label for="query">Query *</label>
-                        <input type="text" id="query" name="query" placeholder="e.g., remote python developer" required>
+                        <input type="text" id="query" name="query" placeholder="e.g., remote python developer" value="python remote automation" required>
                     </div>
                     <div class="form-group">
                         <label for="resume">Resume (optional)</label>
@@ -303,6 +303,34 @@
                     </div>
                     <button type="submit">Search</button>
                 </form>
+                <hr style="margin:28px 0 18px; border:none; border-top:1px solid #ddd;" />
+                <div id="configSection">
+                    <h2 style="font-size:1.3em; margin-bottom:12px;">Configuration</h2>
+                    <div class="form-group">
+                        <label for="blockedEntity">Add Blocked Entity</label>
+                        <input type="text" id="blockedEntity" placeholder="domain.com or Employer Name" />
+                    </div>
+                    <div class="form-group">
+                        <label for="blockedType">Type</label>
+                        <select id="blockedType" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="site">Site</option>
+                            <option value="employer">Employer</option>
+                        </select>
+                    </div>
+                    <button id="addBlockedBtn" type="button" style="margin-bottom:18px;">Add to Block List</button>
+                    <div style="margin-bottom:20px;">
+                        <h3 style="margin-bottom:10px; font-size:1.05em;">Blocked Entities</h3>
+                        <ul id="blockedList" style="list-style:none; padding:0; display:flex; flex-direction:column; gap:8px;"></ul>
+                    </div>
+                    <div>
+                        <h3 style="margin-bottom:10px; font-size:1.05em;">Validate Link</h3>
+                        <div class="form-group" style="margin-bottom:10px;">
+                            <input type="text" id="validateUrl" placeholder="https://example.com/job" />
+                        </div>
+                        <button id="validateLinkBtn" type="button" style="width:100%;">Validate Link</button>
+                        <div id="validateResult" style="margin-top:10px; font-size:0.85em; color:#333; min-height:18px;"></div>
+                    </div>
+                </div>
             </div>
             <div class="leads-panel">
                 <h2>Results</h2>
@@ -338,11 +366,93 @@
         }
         function showStatus(message, type) { const status = document.getElementById('status'); status.textContent = message; status.className = `status show ${type}`; if (type !== 'loading') { setTimeout(() => status.classList.remove('show'), 5000); } }
 
+        async function performSearch() {
+            const query = document.getElementById('query').value;
+            const resume = document.getElementById('resume').value;
+            const count = parseInt(document.getElementById('count').value);
+            const evaluate = document.getElementById('evaluate').checked;
+            showStatus('Searching...', 'loading');
+            try {
+                const resp = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, resume: resume || null, count, evaluate }) });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Search failed');
+                displayLeads(data.leads);
+                showStatus(`Found ${data.count} job${data.count !== 1 ? 's' : ''}!`, 'success');
+            } catch (e) {
+                showStatus(`Error: ${e.message}`, 'error');
+                console.error(e);
+            }
+        }
+
         document.getElementById('searchForm').addEventListener('submit', async (e) => {
-            e.preventDefault(); const query = document.getElementById('query').value; const resume = document.getElementById('resume').value; const count = parseInt(document.getElementById('count').value); const evaluate = document.getElementById('evaluate').checked; showStatus('Searching...', 'loading');
-            try { const resp = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, resume: resume || null, count, evaluate }) }); const data = await resp.json(); if (!resp.ok) throw new Error(data.detail || 'Search failed'); displayLeads(data.leads); showStatus(`Found ${data.count} job${data.count !== 1 ? 's' : ''}!`, 'success'); } catch (e) { showStatus(`Error: ${e.message}`, 'error'); console.error(e); }
+            e.preventDefault();
+            await performSearch();
         });
+
+        // --- Configuration UI ---
+        async function loadConfig() {
+            try {
+                const resp = await fetch('/api/config');
+                const cfg = await resp.json();
+                renderBlockedEntities(cfg.blocked_entities || []);
+            } catch (e) { console.error('Failed to load config', e); }
+        }
+
+        function renderBlockedEntities(list) {
+            const ul = document.getElementById('blockedList');
+            if (!list.length) { ul.innerHTML = '<li style="color:#777;">None blocked</li>'; return; }
+            ul.innerHTML = list.map(item => `
+                <li style="background:#f4f4f8; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                    <span><strong>${item.type}</strong>: ${item.value}</span>
+                    <button type="button" data-type="${item.type}" data-value="${item.value}" style="width:auto; padding:6px 10px; font-size:0.75em; background:#d32f2f;">Remove</button>
+                </li>
+            `).join('');
+            [...ul.querySelectorAll('button')].forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const type = btn.getAttribute('data-type');
+                    const value = btn.getAttribute('data-value');
+                    try {
+                        const resp = await fetch(`/api/config/block-entity/${encodeURIComponent(type)}/${encodeURIComponent(value)}`, { method: 'DELETE' });
+                        const cfg = await resp.json();
+                        renderBlockedEntities(cfg.blocked_entities || []);
+                        showStatus(`Removed ${value} from block list`, 'success');
+                    } catch (e) { showStatus('Failed to remove entity', 'error'); }
+                });
+            });
+        }
+
+        document.getElementById('addBlockedBtn').addEventListener('click', async () => {
+            const entity = document.getElementById('blockedEntity').value.trim();
+            const type = document.getElementById('blockedType').value;
+            if (!entity) { showStatus('Enter an entity to block', 'error'); return; }
+            showStatus('Adding to block list...', 'loading');
+            try {
+                const resp = await fetch('/api/config/block-entity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entity, entity_type: type }) });
+                const cfg = await resp.json();
+                if (!resp.ok) { throw new Error(cfg.detail?.error || cfg.detail || 'Failed'); }
+                renderBlockedEntities(cfg.blocked_entities || []);
+                document.getElementById('blockedEntity').value = '';
+                showStatus(`Blocked ${entity}`, 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        document.getElementById('validateLinkBtn').addEventListener('click', async () => {
+            const url = document.getElementById('validateUrl').value.trim();
+            const resultBox = document.getElementById('validateResult');
+            if (!url) { resultBox.textContent = 'Enter a URL.'; return; }
+            resultBox.textContent = 'Validating...';
+            try {
+                const resp = await fetch('/api/validate-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+                const data = await resp.json();
+                if (!resp.ok) { throw new Error(data.error || data.detail || 'Validation failed'); }
+                resultBox.textContent = data.valid ? `OK (status ${data.status_code || 'n/a'})` : `Invalid or unreachable (${data.error || 'unknown'})`;
+            } catch (e) { resultBox.textContent = `Error: ${e.message}`; }
+        });
+
+        loadConfig();
         loadLeads();
+        // Auto-search on page load
+        setTimeout(() => performSearch(), 500);
     </script>
 </body>
 

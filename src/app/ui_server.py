@@ -13,8 +13,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
-from .config_store import load_config, save_config, scan_instructions
+from .config_store import load_config, save_config, scan_entity, scan_instructions, validate_url
 from .job_finder import generate_job_leads, save_to_file
+from .link_validator import validate_link
 
 app = FastAPI(title="Job Lead Finder", version="0.1.1")
 
@@ -38,10 +39,24 @@ class SystemInstructionsRequest(BaseModel):
     instructions: str
 
 
+class BlockedEntity(BaseModel):
+    type: str
+    value: str
+
+
 class ConfigResponse(BaseModel):
     system_instructions: str
-    blocked_entities: list[str]
+    blocked_entities: list[BlockedEntity]
     region: str
+
+
+class BlockedEntityRequest(BaseModel):
+    entity: str
+    entity_type: str  # 'site' or 'employer'
+
+
+class ValidateLinkRequest(BaseModel):
+    url: str
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -90,7 +105,7 @@ def search(req: SearchRequest):
     if not api_key:
         raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
     try:
-        leads = generate_job_leads(
+        raw_leads = generate_job_leads(
             query=req.query,
             resume_text=req.resume or "No resume provided.",
             count=req.count,
@@ -98,8 +113,55 @@ def search(req: SearchRequest):
             evaluate=req.evaluate,
             verbose=False,
         )
-        save_to_file(leads, str(LEADS_FILE))
-        return JSONResponse({"status": "success", "query": req.query, "count": len(leads), "leads": leads})
+        # Load config for blocked entities
+        cfg = load_config()
+        blocked = cfg.get("blocked_entities", [])
+        blocked_sites = {e.get("value", "").lower() for e in blocked if e.get("type") == "site"}
+        blocked_employers = {e.get("value", "").lower() for e in blocked if e.get("type") == "employer"}
+
+        def is_blocked(lead_link: str, company: str) -> bool:
+            from urllib.parse import urlparse
+
+            # Company check
+            if company and company.lower() in blocked_employers:
+                return True
+            # Site/domain check
+            if not lead_link:
+                return False
+            try:
+                parsed = urlparse(lead_link)
+                host = parsed.netloc.lower()
+                host = host[4:] if host.startswith("www.") else host
+                # Direct match or suffix match (e.g., sub.domain.com endswith domain.com)
+                for site in blocked_sites:
+                    if host == site or host.endswith("." + site):
+                        return True
+            except Exception:
+                return False
+            return False
+
+        processed_leads = []
+        for lead in raw_leads:
+            link = lead.get("link", "")
+            company = lead.get("company", "")
+            # Block filtering only (do not drop for link issues)
+            if is_blocked(link, company):
+                continue
+            link_info = (
+                validate_link(link, verbose=False)
+                if link
+                else {"valid": False, "status_code": None, "error": "no_link"}
+            )
+            lead["link_status_code"] = link_info.get("status_code")
+            lead["link_valid"] = link_info.get("valid")
+            lead["link_warning"] = link_info.get("warning")
+            lead["link_error"] = link_info.get("error")
+            processed_leads.append(lead)
+
+        save_to_file(processed_leads, str(LEADS_FILE))
+        return JSONResponse(
+            {"status": "success", "query": req.query, "count": len(processed_leads), "leads": processed_leads}
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -114,3 +176,74 @@ def get_leads():
         return JSONResponse({"leads": leads})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error reading leads: {e}")
+
+
+@app.post("/api/config/block-entity", response_model=ConfigResponse)
+def add_blocked_entity(req: BlockedEntityRequest):
+    """Add a site or employer to the block list."""
+    entity = req.entity.strip()
+    entity_type = req.entity_type.lower()
+
+    if entity_type not in ("site", "employer"):
+        raise HTTPException(status_code=400, detail="entity_type must be 'site' or 'employer'")
+
+    # Validate site domain format
+    if entity_type == "site" and not validate_url(entity):
+        raise HTTPException(status_code=400, detail="Invalid site domain format")
+
+    # Scan for injection
+    findings = scan_entity(entity)
+    if findings:
+        raise HTTPException(status_code=400, detail={"error": "Rejected by scanner", "findings": findings})
+
+    cfg = load_config()
+    blocked = cfg.get("blocked_entities", [])
+
+    # Store as dict with type
+    entry = {"type": entity_type, "value": entity}
+    if entry not in blocked:
+        blocked.append(entry)
+        cfg["blocked_entities"] = blocked
+        save_config(cfg)
+
+    return ConfigResponse(
+        system_instructions=cfg.get("system_instructions", ""),
+        blocked_entities=cfg.get("blocked_entities", []),
+        region=cfg.get("region", ""),
+    )
+
+
+@app.delete("/api/config/block-entity/{entity_type}/{entity}", response_model=ConfigResponse)
+def remove_blocked_entity(entity_type: str, entity: str):
+    """Remove a site or employer from the block list."""
+    entity = entity.strip()
+    entity_type = entity_type.lower()
+
+    cfg = load_config()
+    blocked = cfg.get("blocked_entities", [])
+    entry = {"type": entity_type, "value": entity}
+
+    if entry in blocked:
+        blocked.remove(entry)
+        cfg["blocked_entities"] = blocked
+        save_config(cfg)
+
+    return ConfigResponse(
+        system_instructions=cfg.get("system_instructions", ""),
+        blocked_entities=cfg.get("blocked_entities", []),
+        region=cfg.get("region", ""),
+    )
+
+
+@app.post("/api/validate-link")
+def check_link(req: ValidateLinkRequest):
+    """Validate a link is accessible."""
+    result = validate_link(req.url, verbose=False)
+    return JSONResponse(
+        {
+            "url": result.get("url", req.url),
+            "valid": result.get("valid", False),
+            "status_code": result.get("status_code"),
+            "error": result.get("error"),
+        }
+    )

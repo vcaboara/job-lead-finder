@@ -5,8 +5,7 @@ following redirects and identifying broken links (404s, etc.).
 """
 
 import time
-from typing import Dict, Any, Optional
-from urllib.parse import urlparse
+from typing import Any, Dict, Optional
 
 try:
     import requests
@@ -65,16 +64,16 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
             status_code = resp.status_code
             final_url = resp.url
 
-        # Consider 2xx/3xx as valid; reject 4xx/5xx
-        valid = 200 <= status_code < 400
+        # Consider 2xx/3xx as valid; treat 403 as soft-valid (site may block automation but link exists)
+        valid = 200 <= status_code < 400 or status_code == 403
 
         # Map status codes to soft warnings (non-breaking)
         warning: Optional[str] = None
-        if not valid:
+        if status_code == 403:
+            warning = "access forbidden (treated as present)"
+        elif not valid:
             if status_code == 401:
                 warning = "requires authentication"
-            elif status_code == 403:
-                warning = "blocked by site (403)"
             elif status_code == 404:
                 warning = "not found (404)"
             elif status_code and 500 <= status_code < 600:
@@ -153,7 +152,7 @@ def validate_leads(
         time.sleep(0.2)
 
     if verbose:
-        valid_count = sum(1 for l in validated if l.get("link_valid"))
+        valid_count = sum(1 for lead in validated if lead.get("link_valid"))
         print(f"link_validator: {valid_count}/{len(validated)} links valid")
 
     return validated
