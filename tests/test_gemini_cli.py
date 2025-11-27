@@ -81,137 +81,85 @@ class TestGeminiCliMain:
                 # Should use GOOGLE_API_KEY as fallback
                 assert os.getenv("GOOGLE_API_KEY") == "fallback-key"
 
-    def test_cli_model_default(self, capsys):
+    @pytest.fixture
+    def mock_gemini_sdk(self):
+        """Create a mock Gemini SDK with client and response."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.candidates = []
+        mock_response.text = "test response"
+        mock_client.models.generate_content.return_value = mock_response
+
+        mock_genai = MagicMock()
+        mock_genai.Client.return_value = mock_client
+        mock_genai.types = None  # Avoid tool config by default
+
+        # Create a mock google module with genai attribute
+        mock_google = MagicMock()
+        mock_google.genai = mock_genai
+
+        return {"client": mock_client, "genai": mock_genai, "google": mock_google}
+
+    def _run_cli_with_mock(self, test_args, mock_sdk):
+        """Helper to run the CLI with mocked SDK."""
+        import importlib
+
+        with patch("sys.argv", test_args):
+            with patch.dict("sys.modules", {"google": mock_sdk["google"], "google.genai": mock_sdk["genai"]}):
+                from app import gemini_cli
+
+                importlib.reload(gemini_cli)
+                gemini_cli.main()
+                return mock_sdk["client"]
+
+    def test_cli_model_default(self, capsys, mock_gemini_sdk):
         """Test CLI uses default model when calling generate_content."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key"]
 
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.candidates = []
-        mock_response.text = "test response"
-        mock_client.models.generate_content.return_value = mock_response
+        mock_client = self._run_cli_with_mock(test_args, mock_gemini_sdk)
 
-        mock_genai = MagicMock()
-        mock_genai.Client.return_value = mock_client
-        mock_genai.types = None  # Avoid tool config
+        # Verify generate_content was called with a model containing "gemini"
+        mock_client.models.generate_content.assert_called_once()
+        call_kwargs = mock_client.models.generate_content.call_args[1]
+        assert "gemini" in call_kwargs["model"].lower()
 
-        # Create a mock google module with genai attribute
-        mock_google = MagicMock()
-        mock_google.genai = mock_genai
-
-        with patch("sys.argv", test_args):
-            with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
-                import importlib
-
-                from app import gemini_cli
-
-                importlib.reload(gemini_cli)
-                gemini_cli.main()
-
-                # Verify generate_content was called with a model containing "gemini"
-                mock_client.models.generate_content.assert_called_once()
-                call_kwargs = mock_client.models.generate_content.call_args[1]
-                assert "gemini" in call_kwargs["model"].lower()
-
-    def test_cli_custom_model(self, capsys):
+    def test_cli_custom_model(self, capsys, mock_gemini_sdk):
         """Test CLI uses custom model when provided via --model argument."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--model", "custom-model", "--key", "test-key"]
 
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.candidates = []
-        mock_response.text = "test response"
-        mock_client.models.generate_content.return_value = mock_response
+        mock_client = self._run_cli_with_mock(test_args, mock_gemini_sdk)
 
-        mock_genai = MagicMock()
-        mock_genai.Client.return_value = mock_client
-        mock_genai.types = None  # Avoid tool config
+        # Verify generate_content was called with the custom model
+        mock_client.models.generate_content.assert_called_once()
+        call_kwargs = mock_client.models.generate_content.call_args[1]
+        assert call_kwargs["model"] == "custom-model"
 
-        # Create a mock google module with genai attribute
-        mock_google = MagicMock()
-        mock_google.genai = mock_genai
-
-        with patch("sys.argv", test_args):
-            with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
-                import importlib
-
-                from app import gemini_cli
-
-                importlib.reload(gemini_cli)
-                gemini_cli.main()
-
-                # Verify generate_content was called with the custom model
-                mock_client.models.generate_content.assert_called_once()
-                call_kwargs = mock_client.models.generate_content.call_args[1]
-                assert call_kwargs["model"] == "custom-model"
-
-    def test_cli_no_tool_flag(self, capsys):
+    def test_cli_no_tool_flag(self, capsys, mock_gemini_sdk):
         """Test CLI does not configure tools when --no-tool flag is used."""
         test_args = ["gemini_cli.py", "--prompt", "test prompt", "--no-tool", "--key", "test-key"]
 
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.candidates = []
-        mock_response.text = "test response"
-        mock_client.models.generate_content.return_value = mock_response
-
-        mock_genai = MagicMock()
-        mock_genai.Client.return_value = mock_client
         # Set up types module that would normally configure tools
-        mock_types = MagicMock()
-        mock_genai.types = mock_types
+        mock_gemini_sdk["genai"].types = MagicMock()
 
-        # Create a mock google module with genai attribute
-        mock_google = MagicMock()
-        mock_google.genai = mock_genai
+        mock_client = self._run_cli_with_mock(test_args, mock_gemini_sdk)
 
-        with patch("sys.argv", test_args):
-            with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
-                import importlib
+        # Verify generate_content was called without config (no tools)
+        mock_client.models.generate_content.assert_called_once()
+        call_kwargs = mock_client.models.generate_content.call_args[1]
+        # When --no-tool is set, config should not be passed
+        assert "config" not in call_kwargs
 
-                from app import gemini_cli
-
-                importlib.reload(gemini_cli)
-                gemini_cli.main()
-
-                # Verify generate_content was called without config (no tools)
-                mock_client.models.generate_content.assert_called_once()
-                call_kwargs = mock_client.models.generate_content.call_args[1]
-                # When --no-tool is set, config should not be passed
-                assert "config" not in call_kwargs
-
-    def test_cli_raw_file_argument(self, capsys, tmp_path):
+    def test_cli_raw_file_argument(self, capsys, tmp_path, mock_gemini_sdk):
         """Test CLI writes raw response to file when --raw-file is provided."""
         output_file = tmp_path / "output.txt"
         test_args = ["gemini_cli.py", "--prompt", "test", "--raw-file", str(output_file), "--key", "test-key"]
 
-        mock_client = MagicMock()
-        mock_response = MagicMock()
-        mock_response.candidates = []
-        mock_response.text = "test response"
-        mock_client.models.generate_content.return_value = mock_response
+        self._run_cli_with_mock(test_args, mock_gemini_sdk)
 
-        mock_genai = MagicMock()
-        mock_genai.Client.return_value = mock_client
-        mock_genai.types = None  # Avoid tool config
-
-        # Create a mock google module with genai attribute
-        mock_google = MagicMock()
-        mock_google.genai = mock_genai
-
-        with patch("sys.argv", test_args):
-            with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
-                import importlib
-
-                from app import gemini_cli
-
-                importlib.reload(gemini_cli)
-                gemini_cli.main()
-
-                # Verify raw file was written
-                assert output_file.exists()
-                content = output_file.read_text()
-                assert len(content) > 0  # File should have content
+        # Verify raw file was written
+        assert output_file.exists()
+        content = output_file.read_text()
+        assert len(content) > 0  # File should have content
 
     def test_cli_exits_if_no_sdk_installed(self):
         """Test CLI exits gracefully if no SDK is installed."""
