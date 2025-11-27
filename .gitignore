@@ -46,7 +46,8 @@ Thumbs.db
 .dockerignore
 
 # Generated debug files
-logs/
+logs/*.txt
+!logs/.gitkeep
 .last_gemini_response_*.txt
 
 # Local test artifacts
