@@ -242,17 +242,3 @@ class TestGeminiCliSDKSelection:
                 assert mock_create.called
                 out = capsys.readouterr().out
                 assert "google.generativeai" in out or "generativeai" in out
-class TestGeminiCliOutput:
-    """Tests for CLI output handling."""
-
-    def test_cli_prints_sdk_name(self, capsys):
-        """Test CLI prints which SDK is being used."""
-        # This test verifies the CLI provides feedback about which SDK it's using
-        # In actual usage, output like "Using SDK: google.genai" should appear
-        pass  # Requires full integration test
-
-    def test_cli_writes_raw_file_if_specified(self):
-        """Test CLI writes raw response to file when --raw-file is provided."""
-        # This test would require mocking file writes
-        # Verifies that --raw-file argument causes output to be written
-        pass  # Requires integration test with file mocking
