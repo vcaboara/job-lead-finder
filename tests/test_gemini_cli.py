@@ -313,34 +313,39 @@ class TestGeminiCliOutput:
         """Test CLI writes raw response to file when --raw-file is provided."""
         import tempfile
 
-        test_args = ["gemini_cli.py", "--prompt", "test", "--raw-file", "/tmp/test_raw_output.txt"]
+        # Create a temporary file that will be automatically cleaned up
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as tmp_file:
+            tmp_path = tmp_file.name
 
-        with patch("sys.argv", test_args):
-            with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
-                # Mock the genai module
-                mock_genai = MagicMock()
-                mock_client = MagicMock()
-                mock_response = MagicMock()
-                mock_response.text = "test response"
-                mock_response.__repr__ = lambda self: "MockResponse(text='test response')"
-                mock_client.models.generate_content.return_value = mock_response
-                mock_genai.Client.return_value = mock_client
+        try:
+            test_args = ["gemini_cli.py", "--prompt", "test", "--raw-file", tmp_path]
 
-                with patch.dict("sys.modules", {"google.genai": mock_genai, "google": MagicMock()}):
-                    import importlib
+            with patch("sys.argv", test_args):
+                with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
+                    # Mock the genai module
+                    mock_genai = MagicMock()
+                    mock_client = MagicMock()
+                    mock_response = MagicMock()
+                    mock_response.text = "test response"
+                    mock_response.__repr__ = lambda self: "MockResponse(text='test response')"
+                    mock_client.models.generate_content.return_value = mock_response
+                    mock_genai.Client.return_value = mock_client
 
-                    from app import gemini_cli
+                    with patch.dict("sys.modules", {"google.genai": mock_genai, "google": MagicMock()}):
+                        import importlib
 
-                    importlib.reload(gemini_cli)
-                    gemini_cli.main()
+                        from app import gemini_cli
 
-                    # Verify the raw file was written
-                    import os as os_module
+                        importlib.reload(gemini_cli)
+                        gemini_cli.main()
 
-                    assert os_module.path.exists("/tmp/test_raw_output.txt")
-                    with open("/tmp/test_raw_output.txt", "r") as f:
-                        content = f.read()
-                    # Clean up
-                    os_module.remove("/tmp/test_raw_output.txt")
-                    # Verify content is the repr of the response
-                    assert "MockResponse" in content or len(content) > 0
+                        # Verify the raw file was written
+                        assert os.path.exists(tmp_path)
+                        with open(tmp_path, "r") as f:
+                            content = f.read()
+                        # Verify content is the repr of the response
+                        assert "MockResponse" in content or len(content) > 0
+        finally:
+            # Clean up the temporary file
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
