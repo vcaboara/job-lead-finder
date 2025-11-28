@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # LinkedIn MCP Server
+  linkedin-mcp:
+    image: modelcontextprotocol/linkedin-mcp:latest
+    container_name: linkedin-mcp
+    ports:
+      - "3000:3000"
+    environment:
+      - LINKEDIN_USERNAME=${LINKEDIN_USERNAME}
+      - LINKEDIN_PASSWORD=${LINKEDIN_PASSWORD}
+      # Or use session cookie authentication
+      - LINKEDIN_SESSION_COOKIE=${LINKEDIN_SESSION_COOKIE:-}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  # Indeed MCP Server
+  indeed-mcp:
+    image: modelcontextprotocol/indeed-mcp:latest
+    container_name: indeed-mcp
+    ports:
+      - "3001:3000"
+    environment:
+      - INDEED_API_KEY=${INDEED_API_KEY:-}
+      # Indeed may not require auth for basic searches
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+  # GitHub Jobs MCP Server
+  github-jobs-mcp:
+    image: modelcontextprotocol/github-mcp:latest
+    container_name: github-jobs-mcp
+    ports:
+      - "3002:3000"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN:-}
+      # GitHub token for higher rate limits (optional)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge

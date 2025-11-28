@@ -1,9 +1,10 @@
 # Job Lead Finder
 
-AI-powered job search tool with Gemini integration, link validation, and FastAPI dashboard.
+AI-powered job search tool with MCP integration, Gemini fallback, link validation, and FastAPI dashboard.
 
 ## Features
 
+- **Multiple Data Sources**: LinkedIn, Indeed, GitHub jobs via Model Context Protocol (MCP)
 - **CLI**: Find and evaluate job leads from the command line
 - **Web UI**: FastAPI dashboard at http://localhost:8000
 - **AI Evaluation**: Gemini-powered job matching with fallback when tools unavailable
@@ -13,7 +14,32 @@ AI-powered job search tool with Gemini integration, link validation, and FastAPI
 
 ## Quick Start
 
-### Setup
+### Option 1: MCP Setup (Recommended)
+
+Use MCP servers for LinkedIn, Indeed, and GitHub job searches:
+
+1. **Configure MCP credentials**:
+   ```powershell
+   Copy-Item .env.mcp.example .env.mcp
+   # Edit .env.mcp with your LinkedIn/Indeed/GitHub credentials
+   ```
+
+2. **Start MCP servers**:
+   ```powershell
+   docker-compose -f docker-compose.mcp.yml up -d
+   ```
+
+3. **Verify MCPs are running**:
+   ```powershell
+   docker-compose -f docker-compose.mcp.yml ps
+   curl http://localhost:3000/health  # LinkedIn
+   curl http://localhost:3001/health  # Indeed
+   curl http://localhost:3002/health  # GitHub
+   ```
+
+See **[MCP_SETUP_GUIDE.md](MCP_SETUP_GUIDE.md)** for detailed instructions.
+
+### Option 2: Gemini Fallback Setup
 
 1. **Clone and install**:
    ```powershell
@@ -29,6 +55,8 @@ AI-powered job search tool with Gemini integration, link validation, and FastAPI
    ```
 
 3. **Get your API key**: https://aistudio.google.com/app/apikey
+
+**Note**: Gemini free tier has a 250 requests/day limit. MCP approach is more reliable for production use.
 
 ### CLI Usage
 
@@ -117,4 +145,3 @@ tests/
 ## License
 
 MIT
-
