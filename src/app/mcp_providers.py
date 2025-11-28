@@ -1,10 +1,9 @@
 """MCP (Model Context Protocol) providers for job search.
 
 This module provides a unified interface for multiple job search MCPs:
-- LinkedIn MCP
-- Indeed MCP (if available)
-- GitHub Jobs MCP
-- Custom job board MCPs
+- LinkedIn MCP (via Docker Desktop)
+- DuckDuckGo Search MCP (via Docker Desktop)
+- GitHub Jobs (via GitHub API)
 
 Each MCP can be queried independently and results can be aggregated.
 """
@@ -140,50 +139,174 @@ class IndeedMCP(MCPProvider):
 
 
 class GitHubJobsMCP(MCPProvider):
-    """GitHub Jobs MCP provider."""
+    """GitHub Jobs MCP provider - uses GitHub API to search for job postings."""
 
     def __init__(self):
         super().__init__("GitHub")
-        self.mcp_server_url = os.getenv("GITHUB_JOBS_MCP_URL", "http://localhost:3002")
+        # GitHub Jobs can be found in repos with 'jobs' or 'careers' in issues/discussions
+        # Or in dedicated job board repos
+        self.github_token = os.getenv("GITHUB_TOKEN", "")
+        self.job_repos = [
+            "remoteintech/remote-jobs",
+            "lukasz-madon/awesome-remote-job",
+            "engineerapart/TheRemoteFreelancer",
+        ]
 
     def is_available(self) -> bool:
-        """Check if GitHub Jobs MCP server is running."""
+        """Check if GitHub API is accessible."""
+        if not self.github_token:
+            return False
         try:
             import httpx
 
-            resp = httpx.get(f"{self.mcp_server_url}/health", timeout=2.0)
+            headers = {"Authorization": f"Bearer {self.github_token}", "Accept": "application/vnd.github+json"}
+            resp = httpx.get("https://api.github.com/user", headers=headers, timeout=5.0)
             return resp.status_code == 200
         except Exception:
             return False
 
     def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
-        """Search GitHub jobs via MCP."""
+        """Search GitHub for job postings."""
         if not self.is_available():
-            print(f"GitHub Jobs MCP not available at {self.mcp_server_url}")
+            print(f"GitHub MCP not available (token: {'set' if self.github_token else 'missing'})")
             return []
 
         try:
             import httpx
 
-            payload = {"query": query, "count": count, "location": location}
+            headers = {"Authorization": f"Bearer {self.github_token}", "Accept": "application/vnd.github+json"}
 
-            resp = httpx.post(f"{self.mcp_server_url}/search/jobs", json=payload, timeout=30.0)
+            jobs = []
+            # Search GitHub issues in job repos
+            search_query = f"{query} type:issue state:open"
+            if location:
+                search_query += f" {location}"
+
+            # Add job-related terms
+            search_query += " (hiring OR job OR position OR vacancy)"
+
+            url = "https://api.github.com/search/issues"
+            params = {"q": search_query, "per_page": min(count * 2, 30), "sort": "created", "order": "desc"}
+
+            resp = httpx.get(url, headers=headers, params=params, timeout=10.0)
             resp.raise_for_status()
 
-            jobs = resp.json().get("jobs", [])
-            return [
-                {
-                    "title": job.get("title", ""),
-                    "company": job.get("company", ""),
-                    "location": job.get("location", ""),
-                    "summary": job.get("description", "")[:500],
-                    "link": job.get("url", ""),
-                    "source": "GitHub",
-                }
-                for job in jobs[:count]
-            ]
+            results = resp.json().get("items", [])
+
+            for item in results[:count]:
+                # Extract job details from issue
+                title = item.get("title", "")
+                body = item.get("body", "")[:500] if item.get("body") else ""
+                repo = item.get("repository_url", "").split("/")[-2:] if item.get("repository_url") else ["", ""]
+                company = repo[0] if repo else "GitHub"
+
+                jobs.append(
+                    {
+                        "title": title,
+                        "company": company,
+                        "location": location or "Remote",
+                        "summary": body,
+                        "link": item.get("html_url", ""),
+                        "source": "GitHub",
+                    }
+                )
+
+            return jobs[:count]
         except Exception as e:
-            print(f"GitHub Jobs MCP error: {e}")
+            print(f"GitHub MCP error: {e}")
+            return []
+
+
+class DuckDuckGoMCP(MCPProvider):
+    """DuckDuckGo Search MCP provider - searches for jobs using DuckDuckGo."""
+
+    def __init__(self):
+        super().__init__("DuckDuckGo")
+        # DuckDuckGo doesn't require authentication
+
+    def is_available(self) -> bool:
+        """DuckDuckGo is always available (no auth required)."""
+        return True
+
+    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+        """Search for jobs using DuckDuckGo."""
+        try:
+            import httpx
+            from bs4 import BeautifulSoup
+
+            # Build search query
+            search_query = f"{query} jobs"
+            if location:
+                search_query += f" {location}"
+
+            # Add job-specific terms
+            search_query += " (hiring OR careers OR apply)"
+
+            # DuckDuckGo HTML search
+            url = "https://html.duckduckgo.com/html/"
+            params = {"q": search_query}
+
+            headers = {
+                "User-Agent": (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+                )
+            }
+
+            resp = httpx.post(url, data=params, headers=headers, timeout=10.0, follow_redirects=True)
+            resp.raise_for_status()
+
+            soup = BeautifulSoup(resp.text, "html.parser")
+            results = soup.find_all("div", class_="result")
+
+            jobs = []
+            for result in results[: count * 2]:  # Get extra for filtering
+                try:
+                    link_elem = result.find("a", class_="result__a")
+                    if not link_elem:
+                        continue
+
+                    title = link_elem.get_text(strip=True)
+                    link = link_elem.get("href", "")
+
+                    # Skip if not a job-related link
+                    if not any(
+                        keyword in link.lower()
+                        for keyword in ["job", "career", "hiring", "linkedin.com/jobs", "indeed.com", "glassdoor"]
+                    ):
+                        continue
+
+                    snippet_elem = result.find("a", class_="result__snippet")
+                    summary = snippet_elem.get_text(strip=True) if snippet_elem else ""
+
+                    # Extract company from URL or title
+                    company = "Unknown"
+                    if "linkedin.com" in link:
+                        company = "LinkedIn"
+                    elif "indeed.com" in link:
+                        company = "Indeed"
+                    elif "glassdoor" in link:
+                        company = "Glassdoor"
+
+                    jobs.append(
+                        {
+                            "title": title,
+                            "company": company,
+                            "location": location or "Remote",
+                            "summary": summary[:500],
+                            "link": link,
+                            "source": "DuckDuckGo",
+                        }
+                    )
+
+                    if len(jobs) >= count:
+                        break
+                except Exception:
+                    continue
+
+            return jobs[:count]
+        except Exception as e:
+            print(f"DuckDuckGo MCP error: {e}")
             return []
 
 
@@ -191,7 +314,7 @@ class MCPAggregator:
     """Aggregates results from multiple MCP providers."""
 
     def __init__(self, providers: Optional[List[MCPProvider]] = None):
-        self.providers = providers or [LinkedInMCP(), IndeedMCP(), GitHubJobsMCP()]
+        self.providers = providers or [DuckDuckGoMCP(), GitHubJobsMCP(), LinkedInMCP()]
 
     def get_available_providers(self) -> List[MCPProvider]:
         """Get list of available MCP providers."""

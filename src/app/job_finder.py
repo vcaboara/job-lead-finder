@@ -93,10 +93,14 @@ def generate_job_leads(
         try:
             leads = provider.generate_job_leads(query, resume_text, count=count, model=model, verbose=verbose)
             print(f"job_finder: Gemini returned {len(leads)} leads")
-            # Evaluate each lead if requested
-            if evaluate:
-                leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
-            return leads
+            # If Gemini returned results, use them
+            if leads:
+                # Evaluate each lead if requested
+                if evaluate:
+                    leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
+                return leads
+            else:
+                print("job_finder: Gemini returned 0 leads, using local fallback")
         except Exception as e:
             # Provide diagnostics when verbose
             if os.getenv("VERBOSE") or verbose:
