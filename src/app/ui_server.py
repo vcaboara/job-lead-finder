@@ -128,11 +128,11 @@ def search(req: SearchRequest):
     }
 
     try:
-        # Request 3x more jobs to account for filtering (oversample strategy)
+        # Request 2x more jobs to account for filtering (oversample strategy)
         # This helps ensure we get the requested count after validation
-        oversample_multiplier = 3
+        oversample_multiplier = 2
         initial_request_count = req.count * oversample_multiplier
-        max_retries = 2
+        max_retries = 1  # Reduced from 2 for faster response
         all_valid_leads = []
         seen_links = set()  # Track unique job links to avoid duplicates
 
@@ -245,18 +245,31 @@ def _process_and_filter_leads(raw_leads: list) -> list:
             return False
         return False
 
-    processed_leads = []
-    for lead in raw_leads:
-        link = lead.get("link", "")
-        company = lead.get("company", "")
-        if is_blocked(link, company):
-            continue
-        link_info = (
-            validate_link(link, verbose=False) if link else {"valid": False, "status_code": None, "error": "no_link"}
-        )
-        # Exclude bad links: 403, 404, localhost/127.0.0.1, search-result pages, and generic career pages
-        from urllib.parse import urlparse
+    # Parallelize link validation for speed
+    import concurrent.futures
+    from urllib.parse import urlparse
 
+    # Pre-filter blocked leads
+    unblocked_leads = [lead for lead in raw_leads if not is_blocked(lead.get("link", ""), lead.get("company", ""))]
+
+    # Validate all links in parallel (5-10x faster than sequential)
+    links_to_validate = [lead.get("link", "") for lead in unblocked_leads]
+    validated_results = {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_link = {executor.submit(validate_link, link, False): link for link in links_to_validate if link}
+        for future in concurrent.futures.as_completed(future_to_link):
+            link = future_to_link[future]
+            try:
+                validated_results[link] = future.result()
+            except Exception:
+                validated_results[link] = {"valid": False, "status_code": None, "error": "validation_failed"}
+
+    processed_leads = []
+    for lead in unblocked_leads:
+        link = lead.get("link", "")
+        link_info = validated_results.get(link) if link else {"valid": False, "status_code": None, "error": "no_link"}
+        # Exclude bad links: 403, 404, localhost/127.0.0.1, search-result pages, and generic career pages
         parsed = urlparse(link) if link else None
         host = parsed.netloc.lower() if parsed else ""
         host = host[4:] if host.startswith("www.") else host

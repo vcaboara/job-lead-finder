@@ -53,6 +53,7 @@ logs/*.txt
 config.json
 resume.txt
 uploads/
+notes
 .last_gemini_response_*.txt
 
 # Local test artifacts
