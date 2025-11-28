@@ -144,9 +144,7 @@ class GeminiProvider:
             "  * Job board search result pages\n"
             "  * Generic company websites\n"
             "- Each link should go to ONE specific job opening with a unique job ID or title in the URL\n"
-            "- Verify the link points to an actual job description page before including it\n"
-            "- Check for share buttons or direct job links (look for 'share', 'copy link', or job-specific URLs)\n"
-            "- ONLY search for jobs in North America (United States, Canada, Mexico)\n\n"
+            "- Verify the link points to an actual job description page before including it\n\n"
             f"Find and return EXACTLY {count} REAL job postings that match the candidate profile and query.\n"
             f"Return a JSON array with this exact structure for each job:\n"
             '{"title": "exact job title", "company": "company name", "location": "city, state/country", '
