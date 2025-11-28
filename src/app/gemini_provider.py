@@ -223,11 +223,29 @@ class GeminiProvider:
                     if cfg is not None:
                         if verbose:
                             print(f"gemini_provider: calling generate_content with tool config on {use_model}")
-                        resp = client.models.generate_content(model=use_model, contents=prompt, config=cfg)
+                        try:
+                            resp = client.models.generate_content(model=use_model, contents=prompt, config=cfg)
+                            if verbose:
+                                print(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
+                        except Exception as api_err:
+                            print(f"ERROR calling Gemini API with config: {api_err}")
+                            import traceback
+
+                            traceback.print_exc()
+                            return []
                     else:
                         if verbose:
                             print(f"gemini_provider: calling generate_content WITHOUT tool config on {use_model}")
-                        resp = client.models.generate_content(model=use_model, contents=prompt)
+                        try:
+                            resp = client.models.generate_content(model=use_model, contents=prompt)
+                            if verbose:
+                                print(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
+                        except Exception as api_err:
+                            print(f"ERROR calling Gemini API: {api_err}")
+                            import traceback
+
+                            traceback.print_exc()
+                            return []
 
                     # Robustly extract text from various response shapes returned by the
                     # legacy client. The response may contain `candidates` with
