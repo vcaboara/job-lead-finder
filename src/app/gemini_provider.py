@@ -136,22 +136,16 @@ class GeminiProvider:
         [{"title":..., "company":..., "location":..., "summary":..., "link":...}, ...]
         """
         prompt = (
-            "You MUST use the google_search tool to find REAL, SPECIFIC job postings from the internet.\n"
-            "CRITICAL REQUIREMENTS:\n"
-            "- Each job MUST have a DIRECT link to a specific job posting page (not a general careers page)\n"
-            "- DO NOT return links to:\n"
-            "  * Company careers pages (e.g., /careers, /jobs)\n"
-            "  * Job board search result pages\n"
-            "  * Generic company websites\n"
-            "- Each link should go to ONE specific job opening with a unique job ID or title in the URL\n"
-            "- Verify the link points to an actual job description page before including it\n\n"
-            f"Find and return EXACTLY {count} REAL job postings that match the candidate profile and query.\n"
-            f"Return a JSON array with this exact structure for each job:\n"
-            '{"title": "exact job title", "company": "company name", "location": "city, state/country", '
-            '"summary": "brief description", "link": "direct URL to specific job posting"}\n\n'
-            f"CANDIDATE PROFILE:\n{resume_text}\n\n"
-            f"QUERY:\n{query}\n\n"
-            "Return ONLY the JSON array. No markdown, no explanation, just the array."
+            f"Use the google_search tool to find {count} job postings for: {query}\n\n"
+            "Requirements:\n"
+            "- Find specific job postings with direct links (not general career pages)\n"
+            "- Each job should have a unique URL, preferably with a job ID\n"
+            "- Avoid linking to homepage or /careers pages without a specific job\n\n"
+            f"Return a JSON array with {count} jobs in this format:\n"
+            '[{"title": "job title", "company": "company", "location": "city, state", '
+            '"summary": "description", "link": "https://direct-job-url"}]\n\n'
+            f"Context about candidate:\n{resume_text[:1000]}\n\n"
+            "Return ONLY the JSON array."
         )
 
         try:
