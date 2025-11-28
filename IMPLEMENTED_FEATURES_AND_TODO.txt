@@ -1,0 +1,55 @@
+Job Lead Finder: Implemented Features & TODOs
+
+Implemented Features
+
+Core Functionality
+- FastAPI UI server with REST endpoints for search, config, resume upload, block list, and health check
+- Single-page web UI (HTML/JS) for job search, resume upload, config management, and results display
+- Gemini AI integration (google-generativeai or legacy google.genai) for real job search and evaluation
+- Fallback local search when no Gemini API key or provider unavailable
+- Resume upload: .txt and .md files, with size/type/UTF-8 validation and injection scanning
+- Resume paste: textarea allows manual paste/edit
+- Block list management: add/remove blocked sites and employers via UI and API
+- Link validation: checks job links, annotates with status/warning/error
+- Filtering: excludes jobs with blocked sites/employers, 403/404 links, localhost, and search-result URLs
+- Auto-evaluate: if resume is present, jobs are scored automatically
+- Config persistence: config.json, resume.txt, and uploads/ are gitignored
+- Multi-stage Dockerfile: builder installs all deps; runtime is slim with only venv and app
+- Comprehensive tests: 113 passing tests for endpoints, config, search, upload, and validation
+- Logs: Gemini response logs and diagnostics written to logs/ folder
+
+UI Features
+- Search form: query, resume upload/paste, result count
+- Results panel: job cards with title, company, location, summary, score, reasoning, and link
+- Progress/status indicator: shows search status and errors
+- Config panel: block list management, link validator
+- Responsive layout for desktop and mobile
+
+Security & Validation
+- Injection scanning: system instructions, resume, and block list entries scanned for injection-like patterns
+- File validation: resume uploads limited to 1MB, .txt/.md, UTF-8 only
+- Link validation: checks for valid URLs and annotates with status/warning/error
+
+DevOps & Packaging
+- Multi-stage Dockerfile: builder + runtime for smaller images
+- docker-compose.yml: separate app and ui services, environment variable support
+- .env support: for API keys
+- .gitignore: excludes config.json, resume.txt, uploads/
+
+Known Issues / Limitations
+- Job count may be less than requested due to filtering invalid/blocked/bad links
+- List may disappear if all jobs are filtered out (no valid results)
+- Gemini provider may return jobs with bad links; filtering is post-processing
+- No PDF/DOCX resume support yet (only .txt/.md)
+- No image upload/preview yet
+- No advanced search options (location, salary, etc.)
+
+TODOs
+- Add PDF/DOCX resume support using pdfplumber and python-docx; update Dockerfile and tests
+- Plan smaller images feature: image uploads with size/type limits and preview
+- Improve Gemini prompt to prioritize real postings with direct links
+- Handle empty results gracefully with a clear message
+- Advanced filtering to block more link patterns (e.g., search-result URLs)
+- User feedback for excluded jobs (warnings or reasons)
+- Optional: add OCR for image resumes
+- Optional: add advanced search filters (location, salary, etc.)

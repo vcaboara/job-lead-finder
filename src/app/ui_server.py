@@ -6,10 +6,11 @@ configuration endpoints, and leads retrieval.
 
 import json
 import os
+import time
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
@@ -20,6 +21,12 @@ from .link_validator import validate_link
 app = FastAPI(title="Job Lead Finder", version="0.1.1")
 
 LEADS_FILE = Path("leads.json")
+RESUME_FILE = Path("resume.txt")
+UPLOADS_DIR = Path("uploads")
+UPLOADS_DIR.mkdir(exist_ok=True)
+
+# Progress tracking for search operations
+search_progress: Dict[str, dict] = {}
 
 
 class SearchRequest(BaseModel):
@@ -101,69 +108,199 @@ def update_system_instructions(req: SystemInstructionsRequest):
 
 @app.post("/api/search")
 def search(req: SearchRequest):
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+    # Allow search without an API key; provider will fallback internally
+    # Load resume from file if not provided in request
+    resume_text = req.resume
+    if not resume_text and RESUME_FILE.exists():
+        resume_text = RESUME_FILE.read_text(encoding="utf-8")
+
+    # Auto-evaluate if resume is available
+    should_evaluate = req.evaluate or bool(resume_text)
+
+    # Create unique search ID for progress tracking
+    search_id = f"search_{int(time.time() * 1000)}"
+    search_progress[search_id] = {
+        "status": "starting",
+        "message": f"Requesting {req.count} job listings...",
+        "attempt": 0,
+        "valid_count": 0,
+        "timestamp": time.time(),
+    }
+
     try:
-        raw_leads = generate_job_leads(
-            query=req.query,
-            resume_text=req.resume or "No resume provided.",
-            count=req.count,
-            model=req.model,
-            evaluate=req.evaluate,
-            verbose=False,
-        )
-        # Load config for blocked entities
-        cfg = load_config()
-        blocked = cfg.get("blocked_entities", [])
-        blocked_sites = {e.get("value", "").lower() for e in blocked if e.get("type") == "site"}
-        blocked_employers = {e.get("value", "").lower() for e in blocked if e.get("type") == "employer"}
+        # Request 3x more jobs to account for filtering (oversample strategy)
+        # This helps ensure we get the requested count after validation
+        oversample_multiplier = 3
+        initial_request_count = req.count * oversample_multiplier
+        max_retries = 2
+        all_valid_leads = []
+        seen_links = set()  # Track unique job links to avoid duplicates
 
-        def is_blocked(lead_link: str, company: str) -> bool:
-            from urllib.parse import urlparse
-
-            # Company check
-            if company and company.lower() in blocked_employers:
-                return True
-            # Site/domain check
-            if not lead_link:
-                return False
-            try:
-                parsed = urlparse(lead_link)
-                host = parsed.netloc.lower()
-                host = host[4:] if host.startswith("www.") else host
-                # Direct match or suffix match (e.g., sub.domain.com endswith domain.com)
-                for site in blocked_sites:
-                    if host == site or host.endswith("." + site):
-                        return True
-            except Exception:
-                return False
-            return False
-
-        processed_leads = []
-        for lead in raw_leads:
-            link = lead.get("link", "")
-            company = lead.get("company", "")
-            # Block filtering only (do not drop for link issues)
-            if is_blocked(link, company):
-                continue
-            link_info = (
-                validate_link(link, verbose=False)
-                if link
-                else {"valid": False, "status_code": None, "error": "no_link"}
+        for attempt in range(max_retries + 1):
+            # Update progress
+            search_progress[search_id].update(
+                {
+                    "status": "fetching",
+                    "attempt": attempt + 1,
+                    "message": f"Attempt {attempt + 1}/{max_retries + 1}: Fetching jobs from Gemini...",
+                }
             )
-            lead["link_status_code"] = link_info.get("status_code")
-            lead["link_valid"] = link_info.get("valid")
-            lead["link_warning"] = link_info.get("warning")
-            lead["link_error"] = link_info.get("error")
-            processed_leads.append(lead)
 
-        save_to_file(processed_leads, str(LEADS_FILE))
+            # Calculate how many more we need
+            needed = req.count - len(all_valid_leads)
+            if needed <= 0:
+                break
+
+            # Request extra to account for filtering
+            request_count = needed * oversample_multiplier if attempt > 0 else initial_request_count
+
+            search_progress[search_id]["message"] = f"Attempt {attempt + 1}: Requesting {request_count} jobs..."
+
+            raw_leads = generate_job_leads(
+                query=req.query,
+                resume_text=resume_text or "No resume provided.",
+                count=request_count,
+                model=req.model,
+                evaluate=should_evaluate,
+                verbose=False,
+            )
+
+            # Update progress
+            search_progress[search_id].update(
+                {"status": "filtering", "message": f"Validating and filtering {len(raw_leads)} results..."}
+            )
+
+            # Process and filter leads
+            valid_leads = _process_and_filter_leads(raw_leads)
+
+            # Deduplicate by link
+            for lead in valid_leads:
+                link = lead.get("link", "")
+                if link and link not in seen_links:
+                    seen_links.add(link)
+                    all_valid_leads.append(lead)
+
+            search_progress[search_id].update(
+                {"valid_count": len(all_valid_leads), "message": f"Found {len(all_valid_leads)} valid jobs so far..."}
+            )
+
+            # Stop if we have enough or got no new results
+            if len(all_valid_leads) >= req.count or len(valid_leads) == 0:
+                break
+
+        # Take only the requested count
+        final_leads = all_valid_leads[: req.count]
+
+        search_progress[search_id].update(
+            {
+                "status": "complete",
+                "message": f"Search complete: {len(final_leads)} jobs found",
+                "valid_count": len(final_leads),
+            }
+        )
+
+        save_to_file(final_leads, str(LEADS_FILE))
         return JSONResponse(
-            {"status": "success", "query": req.query, "count": len(processed_leads), "leads": processed_leads}
+            {
+                "status": "success",
+                "query": req.query,
+                "count": len(final_leads),
+                "leads": final_leads,
+                "filtered_count": len(all_valid_leads) - len(final_leads),
+                "total_fetched": len(all_valid_leads),
+                "search_id": search_id,
+            }
         )
     except Exception as e:
+        search_progress[search_id].update({"status": "error", "message": f"Error: {str(e)}"})
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _process_and_filter_leads(raw_leads: list) -> list:
+    """Process raw leads and filter out blocked/invalid ones."""
+    # Load config for blocked entities
+    cfg = load_config()
+    blocked = cfg.get("blocked_entities", [])
+    blocked_sites = {e.get("value", "").lower() for e in blocked if e.get("type") == "site"}
+    blocked_employers = {e.get("value", "").lower() for e in blocked if e.get("type") == "employer"}
+
+    def is_blocked(lead_link: str, company: str) -> bool:
+        from urllib.parse import urlparse
+
+        # Company check
+        if company and company.lower() in blocked_employers:
+            return True
+        # Site/domain check
+        if not lead_link:
+            return False
+        try:
+            parsed = urlparse(lead_link)
+            host = parsed.netloc.lower()
+            host = host[4:] if host.startswith("www.") else host
+            # Direct match or suffix match (e.g., sub.domain.com endswith domain.com)
+            for site in blocked_sites:
+                if host == site or host.endswith("." + site):
+                    return True
+        except Exception:
+            return False
+        return False
+
+    processed_leads = []
+    for lead in raw_leads:
+        link = lead.get("link", "")
+        company = lead.get("company", "")
+        if is_blocked(link, company):
+            continue
+        link_info = (
+            validate_link(link, verbose=False) if link else {"valid": False, "status_code": None, "error": "no_link"}
+        )
+        # Exclude bad links: 403, 404, localhost/127.0.0.1, search-result pages, and generic career pages
+        from urllib.parse import urlparse
+
+        parsed = urlparse(link) if link else None
+        host = parsed.netloc.lower() if parsed else ""
+        host = host[4:] if host.startswith("www.") else host
+        is_local = host in {"localhost", "127.0.0.1"}
+        path = parsed.path.lower() if parsed else ""
+        query = parsed.query.lower() if parsed else ""
+
+        # Detect generic career/jobs pages (not specific job postings)
+        generic_patterns = [
+            "/careers",
+            "/jobs",
+            "/career",
+            "/job",
+            "/employment",
+            "/opportunities",
+            "/join-us",
+            "/work-with-us",
+        ]
+        is_generic_page = any(
+            path.rstrip("/") == pattern or path.rstrip("/") + "/" == pattern + "/" for pattern in generic_patterns
+        )
+
+        looks_like_search = ("/search" in path) or ("jobs/search" in path) or ("q=" in query)
+        status = link_info.get("status_code")
+        is_excluded_status = status in {403, 404}
+
+        if (not link_info.get("valid")) or is_excluded_status or is_local or looks_like_search or is_generic_page:
+            # Skip adding this lead due to unacceptable link
+            continue
+        lead["link_status_code"] = status
+        lead["link_valid"] = True
+        lead["link_warning"] = link_info.get("warning")
+        lead["link_error"] = link_info.get("error")
+        processed_leads.append(lead)
+
+    return processed_leads
+
+
+@app.get("/api/search/progress/{search_id}")
+def get_search_progress(search_id: str):
+    """Get the current progress of a search operation."""
+    if search_id not in search_progress:
+        raise HTTPException(status_code=404, detail="Search ID not found")
+    return JSONResponse(search_progress[search_id])
 
 
 @app.get("/api/leads")
@@ -247,3 +384,52 @@ def check_link(req: ValidateLinkRequest):
             "error": result.get("error"),
         }
     )
+
+
+@app.post("/api/upload/resume")
+async def upload_resume(file: UploadFile = File(...)):
+    """Upload resume file for job matching."""
+    # Validate file size (max 1MB)
+    content = await file.read()
+    if len(content) > 1_000_000:
+        raise HTTPException(status_code=400, detail="File too large (max 1MB)")
+
+    # Validate file type - only text files for now
+    if not file.filename.endswith((".txt", ".md")):
+        raise HTTPException(status_code=400, detail="Only .txt and .md files supported currently")
+
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text")
+
+    # Scan for injection patterns
+    findings = scan_instructions(text[:5000])  # Scan first 5000 chars
+    if findings:
+        raise HTTPException(status_code=400, detail={"error": "Rejected by scanner", "findings": findings})
+
+    # Save to resume.txt
+    RESUME_FILE.write_text(text, encoding="utf-8")
+
+    return JSONResponse({"message": "Resume uploaded successfully", "resume": text, "filename": file.filename})
+
+
+@app.get("/api/resume")
+def get_resume():
+    """Get current resume text."""
+    if not RESUME_FILE.exists():
+        return JSONResponse({"resume": None})
+    try:
+        text = RESUME_FILE.read_text(encoding="utf-8")
+        return JSONResponse({"resume": text})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading resume: {e}")
+
+
+@app.delete("/api/resume")
+def delete_resume():
+    """Delete resume file."""
+    if not RESUME_FILE.exists():
+        raise HTTPException(status_code=404, detail="Resume not found")
+    RESUME_FILE.unlink()
+    return JSONResponse({"message": "Resume deleted"})

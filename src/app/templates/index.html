@@ -286,20 +286,25 @@
                 <form id="searchForm">
                     <div class="form-group">
                         <label for="query">Query *</label>
-                        <input type="text" id="query" name="query" placeholder="e.g., remote python developer" value="python remote automation" required>
+                        <input type="text" id="query" name="query" placeholder="e.g., remote python developer"
+                            value="python remote automation" required>
                     </div>
                     <div class="form-group">
-                        <label for="resume">Resume (optional)</label>
+                        <label>Resume (optional)</label>
+                        <input type="file" id="resumeFile" accept=".txt,.md" style="width:100%; margin-bottom:8px;">
+                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                            <button type="button" id="uploadResumeBtn"
+                                style="flex:1; padding:6px 12px; font-size:0.9em;">Upload</button>
+                            <button type="button" id="deleteResumeBtn"
+                                style="flex:1; padding:6px 12px; font-size:0.9em; background:#d32f2f;">Delete</button>
+                        </div>
                         <textarea id="resume" name="resume"
-                            placeholder="Paste your resume or profile summary..."></textarea>
+                            placeholder="Paste resume or it will appear here after upload..."
+                            style="background:#f5f5f5;"></textarea>
                     </div>
                     <div class="form-group">
                         <label for="count">Results Count</label>
                         <input type="number" id="count" name="count" value="5" min="1" max="20">
-                    </div>
-                    <div class="form-group checkbox-group">
-                        <input type="checkbox" id="evaluate" name="evaluate">
-                        <label for="evaluate" style="margin:0;">Evaluate against resume</label>
                     </div>
                     <button type="submit">Search</button>
                 </form>
@@ -312,7 +317,8 @@
                     </div>
                     <div class="form-group">
                         <label for="blockedType">Type</label>
-                        <select id="blockedType" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                        <select id="blockedType"
+                            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
                             <option value="site">Site</option>
                             <option value="employer">Employer</option>
                         </select>
@@ -320,7 +326,8 @@
                     <button id="addBlockedBtn" type="button" style="margin-bottom:18px;">Add to Block List</button>
                     <div style="margin-bottom:20px;">
                         <h3 style="margin-bottom:10px; font-size:1.05em;">Blocked Entities</h3>
-                        <ul id="blockedList" style="list-style:none; padding:0; display:flex; flex-direction:column; gap:8px;"></ul>
+                        <ul id="blockedList"
+                            style="list-style:none; padding:0; display:flex; flex-direction:column; gap:8px;"></ul>
                     </div>
                     <div>
                         <h3 style="margin-bottom:10px; font-size:1.05em;">Validate Link</h3>
@@ -328,14 +335,15 @@
                             <input type="text" id="validateUrl" placeholder="https://example.com/job" />
                         </div>
                         <button id="validateLinkBtn" type="button" style="width:100%;">Validate Link</button>
-                        <div id="validateResult" style="margin-top:10px; font-size:0.85em; color:#333; min-height:18px;"></div>
+                        <div id="validateResult"
+                            style="margin-top:10px; font-size:0.85em; color:#333; min-height:18px;"></div>
                     </div>
                 </div>
             </div>
             <div class="leads-panel">
-                <h2>Results</h2>
-                <div id="status" class="status"></div>
-                <div id="leadsList" class="leads-list">
+                <h2>Results <span id="resultsCount" style="color:#666; font-size:0.9em;"></span></h2>
+                <div class="status" id="status"></div>
+                <div class="leads-list" id="leadsList">
                     <div class="empty-state">
                         <p>No leads yet. Search to get started!</p>
                     </div>
@@ -348,7 +356,18 @@
             try { const resp = await fetch('/api/leads'); const data = await resp.json(); displayLeads(data.leads); } catch (e) { console.error('Error loading leads:', e); }
         }
         function displayLeads(leads) {
-            const container = document.getElementById('leadsList'); if (!leads || leads.length === 0) { container.innerHTML = '<div class="empty-state"><p>No leads yet. Search to get started!</p></div>'; return; } container.innerHTML = leads.map(lead => `
+            const container = document.getElementById('leadsList');
+            const countEl = document.getElementById('resultsCount');
+
+            if (!leads || leads.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No leads yet. Search to get started!</p></div>';
+                countEl.textContent = '';
+                return;
+            }
+
+            countEl.textContent = `(${leads.length})`;
+
+            container.innerHTML = leads.map(lead => `
     <div class="lead-card">
         <h3>${lead.title}</h3>
         <div class="company">${lead.company}</div>
@@ -370,14 +389,22 @@
             const query = document.getElementById('query').value;
             const resume = document.getElementById('resume').value;
             const count = parseInt(document.getElementById('count').value);
-            const evaluate = document.getElementById('evaluate').checked;
+            const evalEl = document.getElementById('evaluate');
+            const evaluate = (!!resume && resume.trim().length > 0) || (evalEl ? !!evalEl.checked : false);
             showStatus('Searching...', 'loading');
             try {
                 const resp = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, resume: resume || null, count, evaluate }) });
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.detail || 'Search failed');
+
+                // Show detailed results info
+                let resultMsg = `Found ${data.count} job${data.count !== 1 ? 's' : ''}!`;
+                if (data.total_fetched > data.count) {
+                    resultMsg += ` (${data.total_fetched} fetched, ${data.filtered_count} filtered out)`;
+                }
+
                 displayLeads(data.leads);
-                showStatus(`Found ${data.count} job${data.count !== 1 ? 's' : ''}!`, 'success');
+                showStatus(resultMsg, 'success');
             } catch (e) {
                 showStatus(`Error: ${e.message}`, 'error');
                 console.error(e);
@@ -449,6 +476,49 @@
             } catch (e) { resultBox.textContent = `Error: ${e.message}`; }
         });
 
+        // Resume upload handlers
+        document.getElementById('uploadResumeBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('resumeFile');
+            const file = fileInput.files[0];
+            if (!file) { showStatus('Please select a file', 'error'); return; }
+            const formData = new FormData();
+            formData.append('file', file);
+            showStatus('Uploading resume...', 'loading');
+            try {
+                const resp = await fetch('/api/upload/resume', { method: 'POST', body: formData });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail?.error || data.detail || 'Upload failed');
+                document.getElementById('resume').value = data.resume;
+                fileInput.value = '';
+                showStatus('Resume uploaded successfully', 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        document.getElementById('deleteResumeBtn').addEventListener('click', async () => {
+            if (!confirm('Delete uploaded resume?')) return;
+            showStatus('Deleting resume...', 'loading');
+            try {
+                const resp = await fetch('/api/resume', { method: 'DELETE' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Delete failed');
+                document.getElementById('resume').value = '';
+                document.getElementById('resumeFile').value = '';
+                showStatus('Resume deleted', 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        // Load existing resume on page load
+        async function loadResume() {
+            try {
+                const resp = await fetch('/api/resume');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.resume) document.getElementById('resume').value = data.resume;
+                }
+            } catch (e) { /* Resume doesn't exist yet */ }
+        }
+
+        loadResume();
         loadConfig();
         loadLeads();
         // Auto-search on page load

@@ -136,12 +136,24 @@ class GeminiProvider:
         [{"title":..., "company":..., "location":..., "summary":..., "link":...}, ...]
         """
         prompt = (
-            "You MUST use the google_search tool to find REAL LIVE job postings from the internet.\n"
-            "Find and return ONLY a JSON array of open job postings that match the candidate profile and query.\n"
-            f"Return EXACTLY {count} job objects with keys: title, company, location, summary, link.\n"
+            "You MUST use the google_search tool to find REAL, SPECIFIC job postings from the internet.\n"
+            "CRITICAL REQUIREMENTS:\n"
+            "- Each job MUST have a DIRECT link to a specific job posting page (not a general careers page)\n"
+            "- DO NOT return links to:\n"
+            "  * Company careers pages (e.g., /careers, /jobs)\n"
+            "  * Job board search result pages\n"
+            "  * Generic company websites\n"
+            "- Each link should go to ONE specific job opening with a unique job ID or title in the URL\n"
+            "- Verify the link points to an actual job description page before including it\n"
+            "- Check for share buttons or direct job links (look for 'share', 'copy link', or job-specific URLs)\n"
+            "- ONLY search for jobs in North America (United States, Canada, Mexico)\n\n"
+            f"Find and return EXACTLY {count} REAL job postings that match the candidate profile and query.\n"
+            f"Return a JSON array with this exact structure for each job:\n"
+            '{"title": "exact job title", "company": "company name", "location": "city, state/country", '
+            '"summary": "brief description", "link": "direct URL to specific job posting"}\n\n'
             f"CANDIDATE PROFILE:\n{resume_text}\n\n"
             f"QUERY:\n{query}\n\n"
-            "Return ONLY the JSON array. Do not include any other text, markdown, or formatting."
+            "Return ONLY the JSON array. No markdown, no explanation, just the array."
         )
 
         try:
@@ -297,7 +309,8 @@ class GeminiProvider:
                         import traceback
 
                         ts = int(time.time())
-                        fname = f".last_gemini_response_{ts}.txt"
+                        os.makedirs("logs", exist_ok=True)
+                        fname = f"logs/last_gemini_response_{ts}.txt"
                         print("gemini_provider: used legacy genai.Client; model=", use_model)
                         # print a short preview to the console
                         try:

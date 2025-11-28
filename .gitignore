@@ -48,6 +48,11 @@ Thumbs.db
 # Generated debug files
 logs/*.txt
 !logs/.gitkeep
+
+# User configuration and data files
+config.json
+resume.txt
+uploads/
 .last_gemini_response_*.txt
 
 # Local test artifacts

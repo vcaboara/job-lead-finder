@@ -39,14 +39,14 @@ def test_search_marks_invalid_links(monkeypatch):
                 "company": "GoodCo",
                 "location": "Remote",
                 "summary": "Desc",
-                "link": "https://good.example/job",
+                "link": "https://good.example/jobs/engineer-12345",
             },
             {
                 "title": "Bad Link Job",
                 "company": "BadCo",
                 "location": "Remote",
                 "summary": "Desc",
-                "link": "https://bad.example/job",
+                "link": "https://bad.example/jobs/dev-67890",
             },
         ]
 
@@ -64,13 +64,13 @@ def test_search_marks_invalid_links(monkeypatch):
     )
     assert resp.status_code == 200
     data = resp.json()
-    assert data["count"] == 2
-    assert len(data["leads"]) == 2
-    # Find good/bad leads
-    good = [lead for lead in data["leads"] if lead["company"] == "GoodCo"][0]
-    bad = [lead for lead in data["leads"] if lead["company"] == "BadCo"][0]
+    # Now only the valid link should appear since the invalid one is filtered out
+    assert data["count"] == 1
+    assert len(data["leads"]) == 1
+    # Find good lead
+    good = data["leads"][0]
+    assert good["company"] == "GoodCo"
     assert good["link_valid"] is True
-    assert bad["link_valid"] is False
 
 
 def test_search_filters_blocked_site(monkeypatch):
@@ -86,14 +86,14 @@ def test_search_filters_blocked_site(monkeypatch):
                 "company": "SiteCo",
                 "location": "Remote",
                 "summary": "Desc",
-                "link": "https://blocked.com/job",
+                "link": "https://blocked.com/jobs/position-456",
             },
             {
                 "title": "Site Allowed",
                 "company": "OtherCo",
                 "location": "Remote",
                 "summary": "Desc",
-                "link": "https://allowed.com/job",
+                "link": "https://allowed.com/jobs/position-123",
             },
         ]
 
@@ -127,14 +127,14 @@ def test_search_filters_blocked_employer(monkeypatch):
                 "company": "BadCorp",
                 "location": "Remote",
                 "summary": "Desc",
-                "link": "https://ok.com/job",
+                "link": "https://ok.com/jobs/bad-123",
             },
             {
                 "title": "Employer Allowed",
                 "company": "GoodCorp",
                 "location": "Remote",
                 "summary": "Desc",
-                "link": "https://ok.com/job2",
+                "link": "https://ok.com/jobs/good-456",
             },
         ]
 
