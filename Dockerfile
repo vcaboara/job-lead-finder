@@ -19,20 +19,23 @@ RUN apt-get update \
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Copy package metadata and source
+# Copy only package metadata first (for better caching)
 COPY pyproject.toml /app/
-# TODO: use pyproject.toml to install dependencies directly
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir .
 
-# Copy src after installing deps to leverage caching
+# Upgrade pip and install build tools
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+
+# Install dependencies from pyproject.toml (without source code)
+# This layer is cached unless pyproject.toml changes
+RUN pip install --no-cache-dir '.[web]' \
+    && if [ "${INSTALL_TEST_DEPS}" = "true" ]; then pip install --no-cache-dir '.[test]'; fi \
+    && if [ "${INSTALL_GEMINI}" = "true" ]; then pip install --no-cache-dir '.[gemini]'; fi
+
+# Copy source code (changes frequently, so this layer rebuilds often)
 COPY src/ /app/src/
 
-# Install our package and runtime deps into the venv
-RUN pip install --no-cache-dir . \
-    && pip install --no-cache-dir fastapi uvicorn[standard] httpx python-multipart \
-    && if [ "${INSTALL_TEST_DEPS}" = "true" ]; then pip install --no-cache-dir pytest pytest-cov; fi \
-    && if [ "${INSTALL_GEMINI}" = "true" ]; then pip install --no-cache-dir google-genai google-generativeai; fi
+# Install the package itself in editable mode (no deps, already installed above)
+RUN pip install --no-cache-dir --no-deps -e .
 
 ###############
 # Runtime stage

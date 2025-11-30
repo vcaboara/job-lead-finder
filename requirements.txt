@@ -1,6 +1,13 @@
-fastapi
-uvicorn
-python-multipart
-google-generativeai
-httpx
-beautifulsoup4
+# This file exists for compatibility with tools that expect requirements.txt
+# All dependencies are now managed in pyproject.toml
+#
+# To install dependencies, use:
+#   pip install .                    # Core dependencies only
+#   pip install .[web]              # Web server (FastAPI + Uvicorn)
+#   pip install .[gemini]           # Gemini AI provider
+#   pip install .[test]             # Testing dependencies
+#   pip install .[dev]              # All development tools
+#   pip install .[web,gemini,test] # Multiple extras
+#
+# Or install from this file (which references pyproject.toml):
+-e .[web,gemini]
