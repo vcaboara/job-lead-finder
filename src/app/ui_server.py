@@ -128,9 +128,10 @@ def search(req: SearchRequest):
     }
 
     try:
-        # Request 2x more jobs to account for filtering (oversample strategy)
+        # Request 5x more jobs to account for filtering (oversample strategy)
         # This helps ensure we get the requested count after validation
-        oversample_multiplier = 2
+        # Let the AI/validation filter, not the scrapers
+        oversample_multiplier = 5
         initial_request_count = req.count * oversample_multiplier
         max_retries = 1  # Reduced from 2 for faster response
         all_valid_leads = []
@@ -285,7 +286,19 @@ def _process_and_filter_leads(raw_leads: list) -> list:
         # Detect generic career/jobs pages (not specific job postings)
         # Allow job board sites (LinkedIn, Indeed, Glassdoor, etc.)
         host_is_job_board = any(
-            job_board in host for job_board in ["linkedin.com", "indeed.com", "glassdoor", "github.com", "remote"]
+            job_board in host
+            for job_board in [
+                "linkedin.com",
+                "indeed.com",
+                "glassdoor",
+                "github.com",
+                "remote",
+                "workable.com",
+                "greenhouse.io",
+                "lever.co",
+                "jobvite.com",
+                "applytojob.com",
+            ]
         )
 
         generic_patterns = [
@@ -303,7 +316,11 @@ def _process_and_filter_leads(raw_leads: list) -> list:
                 path.rstrip("/") == pattern or path.rstrip("/") + "/" == pattern + "/" for pattern in generic_patterns
             )
 
-        looks_like_search = ("/search" in path) or ("jobs/search" in path) or ("q=" in query)
+        # Be more lenient with "search" pages on job boards - they often work
+        looks_like_search = False
+        if not host_is_job_board:
+            looks_like_search = ("/search" in path) or ("jobs/search" in path) or ("q=" in query)
+
         status = link_info.get("status_code")
         is_excluded_status = status in {403, 404}
 

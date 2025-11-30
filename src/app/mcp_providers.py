@@ -271,7 +271,7 @@ class DuckDuckGoMCP(MCPProvider):
             results = soup.find_all("div", class_="result")
 
             jobs = []
-            for result in results[: count * 3]:  # Get extra for filtering
+            for result in results[: count * 5]:  # Get MORE results, let AI/validation filter
                 try:
                     link_elem = result.find("a", class_="result__a")
                     if not link_elem:
@@ -280,38 +280,10 @@ class DuckDuckGoMCP(MCPProvider):
                     title = link_elem.get_text(strip=True)
                     link = link_elem.get("href", "")
 
-                    # Skip generic job board landing/search pages
-                    # We want specific job postings, not aggregator pages
+                    # Minimal filtering - just check if job-related
+                    # Let the AI and link validation do the heavy filtering
                     link_lower = link.lower()
-                    skip_patterns = [
-                        "/jobs/search",
-                        "/jobs?",
-                        "linkedin.com/jobs/python",  # Generic search pages
-                        "linkedin.com/jobs/remote",
-                        "indeed.com/jobs?q=",
-                        "glassdoor.com/Job/",  # Glassdoor job search (not specific posting)
-                        "remotepython.com/jobs",  # Aggregator
-                        "arc.dev/remote-jobs",  # Aggregator
-                        "weworkremotely.com",  # Aggregator home
-                    ]
-
-                    if any(pattern in link_lower for pattern in skip_patterns):
-                        continue
-
-                    # Accept job-related links that look like specific postings
-                    job_indicators = [
-                        "/jobs/view/",  # LinkedIn specific job
-                        "/viewjob?",  # Indeed specific job
-                        "/job/",  # Generic job posting pattern
-                        "/position/",
-                        "/opening/",
-                        "/vacancy/",
-                        "apply",
-                        "careers/",
-                    ]
-
-                    if not any(indicator in link_lower for indicator in job_indicators):
-                        # If no job indicators, skip it
+                    if not any(keyword in link_lower for keyword in ["job", "career", "hiring", "work", "position"]):
                         continue
 
                     snippet_elem = result.find("a", class_="result__snippet")

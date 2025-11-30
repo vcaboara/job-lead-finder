@@ -50,11 +50,12 @@ def generate_job_leads(
             from .mcp_providers import generate_job_leads_via_mcp
 
             location = os.getenv("DEFAULT_LOCATION", "United States")
-            count_per_mcp = int(os.getenv("JOBS_PER_MCP", str(count)))
+            # Request 3x from each MCP to get more raw results for filtering
+            count_per_mcp = int(os.getenv("JOBS_PER_MCP", str(count * 3)))
 
             print("job_finder: Trying MCP providers...")
             leads = generate_job_leads_via_mcp(
-                query=query, count=count, count_per_provider=count_per_mcp, location=location
+                query=query, count=count * 3, count_per_provider=count_per_mcp, location=location
             )
 
             if leads:
