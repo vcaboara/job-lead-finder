@@ -21,9 +21,12 @@ ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy package metadata and source
 COPY pyproject.toml /app/
-COPY src/ /app/src/
+# TODO: use pyproject.toml to install dependencies directly
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir .
 
-RUN pip install --upgrade pip setuptools wheel
+# Copy src after installing deps to leverage caching
+COPY src/ /app/src/
 
 # Install our package and runtime deps into the venv
 RUN pip install --no-cache-dir . \

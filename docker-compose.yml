@@ -22,6 +22,8 @@ services:
     build:
       args:
         INSTALL_TEST_DEPS: "false"
+    environment:
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
     ports:
       - "8000:8000"
     command: python -m uvicorn app.ui_server:app --host 0.0.0.0 --port 8000

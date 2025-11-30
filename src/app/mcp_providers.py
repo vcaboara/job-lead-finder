@@ -1,9 +1,9 @@
 """MCP (Model Context Protocol) providers for job search.
 
 This module provides a unified interface for multiple job search MCPs:
-- LinkedIn MCP (via Docker Desktop)
-- DuckDuckGo Search MCP (via Docker Desktop)
+- DuckDuckGo Search MCP (primary - no auth required)
 - GitHub Jobs (via GitHub API)
+- LinkedIn MCP (requires browser cookies - disabled by default)
 
 Each MCP can be queried independently and results can be aggregated.
 """
@@ -11,6 +11,14 @@ Each MCP can be queried independently and results can be aggregated.
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
+
+try:
+    from bs4 import BeautifulSoup
+
+    BS4_AVAILABLE = True
+except ImportError:
+    BS4_AVAILABLE = False
+    print("Warning: BeautifulSoup4 not available. DuckDuckGo search will be disabled.")
 
 
 class MCPProvider(ABC):
@@ -225,14 +233,17 @@ class DuckDuckGoMCP(MCPProvider):
         # DuckDuckGo doesn't require authentication
 
     def is_available(self) -> bool:
-        """DuckDuckGo is always available (no auth required)."""
-        return True
+        """DuckDuckGo is available if BeautifulSoup4 is installed."""
+        return BS4_AVAILABLE
 
     def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
         """Search for jobs using DuckDuckGo."""
+        if not BS4_AVAILABLE:
+            print("DuckDuckGo MCP error: BeautifulSoup4 not installed")
+            return []
+
         try:
             import httpx
-            from bs4 import BeautifulSoup
 
             # Build search query
             search_query = f"{query} jobs"
@@ -314,7 +325,9 @@ class MCPAggregator:
     """Aggregates results from multiple MCP providers."""
 
     def __init__(self, providers: Optional[List[MCPProvider]] = None):
-        self.providers = providers or [DuckDuckGoMCP(), GitHubJobsMCP(), LinkedInMCP()]
+        # Default: DuckDuckGo (primary) and GitHub only
+        # LinkedIn removed from defaults (requires browser cookies)
+        self.providers = providers or [DuckDuckGoMCP(), GitHubJobsMCP()]
 
     def get_available_providers(self) -> List[MCPProvider]:
         """Get list of available MCP providers."""

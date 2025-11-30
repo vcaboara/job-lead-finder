@@ -251,21 +251,26 @@ def _process_and_filter_leads(raw_leads: list) -> list:
 
     # Pre-filter blocked leads
     unblocked_leads = [lead for lead in raw_leads if not is_blocked(lead.get("link", ""), lead.get("company", ""))]
+    print(f"_process_and_filter_leads: {len(raw_leads)} raw leads, {len(unblocked_leads)} after blocking filter")
 
     # Validate all links in parallel (5-10x faster than sequential)
     links_to_validate = [lead.get("link", "") for lead in unblocked_leads]
     validated_results = {}
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        future_to_link = {executor.submit(validate_link, link, False): link for link in links_to_validate if link}
+        future_to_link = {
+            executor.submit(validate_link, link, verbose=False): link for link in links_to_validate if link
+        }
         for future in concurrent.futures.as_completed(future_to_link):
             link = future_to_link[future]
             try:
                 validated_results[link] = future.result()
-            except Exception:
+            except Exception as e:
+                print(f"Link validation exception for {link}: {e}")
                 validated_results[link] = {"valid": False, "status_code": None, "error": "validation_failed"}
 
     processed_leads = []
+    filtered_reasons = {}
     for lead in unblocked_leads:
         link = lead.get("link", "")
         link_info = validated_results.get(link) if link else {"valid": False, "status_code": None, "error": "no_link"}
@@ -278,32 +283,54 @@ def _process_and_filter_leads(raw_leads: list) -> list:
         query = parsed.query.lower() if parsed else ""
 
         # Detect generic career/jobs pages (not specific job postings)
+        # Allow job board sites (LinkedIn, Indeed, Glassdoor, etc.)
+        host_is_job_board = any(
+            job_board in host for job_board in ["linkedin.com", "indeed.com", "glassdoor", "github.com", "remote"]
+        )
+
         generic_patterns = [
             "/careers",
-            "/jobs",
             "/career",
-            "/job",
             "/employment",
             "/opportunities",
             "/join-us",
             "/work-with-us",
         ]
-        is_generic_page = any(
-            path.rstrip("/") == pattern or path.rstrip("/") + "/" == pattern + "/" for pattern in generic_patterns
-        )
+        # Only check generic patterns if NOT on a job board site
+        is_generic_page = False
+        if not host_is_job_board:
+            is_generic_page = any(
+                path.rstrip("/") == pattern or path.rstrip("/") + "/" == pattern + "/" for pattern in generic_patterns
+            )
 
         looks_like_search = ("/search" in path) or ("jobs/search" in path) or ("q=" in query)
         status = link_info.get("status_code")
         is_excluded_status = status in {403, 404}
 
-        if (not link_info.get("valid")) or is_excluded_status or is_local or looks_like_search or is_generic_page:
-            # Skip adding this lead due to unacceptable link
+        # Track filtering reasons
+        filter_reason = None
+        if not link_info.get("valid"):
+            filter_reason = f"invalid_link:{link_info.get('error')}"
+        elif is_excluded_status:
+            filter_reason = f"excluded_status:{status}"
+        elif is_local:
+            filter_reason = "localhost"
+        elif looks_like_search:
+            filter_reason = "search_page"
+        elif is_generic_page:
+            filter_reason = "generic_page"
+
+        if filter_reason:
+            filtered_reasons[filter_reason] = filtered_reasons.get(filter_reason, 0) + 1
             continue
+
         lead["link_status_code"] = status
         lead["link_valid"] = True
         lead["link_warning"] = link_info.get("warning")
         lead["link_error"] = link_info.get("error")
         processed_leads.append(lead)
+
+    print(f"_process_and_filter_leads: {len(processed_leads)} passed validation. Filtered: {filtered_reasons}")
 
     return processed_leads
 

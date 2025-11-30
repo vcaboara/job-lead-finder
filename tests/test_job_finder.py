@@ -38,7 +38,7 @@ class TestGenerateJobLeads:
         mock_provider.generate_job_leads.return_value = mock_leads
 
         with patch("app.job_finder.GeminiProvider", return_value=mock_provider):
-            leads = job_finder.generate_job_leads("python", "Skills: Python", count=2)
+            leads = job_finder.generate_job_leads("python", "Skills: Python", count=2, use_mcp=False)
             assert isinstance(leads, list)
             assert len(leads) == 1
             assert leads[0]["title"] == "Python Dev"
@@ -57,7 +57,7 @@ class TestGenerateJobLeads:
         mock_provider.generate_job_leads.return_value = []
 
         with patch("app.job_finder.GeminiProvider", return_value=mock_provider):
-            job_finder.generate_job_leads("python", "Skills: Python", count=10)
+            job_finder.generate_job_leads("python", "Skills: Python", count=10, use_mcp=False)
             # Verify count was passed to provider
             call_args = mock_provider.generate_job_leads.call_args
             assert call_args[1]["count"] == 10
@@ -68,7 +68,7 @@ class TestGenerateJobLeads:
         mock_provider.generate_job_leads.return_value = []
 
         with patch("app.job_finder.GeminiProvider", return_value=mock_provider):
-            job_finder.generate_job_leads("python", "Skills: Python", model="custom-model")
+            job_finder.generate_job_leads("python", "Skills: Python", model="custom-model", use_mcp=False)
             call_args = mock_provider.generate_job_leads.call_args
             assert call_args[1]["model"] == "custom-model"
 
@@ -78,7 +78,7 @@ class TestGenerateJobLeads:
         mock_provider.generate_job_leads.return_value = []
 
         with patch("app.job_finder.GeminiProvider", return_value=mock_provider):
-            job_finder.generate_job_leads("python", "Skills: Python", verbose=True)
+            job_finder.generate_job_leads("python", "Skills: Python", verbose=True, use_mcp=False)
             call_args = mock_provider.generate_job_leads.call_args
             assert call_args[1]["verbose"] is True
 
@@ -110,7 +110,7 @@ class TestGenerateJobLeads:
 
         with patch("app.job_finder.GeminiProvider", return_value=mock_provider):
             # Should fall back to local search when MCP and Gemini both fail
-            leads = job_finder.generate_job_leads("python", "Skills: Python")
+            leads = job_finder.generate_job_leads("python", "Skills: Python", use_mcp=False)
             # Fallback should return some local results
             assert isinstance(leads, list)
             # Should have expected fields

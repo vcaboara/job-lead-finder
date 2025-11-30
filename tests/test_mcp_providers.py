@@ -2,7 +2,8 @@
 
 from unittest.mock import Mock, patch
 
-from src.app.mcp_providers import GitHubJobsMCP, IndeedMCP, LinkedInMCP, MCPAggregator, generate_job_leads_via_mcp
+from app.mcp_providers import DuckDuckGoMCP  # noqa: F401 - used in @patch decorators
+from app.mcp_providers import GitHubJobsMCP, IndeedMCP, LinkedInMCP, MCPAggregator, generate_job_leads_via_mcp
 
 
 class TestMCPProviders:
@@ -49,7 +50,7 @@ class TestMCPProviders:
         assert mcp.is_available() is False
 
     @patch("httpx.post")
-    @patch("src.app.mcp_providers.LinkedInMCP.is_available")
+    @patch("app.mcp_providers.LinkedInMCP.is_available")
     def test_search_jobs_success(self, mock_available, mock_post):
         """Test search_jobs returns normalized job data."""
         mock_available.return_value = True
@@ -78,7 +79,7 @@ class TestMCPProviders:
         assert jobs[0]["source"] == "LinkedIn"
         assert jobs[0]["link"] == "https://linkedin.com/jobs/123"
 
-    @patch("src.app.mcp_providers.LinkedInMCP.is_available")
+    @patch("app.mcp_providers.LinkedInMCP.is_available")
     def test_search_jobs_unavailable(self, mock_available):
         """Test search_jobs returns empty list when MCP unavailable."""
         mock_available.return_value = False
@@ -89,7 +90,7 @@ class TestMCPProviders:
         assert jobs == []
 
     @patch("httpx.post")
-    @patch("src.app.mcp_providers.LinkedInMCP.is_available")
+    @patch("app.mcp_providers.LinkedInMCP.is_available")
     def test_search_jobs_api_error(self, mock_available, mock_post):
         """Test search_jobs handles API errors gracefully."""
         mock_available.return_value = True
@@ -107,10 +108,9 @@ class TestMCPAggregator:
     def test_aggregator_initialization(self):
         """Test MCPAggregator initializes with default providers."""
         agg = MCPAggregator()
-        assert len(agg.providers) == 3
+        assert len(agg.providers) == 2  # DuckDuckGo and GitHub (LinkedIn removed)
         assert any(p.name == "DuckDuckGo" for p in agg.providers)
         assert any(p.name == "GitHub" for p in agg.providers)
-        assert any(p.name == "LinkedIn" for p in agg.providers)
 
     def test_aggregator_custom_providers(self):
         """Test MCPAggregator with custom provider list."""
@@ -122,27 +122,24 @@ class TestMCPAggregator:
         assert len(agg.providers) == 1
         assert agg.providers[0].name == "Custom"
 
-    @patch("src.app.mcp_providers.LinkedInMCP.is_available")
-    @patch("src.app.mcp_providers.DuckDuckGoMCP.is_available")
-    @patch("src.app.mcp_providers.GitHubJobsMCP.is_available")
-    def test_get_available_providers(self, mock_github, mock_ddg, mock_linkedin):
+    @patch("app.mcp_providers.DuckDuckGoMCP.is_available")
+    @patch("app.mcp_providers.GitHubJobsMCP.is_available")
+    def test_get_available_providers(self, mock_github, mock_ddg):
         """Test get_available_providers filters correctly."""
-        mock_linkedin.return_value = True
         mock_ddg.return_value = True
         mock_github.return_value = False
 
         agg = MCPAggregator()
         available = agg.get_available_providers()
 
-        assert len(available) == 2
-        assert any(p.name == "LinkedIn" for p in available)
+        assert len(available) == 1  # Only DuckDuckGo is available
         assert any(p.name == "DuckDuckGo" for p in available)
         assert not any(p.name == "GitHub" for p in available)
 
-    @patch("src.app.mcp_providers.DuckDuckGoMCP.search_jobs")
-    @patch("src.app.mcp_providers.DuckDuckGoMCP.is_available")
-    @patch("src.app.mcp_providers.LinkedInMCP.is_available")
-    @patch("src.app.mcp_providers.GitHubJobsMCP.is_available")
+    @patch("app.mcp_providers.DuckDuckGoMCP.search_jobs")
+    @patch("app.mcp_providers.DuckDuckGoMCP.is_available")
+    @patch("app.mcp_providers.LinkedInMCP.is_available")
+    @patch("app.mcp_providers.GitHubJobsMCP.is_available")
     def test_search_jobs_aggregation(self, mock_github_avail, mock_linkedin_avail, mock_ddg_avail, mock_search):
         """Test search_jobs aggregates from multiple providers."""
         # Only DuckDuckGo available
@@ -176,10 +173,10 @@ class TestMCPAggregator:
         assert jobs[0]["title"] == "Job 1"
         assert jobs[1]["title"] == "Job 2"
 
-    @patch("src.app.mcp_providers.DuckDuckGoMCP.search_jobs")
-    @patch("src.app.mcp_providers.DuckDuckGoMCP.is_available")
-    @patch("src.app.mcp_providers.LinkedInMCP.is_available")
-    @patch("src.app.mcp_providers.GitHubJobsMCP.is_available")
+    @patch("app.mcp_providers.DuckDuckGoMCP.search_jobs")
+    @patch("app.mcp_providers.DuckDuckGoMCP.is_available")
+    @patch("app.mcp_providers.LinkedInMCP.is_available")
+    @patch("app.mcp_providers.GitHubJobsMCP.is_available")
     def test_deduplication(self, mock_github_avail, mock_linkedin_avail, mock_ddg_avail, mock_search):
         """Test deduplication removes duplicate job links."""
         mock_ddg_avail.return_value = True
@@ -213,9 +210,9 @@ class TestMCPAggregator:
         assert len(jobs) == 1
         assert jobs[0]["link"] == "https://example.com/1"
 
-    @patch("src.app.mcp_providers.DuckDuckGoMCP.is_available")
-    @patch("src.app.mcp_providers.LinkedInMCP.is_available")
-    @patch("src.app.mcp_providers.GitHubJobsMCP.is_available")
+    @patch("app.mcp_providers.DuckDuckGoMCP.is_available")
+    @patch("app.mcp_providers.LinkedInMCP.is_available")
+    @patch("app.mcp_providers.GitHubJobsMCP.is_available")
     def test_no_providers_available(self, mock_github, mock_linkedin, mock_ddg):
         """Test search_jobs returns empty list when no providers available."""
         mock_ddg.return_value = False
@@ -235,7 +232,7 @@ class TestMCPAggregator:
 class TestGenerateJobLeadsViaMCP:
     """Test generate_job_leads_via_mcp function."""
 
-    @patch("src.app.mcp_providers.MCPAggregator.search_jobs")
+    @patch("app.mcp_providers.MCPAggregator.search_jobs")
     def test_generate_job_leads_via_mcp(self, mock_search):
         """Test generate_job_leads_via_mcp wrapper function."""
         mock_search.return_value = [
