@@ -271,7 +271,7 @@ class DuckDuckGoMCP(MCPProvider):
             results = soup.find_all("div", class_="result")
 
             jobs = []
-            for result in results[: count * 2]:  # Get extra for filtering
+            for result in results[: count * 3]:  # Get extra for filtering
                 try:
                     link_elem = result.find("a", class_="result__a")
                     if not link_elem:
@@ -280,11 +280,38 @@ class DuckDuckGoMCP(MCPProvider):
                     title = link_elem.get_text(strip=True)
                     link = link_elem.get("href", "")
 
-                    # Skip if not a job-related link
-                    if not any(
-                        keyword in link.lower()
-                        for keyword in ["job", "career", "hiring", "linkedin.com/jobs", "indeed.com", "glassdoor"]
-                    ):
+                    # Skip generic job board landing/search pages
+                    # We want specific job postings, not aggregator pages
+                    link_lower = link.lower()
+                    skip_patterns = [
+                        "/jobs/search",
+                        "/jobs?",
+                        "linkedin.com/jobs/python",  # Generic search pages
+                        "linkedin.com/jobs/remote",
+                        "indeed.com/jobs?q=",
+                        "glassdoor.com/Job/",  # Glassdoor job search (not specific posting)
+                        "remotepython.com/jobs",  # Aggregator
+                        "arc.dev/remote-jobs",  # Aggregator
+                        "weworkremotely.com",  # Aggregator home
+                    ]
+
+                    if any(pattern in link_lower for pattern in skip_patterns):
+                        continue
+
+                    # Accept job-related links that look like specific postings
+                    job_indicators = [
+                        "/jobs/view/",  # LinkedIn specific job
+                        "/viewjob?",  # Indeed specific job
+                        "/job/",  # Generic job posting pattern
+                        "/position/",
+                        "/opening/",
+                        "/vacancy/",
+                        "apply",
+                        "careers/",
+                    ]
+
+                    if not any(indicator in link_lower for indicator in job_indicators):
+                        # If no job indicators, skip it
                         continue
 
                     snippet_elem = result.find("a", class_="result__snippet")
@@ -298,6 +325,13 @@ class DuckDuckGoMCP(MCPProvider):
                         company = "Indeed"
                     elif "glassdoor" in link:
                         company = "Glassdoor"
+                    else:
+                        # Try to extract company from domain
+                        from urllib.parse import urlparse
+
+                        domain = urlparse(link).netloc
+                        if domain:
+                            company = domain.replace("www.", "").split(".")[0].title()
 
                     jobs.append(
                         {
@@ -325,9 +359,9 @@ class MCPAggregator:
     """Aggregates results from multiple MCP providers."""
 
     def __init__(self, providers: Optional[List[MCPProvider]] = None):
-        # Default: DuckDuckGo (primary) and GitHub only
+        # Default: GitHub (primary - real job postings) and DuckDuckGo (secondary)
         # LinkedIn removed from defaults (requires browser cookies)
-        self.providers = providers or [DuckDuckGoMCP(), GitHubJobsMCP()]
+        self.providers = providers or [GitHubJobsMCP(), DuckDuckGoMCP()]
 
     def get_available_providers(self) -> List[MCPProvider]:
         """Get list of available MCP providers."""
