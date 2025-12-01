@@ -258,16 +258,18 @@ class TestMCPAggregator:
         assert len(jobs) == 1
         assert jobs[0]["link"] == "https://example.com/1"
 
+    @patch("app.mcp_providers.WeWorkRemotelyMCP.is_available")
     @patch("app.mcp_providers.CompanyJobsMCP.is_available")
     @patch("app.mcp_providers.LinkedInMCP.is_available")
     @patch("app.mcp_providers.RemotiveMCP.is_available")
     @patch("app.mcp_providers.RemoteOKMCP.is_available")
-    def test_no_providers_available(self, mock_remoteok, mock_remotive, mock_linkedin, mock_companyjobs):
+    def test_no_providers_available(self, mock_remoteok, mock_remotive, mock_linkedin, mock_companyjobs, mock_wwr):
         """Test search_jobs returns empty list when no providers available."""
         mock_companyjobs.return_value = False
         mock_linkedin.return_value = False
         mock_remotive.return_value = False
         mock_remoteok.return_value = False
+        mock_wwr.return_value = False
 
         agg = MCPAggregator()
         jobs = agg.search_jobs("python developer", count_per_provider=5)
