@@ -4,6 +4,7 @@ This module provides functions to validate URLs returned by Gemini job search,
 following redirects and identifying broken links (404s, etc.).
 """
 
+import logging
 import time
 from typing import Any, Dict, Optional
 
@@ -13,6 +14,8 @@ try:
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
 
 
 # Soft 404 URL patterns - defined at module level for performance
@@ -99,7 +102,7 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
                 warning = "server error"
 
         if verbose:
-            print(f"link_validator: {url} -> {status_code} (valid={valid}, soft_404={is_soft_404})")
+            logger.info(f"{url} -> {status_code} (valid={valid}, soft_404={is_soft_404})")
 
         return {
             "valid": valid,
@@ -111,7 +114,7 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
     except Exception as e:
         error_msg = str(e)
         if verbose:
-            print(f"link_validator: {url} -> ERROR: {error_msg}")
+            logger.error(f"{url} -> ERROR: {error_msg}")
         return {
             "valid": False,
             "status_code": None,
@@ -148,13 +151,13 @@ def validate_leads(
         return leads
 
     if verbose:
-        print(f"link_validator: validating {len(leads)} leads")
+        logger.info(f"Validating {len(leads)} leads")
 
     validated = []
     for i, lead in enumerate(leads):
         url = lead.get("link", "")
         if verbose:
-            print(f"link_validator: [{i+1}/{len(leads)}] validating {url}")
+            logger.info(f"[{i+1}/{len(leads)}] validating {url}")
 
         validation = validate_link(url, timeout=timeout, verbose=verbose)
 
@@ -172,7 +175,7 @@ def validate_leads(
 
     if verbose:
         valid_count = sum(1 for lead in validated if lead.get("link_valid"))
-        print(f"link_validator: {valid_count}/{len(validated)} links valid")
+        logger.info(f"{valid_count}/{len(validated)} links valid")
 
     return validated
 

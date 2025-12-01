@@ -174,8 +174,12 @@ class TestValidateLink:
             assert result["warning"] == "validator unavailable"
 
     @pytest.mark.skipif(not REQUESTS_AVAILABLE, reason="requests library not installed")
-    def test_validate_link_verbose_output(self, capsys):
+    def test_validate_link_verbose_output(self, capsys, caplog):
         """Test verbose output for successful validation."""
+        import logging
+
+        caplog.set_level(logging.INFO)
+
         with patch("app.link_validator.requests") as mock_requests:
             mock_resp = Mock()
             mock_resp.status_code = 200
@@ -183,9 +187,9 @@ class TestValidateLink:
             mock_requests.head.return_value = mock_resp
 
             validate_link("https://example.com", verbose=True)
-            captured = capsys.readouterr()
-            assert "link_validator:" in captured.out
-            assert "200" in captured.out
+            # Check that logging occurred
+            assert len(caplog.records) > 0
+            assert any("200" in record.message for record in caplog.records)
 
 
 class TestValidateLeads:
@@ -221,8 +225,12 @@ class TestValidateLeads:
         assert results == []
 
     @pytest.mark.skipif(not REQUESTS_AVAILABLE, reason="requests library not installed")
-    def test_validate_leads_verbose_output(self, capsys):
+    def test_validate_leads_verbose_output(self, capsys, caplog):
         """Test verbose output for lead validation."""
+        import logging
+
+        caplog.set_level(logging.INFO)
+
         with patch("app.link_validator.requests") as mock_requests:
             mock_resp = Mock()
             mock_resp.status_code = 200
@@ -232,8 +240,9 @@ class TestValidateLeads:
             leads = [{"title": "Job", "company": "Co", "link": "https://example.com"}]
             validate_leads(leads, verbose=True)
 
-            captured = capsys.readouterr()
-            assert "link_validator:" in captured.out
+            # Check that logging occurred
+            assert len(caplog.records) > 0
+            assert any("Validating" in record.message or "valid" in record.message for record in caplog.records)
 
 
 class TestEnrichLeadsValidation:

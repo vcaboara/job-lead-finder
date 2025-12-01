@@ -5,6 +5,7 @@ configuration endpoints, and leads retrieval.
 """
 
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -19,6 +20,9 @@ from .config_store import load_config, save_config, scan_entity, scan_instructio
 from .job_finder import generate_job_leads, save_to_file
 from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
 from .link_validator import validate_link
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 app = FastAPI(title="Job Lead Finder", version="0.1.1")
 
@@ -121,13 +125,17 @@ def search(req: SearchRequest):
 
     # Create unique search ID for progress tracking
     search_id = f"search_{int(time.time() * 1000)}"
+    start_time = time.time()
     search_progress[search_id] = {
         "status": "starting",
         "message": f"Requesting {req.count} job listings...",
         "attempt": 0,
         "valid_count": 0,
-        "timestamp": time.time(),
+        "timestamp": start_time,
+        "start_time": start_time,
     }
+
+    logger.info(f"[{search_id}] Search started: query='{req.query}', count={req.count}, model={req.model}")
 
     try:
         # Request 10x more jobs to account for filtering (oversample strategy)
@@ -140,6 +148,11 @@ def search(req: SearchRequest):
         all_valid_leads = []
         seen_links = set()  # Track unique job links to avoid duplicates
 
+        logger.info(
+            f"[{search_id}] Configuration: oversample={oversample_multiplier}x, "
+            f"initial_request={initial_request_count}, max_retries={max_retries}"
+        )
+
         for attempt in range(max_retries + 1):
             # Calculate how many more we need
             needed = req.count - len(all_valid_leads)
@@ -150,21 +163,24 @@ def search(req: SearchRequest):
             request_count = needed * oversample_multiplier if attempt > 0 else initial_request_count
 
             # Update progress
+            attempt_start = time.time()
+            elapsed = attempt_start - start_time
             search_progress[search_id].update(
                 {
                     "status": "fetching",
                     "attempt": attempt + 1,
                     "message": (
                         f"Attempt {attempt + 1}/{max_retries + 1}: "
-                        f"Searching {request_count} jobs across providers..."
+                        f"Searching {request_count} jobs across providers... (elapsed: {elapsed:.1f}s)"
                     ),
                 }
             )
 
-            search_progress[search_id][
-                "message"
-            ] = f"Searching CompanyJobs, RemoteOK, Remotive for {request_count} jobs..."
-            print(f"UI: Starting search for {request_count} jobs (need {needed} more valid results)")
+            logger.info(
+                f"[{search_id}] Attempt {attempt + 1}/{max_retries + 1}: "
+                f"requesting {request_count} jobs (need {needed} more valid), "
+                f"elapsed={elapsed:.1f}s"
+            )
 
             raw_leads = generate_job_leads(
                 query=req.query,
@@ -175,16 +191,33 @@ def search(req: SearchRequest):
                 verbose=False,
             )
 
+            fetch_elapsed = time.time() - attempt_start
+            logger.info(f"[{search_id}] Fetched {len(raw_leads)} raw jobs in {fetch_elapsed:.1f}s")
+
             # Update progress with provider stats
+            total_elapsed = time.time() - start_time
             search_progress[search_id].update(
-                {"status": "filtering", "message": f"Fetched {len(raw_leads)} jobs. Validating links..."}
+                {
+                    "status": "filtering",
+                    "message": (
+                        f"Fetched {len(raw_leads)} jobs in {fetch_elapsed:.1f}s. "
+                        f"Validating links... (total: {total_elapsed:.1f}s)"
+                    ),
+                }
             )
 
             # Process and filter leads
+            filter_start = time.time()
             valid_leads = _process_and_filter_leads(raw_leads)
+            logger.info(
+                f"[{search_id}] Filtered to {len(valid_leads)} valid jobs "
+                f"(removed {len(raw_leads) - len(valid_leads)} invalid)"
+            )
 
             # Deduplicate by link and filter out hidden jobs
             tracker = get_tracker()
+            hidden_count = 0
+            duplicate_count = 0
             for lead in valid_leads:
                 link = lead.get("link", "")
                 if link and link not in seen_links:
@@ -194,9 +227,24 @@ def search(req: SearchRequest):
                         all_valid_leads.append(lead)
                         # Track new job automatically as "new" status
                         tracker.track_job(lead, STATUS_NEW)
+                    else:
+                        hidden_count += 1
+                elif link:
+                    duplicate_count += 1
 
+            filter_elapsed = time.time() - filter_start
+            logger.info(
+                f"[{search_id}] After deduplication: {len(all_valid_leads)} unique jobs "
+                f"(filtered {hidden_count} hidden, {duplicate_count} duplicates) "
+                f"in {filter_elapsed:.1f}s"
+            )
+
+            total_elapsed = time.time() - start_time
             search_progress[search_id].update(
-                {"valid_count": len(all_valid_leads), "message": f"Found {len(all_valid_leads)} valid jobs so far..."}
+                {
+                    "valid_count": len(all_valid_leads),
+                    "message": f"Found {len(all_valid_leads)} valid jobs so far... (total: {total_elapsed:.1f}s)",
+                }
             )
 
             # Stop if we have enough or got no new results
@@ -219,11 +267,15 @@ def search(req: SearchRequest):
                 lead["tracking_notes"] = tracked_job.get("notes", "")
                 lead["company_link"] = tracked_job.get("company_link")
 
+        total_elapsed = time.time() - start_time
+        logger.info(f"[{search_id}] Search complete: {len(final_leads)} jobs returned in {total_elapsed:.1f}s")
+
         search_progress[search_id].update(
             {
                 "status": "complete",
-                "message": f"Search complete: {len(final_leads)} jobs found",
+                "message": f"Search complete: {len(final_leads)} jobs found in {total_elapsed:.1f}s",
                 "valid_count": len(final_leads),
+                "elapsed": total_elapsed,
             }
         )
 

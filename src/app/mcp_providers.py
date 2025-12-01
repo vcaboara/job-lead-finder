@@ -8,6 +8,7 @@ This module provides a unified interface for multiple job search MCPs:
 Each MCP can be queried independently and results can be aggregated.
 """
 
+import logging
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
@@ -767,25 +768,32 @@ class MCPAggregator:
             # Filter to requested providers
             available = [p for p in available if p.name in providers]
 
+        logger = logging.getLogger(__name__)
+
         if not available:
-            print("No MCP providers available")
+            logger.warning("No MCP providers available")
             return []
 
-        print(f"Searching {len(available)} MCP providers: {[p.name for p in available]}")
+        logger.info(f"Searching {len(available)} MCP providers: {[p.name for p in available]}")
 
         # Parallelize provider searches for speed (3-5x faster)
         import concurrent.futures
+        import time
 
         all_jobs = []
+        search_start = time.time()
 
         def search_provider(provider):
             """Helper to search a single provider."""
+            provider_start = time.time()
             try:
                 jobs = provider.search_jobs(query, count_per_provider, location)
-                print(f"  {provider.name}: found {len(jobs)} jobs")
+                elapsed = time.time() - provider_start
+                logger.info(f"  {provider.name}: found {len(jobs)} jobs in {elapsed:.2f}s")
                 return jobs
             except Exception as e:
-                print(f"  {provider.name}: error - {e}")
+                elapsed = time.time() - provider_start
+                logger.error(f"  {provider.name}: error after {elapsed:.2f}s - {e}")
                 return []
 
         # Run searches in parallel (much faster than sequential)
@@ -794,6 +802,9 @@ class MCPAggregator:
             for future in concurrent.futures.as_completed(futures):
                 provider_jobs = future.result()
                 all_jobs.extend(provider_jobs)
+
+        search_elapsed = time.time() - search_start
+        logger.info(f"All providers completed in {search_elapsed:.2f}s, total jobs: {len(all_jobs)}")
 
         # Deduplicate by link
         seen_links = set()

@@ -197,6 +197,8 @@
             border-radius: 5px;
             font-weight: 600;
             font-size: 0.9em;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .score-badge.high {
@@ -553,21 +555,17 @@
 
             countEl.textContent = `(${leads.length})`;
 
-            container.innerHTML = leads.map(lead => `
-    <div class="lead-card">
-        <h3>${lead.title}</h3>
-        <div class="company">${lead.company}</div>
-        <div class="location">📍 ${lead.location}</div>
-        <div class="summary">${lead.summary}</div>
-        ${lead.score !== undefined ? `
-            <div class="score-section">
-                <div class="score-badge ${lead.score >= 80 ? 'high' : lead.score >= 60 ? 'medium' : 'low'}">Score: ${lead.score}</div>
-                ${lead.reasoning ? `<div class="reasoning">${lead.reasoning}</div>` : ''}
-            </div>
-        ` : ''}
-        <a href="${lead.link}" target="_blank">View on site →</a>
-    </div>
-`).join('');
+            container.innerHTML = leads.map(lead => `<div class="lead-card">
+    <h3>${lead.title}</h3>
+    <div class="company">${lead.company}</div>
+    <div class="location">📍 ${lead.location}</div>
+    <div class="summary">${lead.summary}</div>
+    ${lead.score !== undefined ? `<div class="score-section">
+        <div class="score-badge ${lead.score >= 80 ? 'high' : lead.score >= 60 ? 'medium' : 'low'}">Score: ${lead.score}</div>
+        ${lead.reasoning ? `<div class="reasoning">${lead.reasoning}</div>` : ''}
+    </div>` : ''}
+    <a href="${lead.link}" target="_blank">View on site →</a>
+</div>`).join('');
         }
         function showStatus(message, type) { const status = document.getElementById('status'); status.textContent = message; status.className = `status show ${type}`; if (type !== 'loading') { setTimeout(() => status.classList.remove('show'), 5000); } }
 
@@ -741,7 +739,9 @@
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.detail || 'Failed to update');
                 await loadIndustryProfile();
-                showStatus(`Industry profile updated to ${profile}`, 'success');
+                // Clear current results since they're from the old profile
+                displayLeads([]);
+                showStatus(`Industry profile updated to ${profile}. Click Search to find jobs with the new profile.`, 'success');
             } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
         });
 

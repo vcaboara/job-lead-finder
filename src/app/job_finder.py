@@ -8,11 +8,14 @@ This module orchestrates job search across multiple sources:
 Priority: MCP > Gemini > Local
 """
 
+import logging
 import os
 from typing import Any, Dict, List
 
 from .gemini_provider import GeminiProvider
 from .main import fetch_jobs
+
+logger = logging.getLogger(__name__)
 
 
 def generate_job_leads(
@@ -53,21 +56,21 @@ def generate_job_leads(
             # Request 3x from each MCP to get more raw results for filtering
             count_per_mcp = int(os.getenv("JOBS_PER_MCP", str(count * 3)))
 
-            print("job_finder: Trying MCP providers...")
+            logger.info(f"Trying MCP providers (count={count * 3}, per_provider={count_per_mcp}, location={location})")
             leads = generate_job_leads_via_mcp(
                 query=query, count=count * 3, count_per_provider=count_per_mcp, location=location
             )
 
             if leads:
-                print(f"job_finder: MCP providers returned {len(leads)} leads")
+                logger.info(f"MCP providers returned {len(leads)} leads")
                 # Evaluate if requested - use BATCH ranking for speed
                 if evaluate:
                     try:
                         provider = GeminiProvider()
-                        print(f"job_finder: Batch ranking {len(leads)} jobs...")
+                        logger.info(f"Batch ranking {len(leads)} jobs...")
                         # Rank all leads, return top 'count' with scores
                         leads = provider.rank_jobs_batch(leads, resume_text, top_n=count)
-                        print(f"job_finder: Ranked and filtered to top {len(leads)} jobs")
+                        logger.info(f"Ranked and filtered to top {len(leads)} jobs")
                     except Exception as e:
                         if verbose:
                             print(f"job_finder: Batch ranking unavailable: {e}")
