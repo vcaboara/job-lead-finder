@@ -304,52 +304,20 @@ class GeminiProvider:
             if hasattr(genai, "Client"):
                 try:
                     client = genai.Client(api_key=self.api_key)
-                    # If the types helper exists, build a config enabling google_search
-                    cfg = None
-                    types_mod = getattr(genai, "types", None)
-                    if types_mod is not None:
-                        try:
-                            try:
-                                # Avoid forcing response_mime_type when requesting tools; some backends reject that.
-                                cfg = types_mod.GenerateContentConfig(
-                                    system_instruction="Please return only a JSON array of job objects.",
-                                    tools=[{"google_search": {}}],
-                                )
-                                if verbose:
-                                    print("gemini_provider: created GenerateContentConfig with google_search tool")
-                            except Exception as cfg_err:
-                                if verbose:
-                                    print(f"gemini_provider: GenerateContentConfig failed: {cfg_err}")
-                                cfg = None
-                        except Exception:
-                            cfg = None
-
-                    if cfg is not None:
+                    # Note: google_search tool disabled due to MALFORMED_FUNCTION_CALL errors
+                    # and redirect URLs instead of direct links. Simple prompting works better.
+                    if verbose:
+                        print(f"gemini_provider: calling generate_content on {use_model}")
+                    try:
+                        resp = client.models.generate_content(model=use_model, contents=prompt)
                         if verbose:
-                            print(f"gemini_provider: calling generate_content with tool config on {use_model}")
-                        try:
-                            resp = client.models.generate_content(model=use_model, contents=prompt, config=cfg)
-                            if verbose:
-                                print(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
-                        except Exception as api_err:
-                            print(f"ERROR calling Gemini API with config: {api_err}")
-                            import traceback
+                            print(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
+                    except Exception as api_err:
+                        print(f"ERROR calling Gemini API: {api_err}")
+                        import traceback
 
-                            traceback.print_exc()
-                            return []
-                    else:
-                        if verbose:
-                            print(f"gemini_provider: calling generate_content WITHOUT tool config on {use_model}")
-                        try:
-                            resp = client.models.generate_content(model=use_model, contents=prompt)
-                            if verbose:
-                                print(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
-                        except Exception as api_err:
-                            print(f"ERROR calling Gemini API: {api_err}")
-                            import traceback
-
-                            traceback.print_exc()
-                            return []
+                        traceback.print_exc()
+                        return []
 
                     # Robustly extract text from various response shapes returned by the
                     # legacy client. The response may contain `candidates` with
