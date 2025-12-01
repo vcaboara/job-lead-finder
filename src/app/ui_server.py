@@ -8,7 +8,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from .config_store import load_config, save_config, scan_entity, scan_instructions, validate_url
 from .job_finder import generate_job_leads, save_to_file
+from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
 from .link_validator import validate_link
 
 app = FastAPI(title="Job Lead Finder", version="0.1.1")
@@ -128,25 +129,16 @@ def search(req: SearchRequest):
     }
 
     try:
-        # Request 5x more jobs to account for filtering (oversample strategy)
+        # Request 10x more jobs to account for filtering (oversample strategy)
         # This helps ensure we get the requested count after validation
-        # Let the AI/validation filter, not the scrapers
-        oversample_multiplier = 5
+        # With high invalid link rates (soft 404s, hallucinations), we need aggressive oversampling
+        oversample_multiplier = 10
         initial_request_count = req.count * oversample_multiplier
         max_retries = 1  # Reduced from 2 for faster response
         all_valid_leads = []
         seen_links = set()  # Track unique job links to avoid duplicates
 
         for attempt in range(max_retries + 1):
-            # Update progress
-            search_progress[search_id].update(
-                {
-                    "status": "fetching",
-                    "attempt": attempt + 1,
-                    "message": f"Attempt {attempt + 1}/{max_retries + 1}: Fetching jobs from Gemini...",
-                }
-            )
-
             # Calculate how many more we need
             needed = req.count - len(all_valid_leads)
             if needed <= 0:
@@ -155,7 +147,23 @@ def search(req: SearchRequest):
             # Request extra to account for filtering
             request_count = needed * oversample_multiplier if attempt > 0 else initial_request_count
 
-            search_progress[search_id]["message"] = f"Attempt {attempt + 1}: Requesting {request_count} jobs..."
+            # Update progress
+            search_progress[search_id].update(
+                {
+                    "status": "fetching",
+                    "attempt": attempt + 1,
+                    "message": (
+                        f"Attempt {attempt + 1}/{max_retries + 1}: "
+                        f"Searching {request_count} jobs across providers..."
+                    ),
+                }
+            )
+
+            search_progress[search_id]["message"] = (
+                f"Searching CompanyJobs, RemoteOK, Remotive for {request_count} jobs..."
+            )
+            )
+            print(f"UI: Starting search for {request_count} jobs (need {needed} more valid results)")
 
             raw_leads = generate_job_leads(
                 query=req.query,
@@ -166,20 +174,25 @@ def search(req: SearchRequest):
                 verbose=False,
             )
 
-            # Update progress
+            # Update progress with provider stats
             search_progress[search_id].update(
-                {"status": "filtering", "message": f"Validating and filtering {len(raw_leads)} results..."}
+                {"status": "filtering", "message": f"Fetched {len(raw_leads)} jobs. Validating links..."}
             )
 
             # Process and filter leads
             valid_leads = _process_and_filter_leads(raw_leads)
 
-            # Deduplicate by link
+            # Deduplicate by link and filter out hidden jobs
+            tracker = get_tracker()
             for lead in valid_leads:
                 link = lead.get("link", "")
                 if link and link not in seen_links:
-                    seen_links.add(link)
-                    all_valid_leads.append(lead)
+                    # Check if job is hidden
+                    if not tracker.is_job_hidden(lead):
+                        seen_links.add(link)
+                        all_valid_leads.append(lead)
+                        # Track new job automatically as "new" status
+                        tracker.track_job(lead, STATUS_NEW)
 
             search_progress[search_id].update(
                 {"valid_count": len(all_valid_leads), "message": f"Found {len(all_valid_leads)} valid jobs so far..."}
@@ -191,6 +204,19 @@ def search(req: SearchRequest):
 
         # Take only the requested count
         final_leads = all_valid_leads[: req.count]
+
+        # Enrich leads with tracking data (status, notes, etc.)
+        tracker = get_tracker()
+        for lead in final_leads:
+            from .job_tracker import generate_job_id
+
+            job_id = generate_job_id(lead)
+            tracked_job = tracker.get_job(job_id)
+            if tracked_job:
+                lead["job_id"] = job_id
+                lead["tracking_status"] = tracked_job.get("status", STATUS_NEW)
+                lead["tracking_notes"] = tracked_job.get("notes", "")
+                lead["company_link"] = tracked_job.get("company_link")
 
         search_progress[search_id].update(
             {
@@ -260,7 +286,7 @@ def _process_and_filter_leads(raw_leads: list) -> list:
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
         future_to_link = {
-            executor.submit(validate_link, link, verbose=False): link for link in links_to_validate if link
+            executor.submit(validate_link, link, timeout=10, verbose=False): link for link in links_to_validate if link
         }
         for future in concurrent.futures.as_completed(future_to_link):
             link = future_to_link[future]
@@ -322,12 +348,15 @@ def _process_and_filter_leads(raw_leads: list) -> list:
             looks_like_search = ("/search" in path) or ("jobs/search" in path) or ("q=" in query)
 
         status = link_info.get("status_code")
-        is_excluded_status = status in {403, 404}
+        is_excluded_status = status == 404  # Only exclude 404s, not 403 (soft-valid)
 
         # Track filtering reasons
         filter_reason = None
         if not link_info.get("valid"):
-            filter_reason = f"invalid_link:{link_info.get('error')}"
+            # Only filter truly broken links - exclude timeouts and generic errors
+            error = link_info.get("error") or ""
+            if "timeout" not in error.lower() and status == 404:
+                filter_reason = f"invalid_link:{error}"
         elif is_excluded_status:
             filter_reason = f"excluded_status:{status}"
         elif is_local:
@@ -539,18 +568,14 @@ def toggle_provider(provider_key: str, enabled: bool):
 
 
 @app.post("/api/job-config/search")
-def update_search_config(
-    default_count: Optional[int] = None,
-    oversample_multiplier: Optional[int] = None,
-    enable_ai_ranking: Optional[bool] = None,
-):
+def update_search_config(req: Dict[str, Any]):
     """Update search parameters."""
     from .config_manager import update_search_preferences
 
     success = update_search_preferences(
-        default_count=default_count,
-        oversample_multiplier=oversample_multiplier,
-        enable_ai_ranking=enable_ai_ranking,
+        default_count=req.get("default_count"),
+        oversample_multiplier=req.get("oversample_multiplier"),
+        enable_ai_ranking=req.get("enable_ai_ranking"),
     )
     if success:
         return JSONResponse({"message": "Search preferences updated"})
@@ -586,3 +611,227 @@ def update_industry_profile_endpoint(profile: str):
         return JSONResponse({"message": f"Industry profile updated to {profile}"})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============ Job Tracking Endpoints ============
+
+
+class JobStatusUpdateRequest(BaseModel):
+    status: str
+    notes: Optional[str] = None
+
+
+class CompanyLinkRequest(BaseModel):
+    company_link: str
+
+
+class CoverLetterRequest(BaseModel):
+    job_description: str
+    resume_text: Optional[str] = None
+
+
+@app.get("/api/jobs/tracked")
+def get_tracked_jobs(status: Optional[str] = None, include_hidden: bool = False):
+    """Get all tracked jobs, optionally filtered by status."""
+    tracker = get_tracker()
+
+    # Parse status filter (comma-separated)
+    status_filter = None
+    if status:
+        status_filter = [s.strip() for s in status.split(",") if s.strip()]
+
+    jobs = tracker.get_all_jobs(status_filter=status_filter, include_hidden=include_hidden)
+    return JSONResponse({"jobs": jobs, "count": len(jobs)})
+
+
+@app.get("/api/jobs/{job_id}")
+def get_job_details(job_id: str):
+    """Get details for a specific job."""
+    tracker = get_tracker()
+    job = tracker.get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    return JSONResponse({"job": job})
+
+
+@app.post("/api/jobs/{job_id}/status")
+def update_job_status(job_id: str, req: JobStatusUpdateRequest):
+    """Update job status and optionally add notes."""
+    tracker = get_tracker()
+
+    if req.status not in VALID_STATUSES:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid status '{req.status}'. Valid statuses: {', '.join(VALID_STATUSES)}"
+        )
+
+    success = tracker.update_status(job_id, req.status, req.notes)
+
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    job = tracker.get_job(job_id)
+    return JSONResponse({"message": "Status updated", "job": job})
+
+
+@app.post("/api/jobs/{job_id}/hide")
+def hide_job(job_id: str):
+    """Hide a job (won't appear in search results)."""
+    tracker = get_tracker()
+    success = tracker.hide_job(job_id)
+
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    return JSONResponse({"message": "Job hidden"})
+
+
+@app.post("/api/jobs/{job_id}/company-link")
+def set_company_link(job_id: str, req: CompanyLinkRequest):
+    """Set the direct company career page link for a job."""
+    tracker = get_tracker()
+
+    # Validate URL format
+    if not req.company_link.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="Invalid URL format")
+
+    success = tracker.set_company_link(job_id, req.company_link)
+
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    job = tracker.get_job(job_id)
+    return JSONResponse({"message": "Company link updated", "job": job})
+
+
+@app.post("/api/jobs/{job_id}/cover-letter")
+def generate_cover_letter(job_id: str, req: CoverLetterRequest):
+    """Generate a customized cover letter for a job using Gemini."""
+    from .gemini_provider import GeminiProvider
+
+    tracker = get_tracker()
+    job = tracker.get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    # Get resume text
+    resume_text = req.resume_text
+    if not resume_text and RESUME_FILE.exists():
+        resume_text = RESUME_FILE.read_text(encoding="utf-8")
+
+    if not resume_text:
+        raise HTTPException(status_code=400, detail="No resume text provided")
+
+    # Use provided job description or job summary
+    job_description = req.job_description or job.get("summary", "")
+
+    if not job_description:
+        raise HTTPException(status_code=400, detail="No job description available")
+
+    # Generate cover letter using Gemini
+    try:
+        provider = GeminiProvider()
+
+        prompt = f"""Generate a professional cover letter for this job application.
+
+Job Title: {job.get('title', 'N/A')}
+Company: {job.get('company', 'N/A')}
+Location: {job.get('location', 'N/A')}
+
+Job Description:
+{job_description}
+
+Candidate Resume:
+{resume_text}
+
+Write a concise, professional cover letter (3-4 paragraphs) that:
+1. Expresses interest in the specific role
+2. Highlights relevant experience from the resume
+3. Explains why the candidate is a good fit
+4. Ends with a call to action
+
+Return ONLY the cover letter text, no additional commentary."""
+
+        response = provider.query(prompt)
+        cover_letter = response.get("response", "")
+
+        if not cover_letter:
+            raise HTTPException(status_code=500, detail="Failed to generate cover letter")
+
+        return JSONResponse(
+            {"cover_letter": cover_letter, "job_title": job.get("title"), "company": job.get("company")}
+        )
+
+    except Exception as e:
+        print(f"Cover letter generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate cover letter: {str(e)}")
+
+
+@app.post("/api/jobs/find-company-link/{job_id}")
+async def find_company_link(job_id: str):
+    """Find direct company career page link for an aggregator job.
+
+    Extracts company name from job and searches for direct company careers page.
+    """
+    from .mcp_providers import generate_job_leads_via_mcp
+
+    tracker = get_tracker()
+    job = tracker.get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    company = job.get("company", "")
+    title = job.get("title", "")
+
+    if not company:
+        raise HTTPException(status_code=400, detail="Job has no company name")
+
+    # Search for this specific company's jobs using CompanyJobs
+    try:
+        search_query = f"{title} at {company}"
+        print(f"Finding company link: searching for '{search_query}'")
+
+        # Use CompanyJobs provider to find company career page
+        leads = generate_job_leads_via_mcp(
+            query=search_query, count=5, count_per_provider=5, location=job.get("location", "Remote")
+        )
+
+        # Filter results to only this company's jobs (case-insensitive)
+        company_lower = company.lower()
+        company_jobs = [
+            lead
+            for lead in leads
+            if lead.get("company", "").lower() == company_lower
+            and lead.get("source") == "CompanyJobs"  # Only direct company links
+        ]
+
+        if not company_jobs:
+            return JSONResponse(
+                {
+                    "found": False,
+                    "message": f"No direct company links found for {company}. Try searching their website directly.",
+                }
+            )
+
+        # Return the first match (most relevant)
+        direct_link = company_jobs[0].get("link", "")
+
+        # Automatically save it to the job
+        if direct_link:
+            tracker.set_company_link(job_id, direct_link)
+
+        return JSONResponse(
+            {
+                "found": True,
+                "company_link": direct_link,
+                "job": company_jobs[0],
+                "message": f"Found direct link at {company}",
+            }
+        )
+
+    except Exception as e:
+        print(f"Error finding company link: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to find company link: {str(e)}")

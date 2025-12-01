@@ -271,6 +271,92 @@
                 font-size: 1.8em;
             }
         }
+
+        /* Config tabs */
+        .config-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .config-tab {
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .config-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .config-panel {
+            display: none;
+        }
+
+        .config-panel.active {
+            display: block;
+        }
+
+        .provider-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background-color: #667eea;
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(24px);
+        }
     </style>
 </head>
 
@@ -303,33 +389,133 @@
                             style="background:#f5f5f5;"></textarea>
                     </div>
                     <div class="form-group">
-                        <label for="count">Results Count</label>
-                        <input type="number" id="count" name="count" value="5" min="1" max="20">
+                        <label for="count">Results Count (searches 10x this amount)</label>
+                        <input type="number" id="count" name="count" value="10" min="1" max="50">
                     </div>
                     <button type="submit">Search</button>
                 </form>
                 <hr style="margin:28px 0 18px; border:none; border-top:1px solid #ddd;" />
                 <div id="configSection">
                     <h2 style="font-size:1.3em; margin-bottom:12px;">Configuration</h2>
-                    <div class="form-group">
-                        <label for="blockedEntity">Add Blocked Entity</label>
-                        <input type="text" id="blockedEntity" placeholder="domain.com or Employer Name" />
+
+                    <!-- Config Tabs -->
+                    <div class="config-tabs">
+                        <button class="config-tab active" data-tab="industry">Industry</button>
+                        <button class="config-tab" data-tab="providers">Providers</button>
+                        <button class="config-tab" data-tab="location">Location</button>
+                        <button class="config-tab" data-tab="search">Search</button>
+                        <button class="config-tab" data-tab="blocked">Blocked</button>
                     </div>
-                    <div class="form-group">
-                        <label for="blockedType">Type</label>
-                        <select id="blockedType"
-                            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
-                            <option value="site">Site</option>
-                            <option value="employer">Employer</option>
-                        </select>
+
+                    <!-- Industry Profile Tab -->
+                    <div class="config-panel active" id="panel-industry">
+                        <div class="form-group">
+                            <label for="industryProfile">Industry Profile</label>
+                            <select id="industryProfile"
+                                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                <option value="tech">Technology & Software</option>
+                                <option value="finance">Financial Technology & Banking</option>
+                                <option value="healthcare">Healthcare & Medical Technology</option>
+                                <option value="gaming">Gaming & Interactive Entertainment</option>
+                                <option value="ecommerce">E-commerce & Retail Technology</option>
+                                <option value="automotive">Automotive & Autonomous Vehicles</option>
+                                <option value="aerospace">Aerospace & Defense</option>
+                                <option value="esg">ESG & Sustainability (Climate Tech, Clean Energy)</option>
+                            </select>
+                        </div>
+                        <button id="saveIndustryBtn" type="button" style="width:100%;"
+                            title="Save this industry profile to customize which companies are targeted in searches">
+                            Save Profile & Update Company List
+                        </button>
+                        <div id="industryInfo"
+                            style="margin-top:12px; padding:10px; background:#f8f9fa; border-radius:6px; font-size:0.9em; color:#666;">
+                        </div>
                     </div>
-                    <button id="addBlockedBtn" type="button" style="margin-bottom:18px;">Add to Block List</button>
-                    <div style="margin-bottom:20px;">
-                        <h3 style="margin-bottom:10px; font-size:1.05em;">Blocked Entities</h3>
-                        <ul id="blockedList"
-                            style="list-style:none; padding:0; display:flex; flex-direction:column; gap:8px;"></ul>
+
+                    <!-- Providers Tab -->
+                    <div class="config-panel" id="panel-providers">
+                        <div id="providersList"></div>
                     </div>
-                    <div>
+
+                    <!-- Location Tab -->
+                    <div class="config-panel" id="panel-location">
+                        <div class="form-group">
+                            <label for="defaultLocation">Default Location</label>
+                            <input type="text" id="defaultLocation" placeholder="e.g., United States" />
+                        </div>
+                        <div class="form-group" style="display:flex; gap:20px; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="preferRemote" />
+                                <span>Prefer Remote</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="allowHybrid" />
+                                <span>Allow Hybrid</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="allowOnsite" />
+                                <span>Allow On-site</span>
+                            </label>
+                        </div>
+                        <button id="saveLocationBtn" type="button" style="width:100%;">Save Location
+                            Preferences</button>
+                    </div>
+
+                    <!-- Search Parameters Tab -->
+                    <div class="config-panel" id="panel-search">
+                        <div class="form-group">
+                            <label for="defaultCount">Default Result Count</label>
+                            <input type="number" id="defaultCount" min="1" max="50" placeholder="e.g., 10"
+                                title="Number of valid job results to return after filtering" />
+                            <small style="display:block; margin-top:4px; color:#666;">
+                                How many valid jobs to return after filtering out invalid links
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label for="oversampleMultiplier">Oversample Multiplier</label>
+                            <input type="number" id="oversampleMultiplier" min="5" max="20" placeholder="e.g., 10"
+                                title="How many extra jobs to fetch to account for invalid links" />
+                            <small style="display:block; margin-top:4px; color:#666;">
+                                Fetches N×count jobs to account for invalid links (e.g., 10× means requesting 100 jobs
+                                to get 10 valid ones)
+                            </small>
+                        </div>
+                        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="enableAiRanking" />
+                                <span>Enable AI Ranking</span>
+                            </label>
+                            <small style="display:block; margin-top:4px; color:#666;">
+                                Use AI to rank and filter job relevance (requires resume)
+                            </small>
+                        </div>
+                        <button id="saveSearchBtn" type="button" style="width:100%;">Save Search Parameters</button>
+                    </div>
+
+                    <!-- Blocked Entities Tab -->
+                    <div class="config-panel" id="panel-blocked">
+                        <div class="form-group">
+                            <label for="blockedEntity">Add Blocked Entity</label>
+                            <input type="text" id="blockedEntity" placeholder="domain.com or Employer Name" />
+                        </div>
+                        <div class="form-group">
+                            <label for="blockedType">Type</label>
+                            <select id="blockedType"
+                                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                <option value="site">Site</option>
+                                <option value="employer">Employer</option>
+                            </select>
+                        </div>
+                        <button id="addBlockedBtn" type="button" style="margin-bottom:18px;">Add to Block List</button>
+                        <div style="margin-bottom:20px;">
+                            <h3 style="margin-bottom:10px; font-size:1.05em;">Blocked Entities</h3>
+                            <ul id="blockedList"
+                                style="list-style:none; padding:0; display:flex; flex-direction:column; gap:8px;"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Link Validator (always visible) -->
+                    <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
                         <h3 style="margin-bottom:10px; font-size:1.05em;">Validate Link</h3>
                         <div class="form-group" style="margin-bottom:10px;">
                             <input type="text" id="validateUrl" placeholder="https://example.com/job" />
@@ -523,6 +709,151 @@
         loadLeads();
         // Auto-search on page load
         setTimeout(() => performSearch(), 500);
+
+        // --- Config Tabs ---
+        document.querySelectorAll('.config-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.getAttribute('data-tab');
+                document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.config-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`panel-${targetTab}`).classList.add('active');
+            });
+        });
+
+        // --- Industry Profile ---
+        async function loadIndustryProfile() {
+            try {
+                const resp = await fetch('/api/industry-profile');
+                const data = await resp.json();
+                document.getElementById('industryProfile').value = data.current;
+                const info = document.getElementById('industryInfo');
+                info.innerHTML = `<strong>${data.profile.name}</strong><br>${data.profile.description}<br><small>${data.profile.target_companies?.length || 0} companies targeted</small>`;
+            } catch (e) { console.error('Failed to load industry profile', e); }
+        }
+
+        document.getElementById('saveIndustryBtn').addEventListener('click', async () => {
+            const profile = document.getElementById('industryProfile').value;
+            showStatus('Updating industry profile...', 'loading');
+            try {
+                const resp = await fetch(`/api/industry-profile?profile=${profile}`, { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed to update');
+                await loadIndustryProfile();
+                showStatus(`Industry profile updated to ${profile}`, 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        // --- Providers ---
+        async function loadProviders() {
+            try {
+                const resp = await fetch('/api/job-config');
+                const config = await resp.json();
+                const container = document.getElementById('providersList');
+                const providers = config.providers || {};
+
+                container.innerHTML = Object.entries(providers).map(([key, provider]) => `
+                    <div class="provider-toggle">
+                        <span><strong>${provider.name}</strong></span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-provider="${key}" ${provider.enabled ? 'checked' : ''} />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                `).join('');
+
+                container.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', async (e) => {
+                        const providerKey = e.target.getAttribute('data-provider');
+                        const enabled = e.target.checked;
+                        try {
+                            const resp = await fetch(`/api/job-config/provider/${providerKey}?enabled=${enabled}`, { method: 'POST' });
+                            if (!resp.ok) throw new Error('Failed to update provider');
+                            showStatus(`${providerKey} ${enabled ? 'enabled' : 'disabled'}`, 'success');
+                        } catch (err) {
+                            e.target.checked = !enabled; // Revert on error
+                            showStatus(`Error updating provider`, 'error');
+                        }
+                    });
+                });
+            } catch (e) { console.error('Failed to load providers', e); }
+        }
+
+        // --- Location Preferences ---
+        async function loadLocationPrefs() {
+            try {
+                const resp = await fetch('/api/job-config');
+                const config = await resp.json();
+                const loc = config.location || {};
+                document.getElementById('defaultLocation').value = loc.default_location || '';
+                document.getElementById('preferRemote').checked = loc.prefer_remote || false;
+                document.getElementById('allowHybrid').checked = loc.allow_hybrid || false;
+                document.getElementById('allowOnsite').checked = loc.allow_onsite || false;
+            } catch (e) { console.error('Failed to load location prefs', e); }
+        }
+
+        document.getElementById('saveLocationBtn').addEventListener('click', async () => {
+            const location = document.getElementById('defaultLocation').value;
+            const preferRemote = document.getElementById('preferRemote').checked;
+            const allowHybrid = document.getElementById('allowHybrid').checked;
+            const allowOnsite = document.getElementById('allowOnsite').checked;
+
+            showStatus('Updating location preferences...', 'loading');
+            try {
+                const resp = await fetch('/api/job-config/location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        default_location: location,
+                        prefer_remote: preferRemote,
+                        allow_hybrid: allowHybrid,
+                        allow_onsite: allowOnsite
+                    })
+                });
+                if (!resp.ok) throw new Error('Failed to update location');
+                showStatus('Location preferences updated', 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        // --- Search Parameters ---
+        async function loadSearchParams() {
+            try {
+                const resp = await fetch('/api/job-config');
+                const config = await resp.json();
+                const search = config.search || {};
+                document.getElementById('defaultCount').value = search.default_count || 10;
+                document.getElementById('oversampleMultiplier').value = search.oversample_multiplier || 10;
+                document.getElementById('enableAiRanking').checked = search.enable_ai_ranking !== false;
+            } catch (e) { console.error('Failed to load search params', e); }
+        }
+
+        document.getElementById('saveSearchBtn').addEventListener('click', async () => {
+            const defaultCount = parseInt(document.getElementById('defaultCount').value);
+            const oversampleMultiplier = parseInt(document.getElementById('oversampleMultiplier').value);
+            const enableAiRanking = document.getElementById('enableAiRanking').checked;
+
+            showStatus('Updating search parameters...', 'loading');
+            try {
+                const resp = await fetch('/api/job-config/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        default_count: defaultCount,
+                        oversample_multiplier: oversampleMultiplier,
+                        enable_ai_ranking: enableAiRanking
+                    })
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed to update');
+                showStatus('Search parameters updated', 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        // Load all config on page load
+        loadIndustryProfile();
+        loadProviders();
+        loadLocationPrefs();
+        loadSearchParams();
     </script>
 </body>
 

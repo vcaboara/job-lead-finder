@@ -120,10 +120,10 @@ class TestValidateLink:
         with patch("app.link_validator.requests") as mock_requests:
             mock_resp = Mock()
             mock_resp.status_code = 500
-            mock_resp.url = "https://example.com/error"
+            mock_resp.url = "https://example.com/api/endpoint"  # Not caught by soft-404 detector
             mock_requests.head.return_value = mock_resp
 
-            result = validate_link("https://example.com/error")
+            result = validate_link("https://example.com/api/endpoint")
             assert result["valid"] is False
             assert result["status_code"] == 500
             assert result["warning"] == "server error"

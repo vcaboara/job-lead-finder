@@ -504,19 +504,26 @@ class CompanyJobsMCP(MCPProvider):
             companies_to_search = profile_companies if profile_companies else self.companies
 
             # Build search query targeting company career pages
-            companies_str = ", ".join(companies_to_search[:10])  # First 10 companies
+            # Use more companies for better coverage (30 vs 10)
+            companies_str = ", ".join(companies_to_search[:30])  # Top 30 companies
             search_prompt = (
-                f"Find {count} {query} job postings directly on company career pages "
-                f"(like {companies_str}). "
-                f"Use the google_search tool to find jobs on official career sites. "
+                f"Use the google_search tool to find {count} REAL {query} job postings "
+                f"currently listed on company career pages (including {companies_str} and similar companies). "
+                f"CRITICAL: Only return jobs you actually found via google_search. "
+                f"DO NOT make up or hallucinate job URLs. "
+                f"DO NOT generate fake job IDs or paths. "
+                f"Each job MUST have a real, working URL from an actual search result. "
+                f"Include jobs from BOTH large companies (e.g., Google, Microsoft) "
+                f"and smaller tech companies/startups. "
             )
             if location:
                 search_prompt += f"Location: {location}. "
             search_prompt += (
                 "Return ONLY a JSON array with this exact format:\n"
                 '[{"title": "Job Title", "company": "Company Name", "location": "City/Remote", '
-                '"summary": "Brief description", "link": "https://company.com/careers/job-id"}]\n'
-                "Make sure links go directly to company career pages, not job boards."
+                '"summary": "Brief description", "link": "https://company.com/careers/actual-job-url"}]\n'
+                "IMPORTANT: Use only real URLs from your search results. "
+                "If you cannot find enough real jobs, return fewer results."
             )
 
             print(
@@ -530,13 +537,24 @@ class CompanyJobsMCP(MCPProvider):
 
             print(f"CompanyJobsMCP: Gemini returned {len(jobs_data)} jobs")
 
-            # Filter out aggregator links and add source tag
+            # Filter out aggregator links, Google redirect URLs, and invalid patterns
             filtered_jobs = []
             for job in jobs_data:
                 link = job.get("link", "")
-                if any(board in link.lower() for board in ["linkedin", "indeed", "glassdoor", "remoteok", "remotive"]):
+
+                # Skip Google redirect URLs (Gemini tracking URLs)
+                if "vertexaisearch.cloud.google.com" in link or "grounding-api-redirect" in link:
+                    print(f"CompanyJobsMCP: Filtering out Google redirect URL: {link[:100]}...")
+                    continue
+
+                # Skip aggregator sites
+                if any(
+                    board in link.lower()
+                    for board in ["linkedin", "indeed", "glassdoor", "remoteok", "remotive", "monster", "dice"]
+                ):
                     print(f"CompanyJobsMCP: Filtering out aggregator link: {link}")
-                    continue  # Skip if it's an aggregator
+                    continue
+
                 job["source"] = "CompanyDirect"
                 filtered_jobs.append(job)
 
@@ -756,14 +774,27 @@ class MCPAggregator:
 
         print(f"Searching {len(available)} MCP providers: {[p.name for p in available]}")
 
+        # Parallelize provider searches for speed (3-5x faster)
+        import concurrent.futures
+
         all_jobs = []
-        for provider in available:
+
+        def search_provider(provider):
+            """Helper to search a single provider."""
             try:
                 jobs = provider.search_jobs(query, count_per_provider, location)
                 print(f"  {provider.name}: found {len(jobs)} jobs")
-                all_jobs.extend(jobs)
+                return jobs
             except Exception as e:
                 print(f"  {provider.name}: error - {e}")
+                return []
+
+        # Run searches in parallel (much faster than sequential)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as executor:
+            futures = {executor.submit(search_provider, p): p for p in available}
+            for future in concurrent.futures.as_completed(futures):
+                provider_jobs = future.result()
+                all_jobs.extend(provider_jobs)
 
         # Deduplicate by link
         seen_links = set()

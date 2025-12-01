@@ -43,6 +43,7 @@ class TestGenerateJobLeads:
             assert len(leads) == 1
             assert leads[0]["title"] == "Python Dev"
 
+    @pytest.mark.slow
     def test_generate_job_leads_gemini_skip(self):
         """Test integration with Gemini if configured."""
         gen_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")

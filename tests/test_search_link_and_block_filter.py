@@ -50,10 +50,10 @@ def test_search_marks_invalid_links(monkeypatch):
             },
         ]
 
-    def fake_validate(url: str, verbose: bool = False):  # noqa: ANN001
+    def fake_validate(url: str, timeout: int = 5, verbose: bool = False):  # noqa: ANN001
         if "good.example" in url:
-            return {"url": url, "valid": True, "status_code": 200, "error": None}
-        return {"url": url, "valid": False, "status_code": None, "error": "unreachable"}
+            return {"url": url, "valid": True, "status_code": 200, "final_url": url, "error": None}
+        return {"url": url, "valid": False, "status_code": 404, "final_url": url, "error": "not found"}
 
     monkeypatch.setattr("app.ui_server.generate_job_leads", fake_generate)
     monkeypatch.setattr("app.ui_server.validate_link", fake_validate)

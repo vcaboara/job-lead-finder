@@ -49,6 +49,13 @@ Thumbs.db
 logs/*.txt
 !logs/.gitkeep
 
+# Job search data (personal/private)
+config.json
+leads.json
+job_tracking.json
+resume.txt
+uploads/
+
 # User configuration and data files
 config.json
 resume.txt

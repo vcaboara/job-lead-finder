@@ -35,8 +35,8 @@ DEFAULT_CONFIG = {
         "indeed": {"enabled": False, "name": "Indeed"},
     },
     "search": {
-        "default_count": 5,
-        "oversample_multiplier": 5,
+        "default_count": 10,
+        "oversample_multiplier": 10,
         "enable_ai_ranking": True,
     },
 }

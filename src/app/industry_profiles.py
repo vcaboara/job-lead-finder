@@ -356,6 +356,92 @@ INDUSTRY_PROFILES = {
         ],
         "preferred_locations": ["Remote", "Los Angeles", "Seattle", "Denver", "Washington DC"],
     },
+    "esg": {
+        "name": "ESG & Sustainability",
+        "description": (
+            "Environmental, Social, Governance focused companies, "
+            "renewable energy, climate tech, sustainable technology"
+        ),
+        "excluded_companies": [
+            # Fossil fuel companies
+            "ExxonMobil",
+            "Chevron",
+            "BP",
+            "Shell",
+            "ConocoPhillips",
+            # Controversial tech
+            "Palantir",  # Defense contracts
+            "Meta",  # Privacy concerns
+            "Facebook",
+        ],
+        "target_companies": [
+            # Renewable Energy
+            "Tesla Energy",
+            "Enphase Energy",
+            "SunPower",
+            "First Solar",
+            "Sunrun",
+            "Vestas",
+            "Orsted",
+            "NextEra Energy",
+            # Climate Tech
+            "Climeworks",
+            "Carbon Engineering",
+            "LanzaTech",
+            "Impossible Foods",
+            "Beyond Meat",
+            "Apeel Sciences",
+            "Indigo Agriculture",
+            # Clean Transportation
+            "Rivian",
+            "Lucid Motors",
+            "Proterra",
+            "ChargePoint",
+            "EVgo",
+            # Sustainable Tech
+            "Patagonia",
+            "Allbirds",
+            "ThredUp",
+            "The RealReal",
+            "Impossible Foods",
+            # ESG-Focused Tech
+            "Salesforce",  # Strong ESG ratings
+            "Microsoft",  # Carbon negative goals
+            "Google",  # Renewable energy leader
+            "Apple",  # 100% renewable energy
+            "SAP",  # Sustainability solutions
+            # Environmental Monitoring
+            "Planet Labs",
+            "Orbital Insight",
+            "Descartes Labs",
+            # Water Tech
+            "Xylem",
+            "Evoqua Water",
+            "Veolia",
+            # Recycling/Circular Economy
+            "TerraCycle",
+            "Rubicon",
+            "AMP Robotics",
+            # Green Building
+            "Interface",
+            "Owens Corning",
+            # ESG Software/Analytics
+            "Sustainalytics",
+            "Arabesque",
+            "TruValue Labs",
+            "RepRisk",
+        ],
+        "search_keywords": [
+            "sustainability engineer",
+            "climate tech",
+            "renewable energy",
+            "ESG analyst",
+            "environmental data",
+            "carbon accounting",
+            "clean energy",
+        ],
+        "preferred_locations": ["Remote", "San Francisco", "Boulder", "Portland", "Seattle", "Boston"],
+    },
 }
 
 
