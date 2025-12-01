@@ -6,7 +6,7 @@ following redirects and identifying broken links (404s, etc.).
 
 import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 try:
     import requests
@@ -88,7 +88,7 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
         valid = (200 <= status_code < 400 or status_code == 403) and not is_soft_404
 
         # Map status codes to soft warnings (non-breaking)
-        warning: Optional[str] = None
+        warning: str | None = None
         if is_soft_404:
             warning = "soft 404 (redirected to error page)"
         elif status_code == 403:

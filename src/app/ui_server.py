@@ -9,7 +9,7 @@ import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -36,9 +36,9 @@ search_progress: Dict[str, dict] = {}
 
 class SearchRequest(BaseModel):
     query: str
-    resume: Optional[str] = None
+    resume: str | None = None
     count: int = 5
-    model: Optional[str] = None
+    model: str | None = None
     evaluate: bool = False
     min_score: int = 60  # Minimum score threshold for filtering results
 
@@ -617,10 +617,10 @@ def get_job_config():
 
 @app.post("/api/job-config/location")
 def update_location_config(
-    default_location: Optional[str] = None,
-    prefer_remote: Optional[bool] = None,
-    allow_hybrid: Optional[bool] = None,
-    allow_onsite: Optional[bool] = None,
+    default_location: str | None = None,
+    prefer_remote: bool | None = None,
+    allow_hybrid: bool | None = None,
+    allow_onsite: bool | None = None,
 ):
     """Update location and remote/onsite preferences."""
     from .config_manager import update_location_preferences
@@ -698,7 +698,7 @@ def update_industry_profile_endpoint(profile: str):
 
 class JobStatusUpdateRequest(BaseModel):
     status: str
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class CompanyLinkRequest(BaseModel):
@@ -706,12 +706,13 @@ class CompanyLinkRequest(BaseModel):
 
 
 class CoverLetterRequest(BaseModel):
+    """Request model for cover letter generation."""
     job_description: str
-    resume_text: Optional[str] = None
+    resume_text: str | None = None
 
 
 @app.get("/api/jobs/tracked")
-def get_tracked_jobs(status: Optional[str] = None, include_hidden: bool = False):
+def get_tracked_jobs(status: str | None = None, include_hidden: bool = False):
     """Get all tracked jobs, optionally filtered by status."""
     tracker = get_tracker()
 

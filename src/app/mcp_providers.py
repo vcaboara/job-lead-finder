@@ -29,7 +29,7 @@ class MCPProvider(ABC):
         self.enabled = enabled
 
     @abstractmethod
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search for jobs using this MCP.
 
         Args:
@@ -66,7 +66,7 @@ class LinkedInMCP(MCPProvider):
         except Exception:
             return False
 
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search LinkedIn jobs via MCP."""
         if not self.is_available():
             print(f"LinkedIn MCP not available at {self.mcp_server_url}")
@@ -115,7 +115,7 @@ class IndeedMCP(MCPProvider):
         except Exception:
             return False
 
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search Indeed jobs via MCP."""
         if not self.is_available():
             print(f"Indeed MCP not available at {self.mcp_server_url}")
@@ -173,7 +173,7 @@ class GitHubJobsMCP(MCPProvider):
         except Exception:
             return False
 
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search GitHub for job postings."""
         if not self.is_available():
             print(f"GitHub MCP not available (token: {'set' if self.github_token else 'missing'})")
@@ -236,7 +236,7 @@ class DuckDuckGoMCP(MCPProvider):
         """DuckDuckGo is available if BeautifulSoup4 is installed."""
         return BS4_AVAILABLE
 
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search for jobs using DuckDuckGo."""
         if not BS4_AVAILABLE:
             print("DuckDuckGo MCP error: BeautifulSoup4 not installed")
