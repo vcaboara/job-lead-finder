@@ -933,14 +933,51 @@ class MCPAggregator:
         search_elapsed = time.time() - search_start
         logger.info("All providers completed in %.2fs, total jobs: %d", search_elapsed, len(all_jobs))
 
-        # Deduplicate by link
+        # Deduplicate by link while preserving provider diversity
+        # Strategy: Round-robin through providers to ensure mix of sources
         seen_links = set()
         unique_jobs = []
+        
+        # Group jobs by provider
+        jobs_by_provider = {}
         for job in all_jobs:
-            link = job.get("link", "")
-            if link and link not in seen_links:
-                seen_links.add(link)
-                unique_jobs.append(job)
+            source = job.get("source", "Unknown")
+            if source not in jobs_by_provider:
+                jobs_by_provider[source] = []
+            jobs_by_provider[source].append(job)
+        
+        # Round-robin through providers to get diverse results
+        provider_names = list(jobs_by_provider.keys())
+        provider_indices = {name: 0 for name in provider_names}
+        
+        while len(unique_jobs) < (total_count or len(all_jobs)):
+            added_this_round = False
+            
+            for provider_name in provider_names:
+                idx = provider_indices[provider_name]
+                provider_jobs = jobs_by_provider[provider_name]
+                
+                # Find next unique job from this provider
+                while idx < len(provider_jobs):
+                    job = provider_jobs[idx]
+                    idx += 1
+                    link = job.get("link", "")
+                    
+                    if link and link not in seen_links:
+                        seen_links.add(link)
+                        unique_jobs.append(job)
+                        added_this_round = True
+                        break
+                
+                provider_indices[provider_name] = idx
+                
+                # Stop if we've hit the limit
+                if total_count and len(unique_jobs) >= total_count:
+                    break
+            
+            # Exit if no providers added jobs this round
+            if not added_this_round:
+                break
 
         # Return requested count
         if total_count:

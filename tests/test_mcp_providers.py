@@ -7,6 +7,7 @@ from app.mcp_providers import (
     IndeedMCP,
     LinkedInMCP,
     MCPAggregator,
+    MCPProvider,
     WeWorkRemotelyMCP,
     generate_job_leads_via_mcp,
 )
@@ -282,6 +283,61 @@ class TestMCPAggregator:
         jobs = agg.search_jobs("python developer", count_per_provider=5)
 
         assert jobs == []
+
+    def test_provider_diversity_round_robin(self):
+        """Test that results include jobs from multiple providers (round-robin)."""
+        # Create mock providers with different jobs
+        provider1 = Mock(spec=MCPProvider)
+        provider1.name = "RemoteOK"
+        provider1.enabled = True
+        provider1.is_available.return_value = True
+        provider1.search_jobs.return_value = [
+            {"title": "Job 1", "link": "https://remoteok.com/1", "source": "RemoteOK"},
+            {"title": "Job 2", "link": "https://remoteok.com/2", "source": "RemoteOK"},
+            {"title": "Job 3", "link": "https://remoteok.com/3", "source": "RemoteOK"},
+        ]
+        
+        provider2 = Mock(spec=MCPProvider)
+        provider2.name = "Remotive"
+        provider2.enabled = True
+        provider2.is_available.return_value = True
+        provider2.search_jobs.return_value = [
+            {"title": "Job A", "link": "https://remotive.io/a", "source": "Remotive"},
+            {"title": "Job B", "link": "https://remotive.io/b", "source": "Remotive"},
+            {"title": "Job C", "link": "https://remotive.io/c", "source": "Remotive"},
+        ]
+        
+        provider3 = Mock(spec=MCPProvider)
+        provider3.name = "WeWorkRemotely"
+        provider3.enabled = True
+        provider3.is_available.return_value = True
+        provider3.search_jobs.return_value = [
+            {"title": "Job X", "link": "https://wwr.com/x", "source": "WeWorkRemotely"},
+            {"title": "Job Y", "link": "https://wwr.com/y", "source": "WeWorkRemotely"},
+        ]
+        
+        agg = MCPAggregator(providers=[provider1, provider2, provider3])
+        jobs = agg.search_jobs("python", count_per_provider=5, total_count=6)
+        
+        # Should get 6 jobs total, distributed across providers (round-robin)
+        assert len(jobs) == 6
+        
+        # Count jobs per source
+        sources = [job["source"] for job in jobs]
+        source_counts = {
+            "RemoteOK": sources.count("RemoteOK"),
+            "Remotive": sources.count("Remotive"),
+            "WeWorkRemotely": sources.count("WeWorkRemotely"),
+        }
+        
+        # Each provider should contribute jobs (round-robin distribution)
+        assert source_counts["RemoteOK"] >= 1
+        assert source_counts["Remotive"] >= 1
+        assert source_counts["WeWorkRemotely"] >= 1
+        
+        # Should not be all from one provider
+        assert source_counts["RemoteOK"] < 6
+        assert source_counts["Remotive"] < 6
 
 
 class TestWeWorkRemotelyMCP:
