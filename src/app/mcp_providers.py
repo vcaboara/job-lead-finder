@@ -723,7 +723,13 @@ class WeWorkRemotelyMCP(MCPProvider):
         """
         try:
             import httpx
-            import xml.etree.ElementTree as ET
+            import re
+            
+            try:
+                import defusedxml.ElementTree as ET
+            except ImportError:
+                # Fallback to standard library if defusedxml not available
+                import xml.etree.ElementTree as ET
             
             # Tech-focused RSS feeds
             categories = [
@@ -761,7 +767,6 @@ class WeWorkRemotelyMCP(MCPProvider):
                             company = "Unknown Company"
                             if description:
                                 # Try to extract company from description
-                                import re
                                 company_match = re.search(r'<strong>([^<]+)</strong>', description)
                                 if company_match:
                                     company = company_match.group(1)
@@ -769,15 +774,15 @@ class WeWorkRemotelyMCP(MCPProvider):
                             # Basic relevance filtering - check if query terms are in title or description
                             if query_lower:
                                 text_to_search = f"{title} {description}".lower()
-                                # Check if any word in query appears in job data
+                                # Check if any word in query appears (support short terms like Go, R, UI)
                                 query_words = query_lower.split()
-                                if not any(word in text_to_search for word in query_words if len(word) > 2):
+                                if not any(word in text_to_search for word in query_words):
                                     continue
                             
                             # Clean HTML from description
                             clean_desc = description
                             if BS4_AVAILABLE:
-                                from bs4 import BeautifulSoup
+                                # BeautifulSoup already imported at module level
                                 soup = BeautifulSoup(description, "html.parser")
                                 clean_desc = soup.get_text()[:500]
                             
