@@ -41,6 +41,7 @@ class SearchRequest(BaseModel):
     count: int = 5
     model: Optional[str] = None
     evaluate: bool = False
+    min_score: int = 60  # Minimum score threshold for filtering results
 
 
 class HealthResponse(BaseModel):
@@ -266,6 +267,16 @@ def search(req: SearchRequest):
                 lead["tracking_status"] = tracked_job.get("status", STATUS_NEW)
                 lead["tracking_notes"] = tracked_job.get("notes", "")
                 lead["company_link"] = tracked_job.get("company_link")
+
+        # Filter by minimum score if evaluation was performed
+        if should_evaluate and req.min_score > 0:
+            before_filter = len(final_leads)
+            final_leads = [
+                lead for lead in final_leads if lead.get("score") is not None and lead.get("score", 0) >= req.min_score
+            ]
+            filtered_count = before_filter - len(final_leads)
+            if filtered_count > 0:
+                logger.info(f"[{search_id}] Filtered out {filtered_count} jobs below score threshold {req.min_score}")
 
         total_elapsed = time.time() - start_time
         logger.info(f"[{search_id}] Search complete: {len(final_leads)} jobs returned in {total_elapsed:.1f}s")

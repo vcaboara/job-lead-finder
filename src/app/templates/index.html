@@ -394,6 +394,11 @@
                         <label for="count">Results Count (searches 10x this amount)</label>
                         <input type="number" id="count" name="count" value="10" min="1" max="50">
                     </div>
+                    <div class="form-group">
+                        <label for="minScore">Min Score (0-100, default 60)</label>
+                        <input type="number" id="minScore" name="minScore" value="60" min="0" max="100"
+                            title="Only show jobs with scores at or above this threshold">
+                    </div>
                     <button type="submit">Search</button>
                 </form>
                 <hr style="margin:28px 0 18px; border:none; border-top:1px solid #ddd;" />
@@ -491,6 +496,14 @@
                                 Use AI to rank and filter job relevance (requires resume)
                             </small>
                         </div>
+                        <div class="form-group">
+                            <label for="minScore">Minimum Score Threshold</label>
+                            <input type="number" id="minScore" min="0" max="100" placeholder="e.g., 60"
+                                title="Only show jobs scoring at or above this threshold" />
+                            <small style="display:block; margin-top:4px; color:#666;">
+                                Filter out jobs with scores below this threshold (0 = show all, 60 = good matches only)
+                            </small>
+                        </div>
                         <button id="saveSearchBtn" type="button" style="width:100%;">Save Search Parameters</button>
                     </div>
 
@@ -555,17 +568,12 @@
 
             countEl.textContent = `(${leads.length})`;
 
-            container.innerHTML = leads.map(lead => `<div class="lead-card">
-    <h3>${lead.title}</h3>
-    <div class="company">${lead.company}</div>
-    <div class="location">📍 ${lead.location}</div>
-    <div class="summary">${lead.summary}</div>
-    ${lead.score !== undefined ? `<div class="score-section">
-        <div class="score-badge ${lead.score >= 80 ? 'high' : lead.score >= 60 ? 'medium' : 'low'}">Score: ${lead.score}</div>
-        ${lead.reasoning ? `<div class="reasoning">${lead.reasoning}</div>` : ''}
-    </div>` : ''}
-    <a href="${lead.link}" target="_blank">View on site →</a>
-</div>`).join('');
+            container.innerHTML = leads.map(lead => {
+                const scoreSection = lead.score !== undefined ?
+                    `<div class="score-section"><div class="score-badge ${lead.score >= 80 ? 'high' : lead.score >= 60 ? 'medium' : 'low'}">Score: ${lead.score}</div>${lead.reasoning ? `<div class="reasoning">${lead.reasoning}</div>` : ''}</div>` : '';
+
+                return `<div class="lead-card"><h3>${lead.title}</h3><div class="company">${lead.company}</div><div class="location">📍 ${lead.location}</div><div class="summary">${lead.summary}</div>${scoreSection}<a href="${lead.link}" target="_blank">View on site →</a></div>`;
+            }).join('');
         }
         function showStatus(message, type) { const status = document.getElementById('status'); status.textContent = message; status.className = `status show ${type}`; if (type !== 'loading') { setTimeout(() => status.classList.remove('show'), 5000); } }
 
@@ -573,11 +581,12 @@
             const query = document.getElementById('query').value;
             const resume = document.getElementById('resume').value;
             const count = parseInt(document.getElementById('count').value);
+            const minScore = parseInt(document.getElementById('minScore')?.value || 60);
             const evalEl = document.getElementById('evaluate');
             const evaluate = (!!resume && resume.trim().length > 0) || (evalEl ? !!evalEl.checked : false);
             showStatus('Searching...', 'loading');
             try {
-                const resp = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, resume: resume || null, count, evaluate }) });
+                const resp = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, resume: resume || null, count, evaluate, min_score: minScore }) });
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.detail || 'Search failed');
 
