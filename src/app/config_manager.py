@@ -25,7 +25,7 @@ DEFAULT_CONFIG = {
         "allow_onsite": False,
     },
     "providers": {
-        "companyjobs": {"enabled": True, "name": "CompanyJobs"},
+        "companyjobs": {"enabled": False, "name": "CompanyJobs"},  # Requires google.genai SDK with google_search tool
         "remoteok": {"enabled": True, "name": "RemoteOK"},
         "remotive": {"enabled": True, "name": "Remotive"},
         "duckduckgo": {"enabled": False, "name": "DuckDuckGo"},

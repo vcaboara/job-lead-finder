@@ -357,9 +357,15 @@ class CompanyJobsMCP(MCPProvider):
     def is_available(self) -> bool:
         """Check if Gemini API is available for google_search."""
         try:
-            from .gemini_provider import GeminiProvider
+            from .gemini_provider import GeminiProvider, genai_name
 
             GeminiProvider()  # Just test if provider can be created
+
+            # CompanyJobsMCP requires google.genai SDK with google_search tool
+            # google.generativeai SDK doesn't support google_search
+            if genai_name == "google.generativeai":
+                return False  # google_search not available
+
             return True
         except Exception:
             return False
@@ -387,23 +393,33 @@ class CompanyJobsMCP(MCPProvider):
                 "Make sure links go directly to company career pages, not job boards."
             )
 
+            print(f"CompanyJobsMCP: Searching with prompt (first 100 chars): {search_prompt[:100]}...")
+
             # Use Gemini to search with google_search tool
             jobs_data = provider.generate_job_leads(
-                query=search_prompt, resume_text="", count=count, verbose=False  # Not needed for search
+                query=search_prompt, resume_text="", count=count, verbose=True  # Enable verbose logging
             )
 
-            # Add source tag
+            print(f"CompanyJobsMCP: Gemini returned {len(jobs_data)} jobs")
+
+            # Filter out aggregator links and add source tag
+            filtered_jobs = []
             for job in jobs_data:
-                job["source"] = "CompanyDirect"
-                # Validate it's actually a company domain
                 link = job.get("link", "")
                 if any(board in link.lower() for board in ["linkedin", "indeed", "glassdoor", "remoteok", "remotive"]):
+                    print(f"CompanyJobsMCP: Filtering out aggregator link: {link}")
                     continue  # Skip if it's an aggregator
+                job["source"] = "CompanyDirect"
+                filtered_jobs.append(job)
 
-            return jobs_data[:count]
+            print(f"CompanyJobsMCP: After filtering, {len(filtered_jobs)} jobs remain")
+            return filtered_jobs[:count]
 
         except Exception as e:
             print(f"CompanyJobsMCP error: {e}")
+            import traceback
+
+            traceback.print_exc()
             return []
 
 

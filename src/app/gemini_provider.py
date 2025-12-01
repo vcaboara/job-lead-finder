@@ -516,6 +516,56 @@ class GeminiProvider:
                         print(f"gemini_provider: wrote raw repr to {fname}")
                     except Exception as e:
                         print("gemini_provider: failed to write raw repr file:", e)
+
+            # Case C: `google.generativeai` with GenerativeModel and google_search tool
+            elif genai_name == "google.generativeai" and hasattr(genai, "GenerativeModel"):
+                try:
+                    if verbose:
+                        print("gemini_provider: using google.generativeai.GenerativeModel with google_search")
+
+                    # Configure google_search tool as a dictionary
+                    # Note: google.generativeai SDK doesn't support google_search tool yet
+                    # It only supports 'code_execution' as a string tool
+                    # We'll call without tools and rely on model's knowledge
+                    model = genai.GenerativeModel(use_model)
+
+                    if verbose:
+                        print(
+                            "gemini_provider: created GenerativeModel (note: google_search not available in this SDK)"
+                        )
+
+                    response = model.generate_content(prompt)
+                    text = response.text if hasattr(response, "text") else str(response)
+                    raw_response = str(response)
+
+                    if verbose:
+                        import time
+
+                        ts = int(time.time())
+                        os.makedirs("logs", exist_ok=True)
+                        fname = f"logs/generativemodel_response_{ts}.txt"
+                        print("gemini_provider: used GenerativeModel; model=", use_model)
+                        try:
+                            preview = raw_response[:4000] + "\n...\n" if len(raw_response) > 4000 else raw_response
+                        except Exception:
+                            preview = repr(raw_response)[:4000]
+                        print("gemini_provider: raw response preview:\n", preview)
+                        try:
+                            with open(fname, "w", encoding="utf-8") as fh:
+                                fh.write(repr(response))
+                            print(f"gemini_provider: wrote raw repr to {fname}")
+                        except Exception as e:
+                            print("gemini_provider: failed to write raw repr file:", e)
+
+                except Exception as gm_err:
+                    if verbose:
+                        print(f"gemini_provider: GenerativeModel call failed: {gm_err}")
+                        import traceback
+
+                        traceback.print_exc()
+                    text = ""
+                    raw_response = ""
+
             else:
                 return []
 
