@@ -166,8 +166,11 @@ def search(req: SearchRequest):
         seen_links = set()  # Track unique job links to avoid duplicates
 
         logger.info(
-            f"[{search_id}] Configuration: oversample={oversample_multiplier}x, "
-            f"initial_request={initial_request_count}, max_retries={max_retries}"
+            "[%s] Configuration: oversample=%dx, initial_request=%d, max_retries=%d",
+            search_id,
+            oversample_multiplier,
+            initial_request_count,
+            max_retries
         )
 
         for attempt in range(max_retries + 1):
@@ -212,9 +215,13 @@ def search(req: SearchRequest):
             )
 
             logger.info(
-                f"[{search_id}] Attempt {attempt + 1}/{max_retries + 1}: "
-                f"requesting {request_count} jobs (need {needed} more valid), "
-                f"elapsed={elapsed:.1f}s"
+                "[%s] Attempt %d/%d: requesting %d jobs (need %d more valid), elapsed=%.1fs",
+                search_id,
+                attempt + 1,
+                max_retries + 1,
+                request_count,
+                needed,
+                elapsed
             )
 
             raw_leads = generate_job_leads(
@@ -245,8 +252,10 @@ def search(req: SearchRequest):
             filter_start = time.time()
             valid_leads = _process_and_filter_leads(raw_leads)
             logger.info(
-                f"[{search_id}] Filtered to {len(valid_leads)} valid jobs "
-                f"(removed {len(raw_leads) - len(valid_leads)} invalid)"
+                "[%s] Filtered to %d valid jobs (removed %d invalid)",
+                search_id,
+                len(valid_leads),
+                len(raw_leads) - len(valid_leads)
             )
 
             # Deduplicate by link and filter out hidden jobs
@@ -269,9 +278,12 @@ def search(req: SearchRequest):
 
             filter_elapsed = time.time() - filter_start
             logger.info(
-                f"[{search_id}] After deduplication: {len(all_valid_leads)} unique jobs "
-                f"(filtered {hidden_count} hidden, {duplicate_count} duplicates) "
-                f"in {filter_elapsed:.1f}s"
+                "[%s] After deduplication: %d unique jobs (filtered %d hidden, %d duplicates) in %.1fs",
+                search_id,
+                len(all_valid_leads),
+                hidden_count,
+                duplicate_count,
+                filter_elapsed
             )
 
             total_elapsed = time.time() - start_time
@@ -315,7 +327,9 @@ def search(req: SearchRequest):
                 logger.info("[%s] Filtered out %d jobs below score threshold %d", search_id, filtered_count, req.min_score)
         elif should_evaluate and req.min_score > 0 and len(jobs_with_scores) == 0:
             logger.warning(
-                f"[{search_id}] Score filter requested but no jobs have scores - showing all {len(final_leads)} jobs"
+                "[%s] Score filter requested but no jobs have scores - showing all %d jobs",
+                search_id,
+                len(final_leads)
             )
 
         total_elapsed = time.time() - start_time
