@@ -49,6 +49,10 @@ WORKDIR /app
 
 # Copy only the pre-built virtualenv with installed deps and our package
 COPY --from=builder /opt/venv /opt/venv
+# Copy the source code from builder (needed for editable install)
+COPY --from=builder /app/src /app/src
+COPY --from=builder /app/pyproject.toml /app/pyproject.toml
+
 ENV PATH="/opt/venv/bin:$PATH"
 
 # Default command is a lightweight health probe; compose overrides for UI

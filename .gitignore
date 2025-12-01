@@ -55,13 +55,12 @@ leads.json
 job_tracking.json
 resume.txt
 uploads/
-
-# User configuration and data files
-config.json
-resume.txt
-uploads/
-notes
-.last_gemini_response_*.txt
+ddg.mcp.json
+test_resume.txt
+Vincent Resume.txt
+*.resume.txt
+IMPLEMENTED_FEATURES_AND_TODO.txt
+IMPLEMENTED_FEATURES_AND_TODO.md
 
 # Local test artifacts
 /tests/.cache/
