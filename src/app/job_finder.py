@@ -60,15 +60,22 @@ def generate_job_leads(
 
             if leads:
                 print(f"job_finder: MCP providers returned {len(leads)} leads")
-                # Evaluate if requested
+                # Evaluate if requested - use BATCH ranking for speed
                 if evaluate:
-                    # Try to get Gemini provider for evaluation
                     try:
                         provider = GeminiProvider()
-                        leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
+                        print(f"job_finder: Batch ranking {len(leads)} jobs...")
+                        # Rank all leads, return top 'count' with scores
+                        leads = provider.rank_jobs_batch(leads, resume_text, top_n=count)
+                        print(f"job_finder: Ranked and filtered to top {len(leads)} jobs")
                     except Exception as e:
                         if verbose:
-                            print(f"job_finder: Evaluation unavailable (no Gemini): {e}")
+                            print(f"job_finder: Batch ranking unavailable: {e}")
+                        # Continue with unranked jobs
+                        for lead in leads[:count]:
+                            lead["score"] = 50
+                            lead["reasoning"] = "Ranking unavailable"
+                        leads = leads[:count]
                 return leads
             else:
                 print("job_finder: No results from MCP providers, trying Gemini...")

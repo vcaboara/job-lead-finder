@@ -74,7 +74,7 @@ class GeminiProvider:
         )
 
         try:
-            # Try legacy client first
+            # Try google.genai Client first (newer SDK)
             if genai_name == "google.genai" and hasattr(genai, "Client"):
                 client = genai.Client(api_key=self.api_key)
                 resp = client.models.generate_content(model=self.model, contents=prompt)
@@ -93,6 +93,16 @@ class GeminiProvider:
                         text = str(resp)
                 except Exception:
                     text = str(resp)
+            # Try google.generativeai.GenerativeModel (older SDK)
+            elif genai_name == "google.generativeai" and hasattr(genai, "GenerativeModel"):
+                try:
+                    if hasattr(genai, "configure"):
+                        genai.configure(api_key=self.api_key)
+                except Exception:
+                    pass
+                model = genai.GenerativeModel(self.model)
+                resp = model.generate_content(prompt)
+                text = resp.text if hasattr(resp, "text") else str(resp)
             else:
                 # Fallback for google.generativeai chat pattern
                 if hasattr(genai, "chat") and hasattr(genai.chat, "create"):
@@ -126,6 +136,99 @@ class GeminiProvider:
         except Exception:
             pass
         return {"score": 50, "reasoning": "Could not parse Gemini response; ensure API key and model are correct."}
+
+    def rank_jobs_batch(self, jobs: list[Dict[str, Any]], resume_text: str, top_n: int = 10) -> list[Dict[str, Any]]:
+        """Rank multiple jobs in a single API call and return top N with scores.
+
+        This is much faster than calling evaluate() for each job individually.
+        Args:
+            jobs: List of job dicts with title, company, location, summary/description
+            resume_text: Candidate's resume text
+            top_n: Number of top jobs to return
+
+        Returns:
+            List of top N jobs with added 'score' and 'reasoning' fields, sorted by score descending
+        """
+        if not jobs:
+            return []
+
+        # Limit to reasonable batch size (Gemini has token limits)
+        max_batch = 50
+        if len(jobs) > max_batch:
+            jobs = jobs[:max_batch]
+
+        # Build prompt with all jobs
+        jobs_text = ""
+        for i, job in enumerate(jobs, 1):
+            jobs_text += f"\n{i}. {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}\n"
+            jobs_text += f"   Location: {job.get('location', 'Unknown')}\n"
+            jobs_text += f"   Description: {job.get('summary', job.get('description', ''))[:200]}...\n"
+
+        prompt = (
+            f"You are a job matching expert. Rank these {len(jobs)} jobs for this candidate.\n\n"
+            f"CANDIDATE RESUME:\n{resume_text[:2000]}\n\n"  # Limit resume to 2000 chars
+            f"JOBS TO RANK:{jobs_text}\n\n"
+            f"Return a JSON array of the top {min(top_n, len(jobs))} jobs with scores (0-100) and brief reasoning.\n"
+            f'Format: [{{"index": 1, "score": 85, "reasoning": "Great match because..."}}, ...]\n'
+            f"Return ONLY the JSON array, nothing else."
+        )
+
+        try:
+            # Use same API pattern as evaluate
+            text = ""
+            if genai_name == "google.genai" and hasattr(genai, "Client"):
+                client = genai.Client(api_key=self.api_key)
+                resp = client.models.generate_content(model=self.model, contents=prompt)
+                if hasattr(resp, "text"):
+                    text = resp.text
+                elif hasattr(resp, "candidates") and resp.candidates:
+                    cand = resp.candidates[0]
+                    if hasattr(cand.content, "parts") and cand.content.parts:
+                        text = cand.content.parts[0].text
+            elif genai_name == "google.generativeai" and hasattr(genai, "GenerativeModel"):
+                if hasattr(genai, "configure"):
+                    genai.configure(api_key=self.api_key)
+                model = genai.GenerativeModel(self.model)
+                resp = model.generate_content(prompt)
+                text = resp.text if hasattr(resp, "text") else str(resp)
+            else:
+                # Fallback - return jobs with default scores
+                for job in jobs[:top_n]:
+                    job["score"] = 50
+                    job["reasoning"] = "Batch ranking unavailable"
+                return jobs[:top_n]
+
+            # Parse JSON response
+            import json
+
+            # Find JSON array
+            start = text.find("[")
+            end = text.rfind("]")
+            if start != -1 and end != -1 and end > start:
+                rankings = json.loads(text[start : end + 1])
+
+                # Apply rankings to jobs
+                ranked_jobs = []
+                for ranking in rankings[:top_n]:
+                    idx = ranking.get("index", 0) - 1  # Convert 1-based to 0-based
+                    if 0 <= idx < len(jobs):
+                        job = jobs[idx].copy()
+                        job["score"] = int(ranking.get("score", 50))
+                        job["reasoning"] = ranking.get("reasoning", "")
+                        ranked_jobs.append(job)
+
+                # Sort by score descending
+                ranked_jobs.sort(key=lambda x: x.get("score", 0), reverse=True)
+                return ranked_jobs[:top_n]
+
+        except Exception as e:
+            print(f"Batch ranking failed: {e}")
+
+        # Fallback: return first N jobs with default scores
+        for job in jobs[:top_n]:
+            job["score"] = 50
+            job["reasoning"] = "Batch ranking failed"
+        return jobs[:top_n]
 
     def generate_job_leads(
         self, query: str, resume_text: str, count: int = 5, model: str | None = None, verbose: bool = False
