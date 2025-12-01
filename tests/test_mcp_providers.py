@@ -107,9 +107,9 @@ class TestMCPAggregator:
     def test_aggregator_initialization(self):
         """Test MCPAggregator initialization with default providers."""
         agg = MCPAggregator()
-        # CompanyJobs now enabled with google-genai SDK
-        assert len(agg.providers) == 3  # CompanyJobs, RemoteOK, and Remotive
-        assert any(p.name == "CompanyJobs" for p in agg.providers)
+        # CompanyJobs disabled by default (slow), RemoteOK and Remotive enabled
+        assert len(agg.providers) == 2  # RemoteOK and Remotive
+        assert not any(p.name == "CompanyJobs" for p in agg.providers)  # Disabled by default
         assert any(p.name == "RemoteOK" for p in agg.providers)
         assert any(p.name == "Remotive" for p in agg.providers)
 
@@ -123,34 +123,27 @@ class TestMCPAggregator:
         assert len(agg.providers) == 1
         assert agg.providers[0].name == "Custom"
 
-    @patch("app.mcp_providers.CompanyJobsMCP.is_available")
     @patch("app.mcp_providers.RemotiveMCP.is_available")
     @patch("app.mcp_providers.RemoteOKMCP.is_available")
-    def test_get_available_providers(self, mock_remoteok, mock_remotive, mock_companyjobs):
+    def test_get_available_providers(self, mock_remoteok, mock_remotive):
         """Test get_available_providers filters correctly."""
-        mock_companyjobs.return_value = True
-        mock_remotive.return_value = False
+        # CompanyJobs disabled by default in config, RemoteOK and Remotive enabled
+        mock_remotive.return_value = True
         mock_remoteok.return_value = False
 
         agg = MCPAggregator()
         available = agg.get_available_providers()
 
-        assert len(available) == 1  # Only CompanyJobs is available
-        assert any(p.name == "CompanyJobs" for p in available)
+        assert len(available) == 1  # Only Remotive is available (RemoteOK mocked as unavailable)
+        assert any(p.name == "Remotive" for p in available)
 
-    @patch("app.mcp_providers.CompanyJobsMCP.search_jobs")
-    @patch("app.mcp_providers.CompanyJobsMCP.is_available")
-    @patch("app.mcp_providers.LinkedInMCP.is_available")
+    @patch("app.mcp_providers.RemotiveMCP.search_jobs")
     @patch("app.mcp_providers.RemotiveMCP.is_available")
     @patch("app.mcp_providers.RemoteOKMCP.is_available")
-    def test_search_jobs_aggregation(
-        self, mock_remoteok_avail, mock_remotive_avail, mock_linkedin_avail, mock_companyjobs_avail, mock_search
-    ):
+    def test_search_jobs_aggregation(self, mock_remoteok_avail, mock_remotive_avail, mock_search):
         """Test search_jobs aggregates from multiple providers."""
-        # Only CompanyJobs available
-        mock_companyjobs_avail.return_value = True
-        mock_linkedin_avail.return_value = False
-        mock_remotive_avail.return_value = False
+        # Only Remotive available (CompanyJobs disabled by default)
+        mock_remotive_avail.return_value = True
         mock_remoteok_avail.return_value = False
 
         mock_search.return_value = [
@@ -160,7 +153,7 @@ class TestMCPAggregator:
                 "location": "Remote",
                 "summary": "Test",
                 "link": "https://example.com/1",
-                "source": "CompanyJobs",
+                "source": "Remotive",
             },
             {
                 "title": "Job 2",
@@ -168,7 +161,7 @@ class TestMCPAggregator:
                 "location": "NYC",
                 "summary": "Test",
                 "link": "https://example.com/2",
-                "source": "CompanyJobs",
+                "source": "Remotive",
             },
         ]
 
@@ -179,19 +172,14 @@ class TestMCPAggregator:
         assert jobs[0]["title"] == "Job 1"
         assert jobs[1]["title"] == "Job 2"
 
-    @patch("app.mcp_providers.CompanyJobsMCP.search_jobs")
-    @patch("app.mcp_providers.CompanyJobsMCP.is_available")
-    @patch("app.mcp_providers.LinkedInMCP.is_available")
-    @patch("app.mcp_providers.RemotiveMCP.is_available")
+    @patch("app.mcp_providers.RemoteOKMCP.search_jobs")
     @patch("app.mcp_providers.RemoteOKMCP.is_available")
-    def test_deduplication(
-        self, mock_remoteok_avail, mock_remotive_avail, mock_linkedin_avail, mock_companyjobs_avail, mock_search
-    ):
+    @patch("app.mcp_providers.RemotiveMCP.is_available")
+    def test_deduplication(self, mock_remotive_avail, mock_remoteok_avail, mock_search):
         """Test deduplication removes duplicate job links."""
-        mock_companyjobs_avail.return_value = True
-        mock_linkedin_avail.return_value = False
+        # Only RemoteOK available
+        mock_remoteok_avail.return_value = True
         mock_remotive_avail.return_value = False
-        mock_remoteok_avail.return_value = False
 
         # Return duplicate jobs
         mock_search.return_value = [
@@ -201,7 +189,7 @@ class TestMCPAggregator:
                 "location": "Remote",
                 "summary": "Test",
                 "link": "https://example.com/1",
-                "source": "CompanyJobs",
+                "source": "RemoteOK",
             },
             {
                 "title": "Job 1 Duplicate",
@@ -209,7 +197,7 @@ class TestMCPAggregator:
                 "location": "Remote",
                 "summary": "Test duplicate",
                 "link": "https://example.com/1",  # Same link
-                "source": "CompanyJobs",
+                "source": "RemoteOK",
             },
         ]
 
