@@ -46,8 +46,21 @@ Thumbs.db
 .dockerignore
 
 # Generated debug files
-logs/
-.last_gemini_response_*.txt
+logs/*.txt
+!logs/.gitkeep
+
+# Job search data (personal/private)
+config.json
+leads.json
+job_tracking.json
+resume.txt
+uploads/
+ddg.mcp.json
+test_resume.txt
+Vincent Resume.txt
+*.resume.txt
+IMPLEMENTED_FEATURES_AND_TODO.txt
+IMPLEMENTED_FEATURES_AND_TODO.md
 
 # Local test artifacts
 /tests/.cache/

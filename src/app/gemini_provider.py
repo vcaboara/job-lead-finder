@@ -6,7 +6,7 @@ clear errors when the dependency or API key is missing.
 """
 
 import os
-from typing import Dict, Any
+from typing import Any, Dict
 
 # Support either the newer `google.generativeai` package or the older
 # `google.genai` package (legacy). Try to import both and prefer the
@@ -63,14 +63,18 @@ class GeminiProvider:
         Returns a dict with `score` (0-100) and `reasoning`.
         """
         prompt = (
-            "Evaluate the relevance of this job posting for the candidate. Return a JSON object.\n"
+            "Evaluate the relevance of this job posting for the candidate. "
+            "Return a JSON object.\n"
             f"CANDIDATE PROFILE:\n{resume_text}\n\n"
-            f"JOB:\nTitle: {job.get('title', '')}\nCompany: {job.get('company', '')}\nLocation: {job.get('location', '')}\nDescription: {job.get('description', '')}\n\n"
+            f"JOB:\nTitle: {job.get('title', '')}\n"
+            f"Company: {job.get('company', '')}\n"
+            f"Location: {job.get('location', '')}\n"
+            f"Description: {job.get('description', '')}\n\n"
             'Return ONLY this JSON object: {"score": <0-100>, "reasoning": "<string>"}'
         )
 
         try:
-            # Try legacy client first
+            # Try google.genai Client first (newer SDK)
             if genai_name == "google.genai" and hasattr(genai, "Client"):
                 client = genai.Client(api_key=self.api_key)
                 resp = client.models.generate_content(model=self.model, contents=prompt)
@@ -89,6 +93,17 @@ class GeminiProvider:
                         text = str(resp)
                 except Exception:
                     text = str(resp)
+            # Try google.generativeai.GenerativeModel (older SDK)
+            elif genai_name == "google.generativeai" and hasattr(genai, "GenerativeModel"):
+                try:
+                    if hasattr(genai, "configure"):
+                        genai.configure(api_key=self.api_key)
+                except Exception:
+                    # Safe to ignore configuration errors - model can be used without explicit configuration
+                    pass
+                model = genai.GenerativeModel(self.model)
+                resp = model.generate_content(prompt)
+                text = resp.text if hasattr(resp, "text") else str(resp)
             else:
                 # Fallback for google.generativeai chat pattern
                 if hasattr(genai, "chat") and hasattr(genai.chat, "create"):
@@ -123,6 +138,99 @@ class GeminiProvider:
             pass
         return {"score": 50, "reasoning": "Could not parse Gemini response; ensure API key and model are correct."}
 
+    def rank_jobs_batch(self, jobs: list[Dict[str, Any]], resume_text: str, top_n: int = 10) -> list[Dict[str, Any]]:
+        """Rank multiple jobs in a single API call and return top N with scores.
+
+        This is much faster than calling evaluate() for each job individually.
+        Args:
+            jobs: List of job dicts with title, company, location, summary/description
+            resume_text: Candidate's resume text
+            top_n: Number of top jobs to return
+
+        Returns:
+            List of top N jobs with added 'score' and 'reasoning' fields, sorted by score descending
+        """
+        if not jobs:
+            return []
+
+        # Limit to reasonable batch size (Gemini has token limits)
+        max_batch = 50
+        if len(jobs) > max_batch:
+            jobs = jobs[:max_batch]
+
+        # Build prompt with all jobs
+        jobs_text = ""
+        for i, job in enumerate(jobs, 1):
+            jobs_text += f"\n{i}. {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}\n"
+            jobs_text += f"   Location: {job.get('location', 'Unknown')}\n"
+            jobs_text += f"   Description: {job.get('summary', job.get('description', ''))[:200]}...\n"
+
+        prompt = (
+            f"You are a job matching expert. Rank these {len(jobs)} jobs for this candidate.\n\n"
+            f"CANDIDATE RESUME:\n{resume_text[:2000]}\n\n"  # Limit resume to 2000 chars
+            f"JOBS TO RANK:{jobs_text}\n\n"
+            f"Return a JSON array of the top {min(top_n, len(jobs))} jobs with scores (0-100) and brief reasoning.\n"
+            f'Format: [{{"index": 1, "score": 85, "reasoning": "Great match because..."}}, ...]\n'
+            f"Return ONLY the JSON array, nothing else."
+        )
+
+        try:
+            # Use same API pattern as evaluate
+            text = ""
+            if genai_name == "google.genai" and hasattr(genai, "Client"):
+                client = genai.Client(api_key=self.api_key)
+                resp = client.models.generate_content(model=self.model, contents=prompt)
+                if hasattr(resp, "text"):
+                    text = resp.text
+                elif hasattr(resp, "candidates") and resp.candidates:
+                    cand = resp.candidates[0]
+                    if hasattr(cand.content, "parts") and cand.content.parts:
+                        text = cand.content.parts[0].text
+            elif genai_name == "google.generativeai" and hasattr(genai, "GenerativeModel"):
+                if hasattr(genai, "configure"):
+                    genai.configure(api_key=self.api_key)
+                model = genai.GenerativeModel(self.model)
+                resp = model.generate_content(prompt)
+                text = resp.text if hasattr(resp, "text") else str(resp)
+            else:
+                # Fallback - return jobs with default scores
+                for job in jobs[:top_n]:
+                    job["score"] = 50
+                    job["reasoning"] = "Batch ranking unavailable"
+                return jobs[:top_n]
+
+            # Parse JSON response
+            import json
+
+            # Find JSON array
+            start = text.find("[")
+            end = text.rfind("]")
+            if start != -1 and end != -1 and end > start:
+                rankings = json.loads(text[start : end + 1])
+
+                # Apply rankings to jobs
+                ranked_jobs = []
+                for ranking in rankings[:top_n]:
+                    idx = ranking.get("index", 0) - 1  # Convert 1-based to 0-based
+                    if 0 <= idx < len(jobs):
+                        job = jobs[idx].copy()
+                        job["score"] = int(ranking.get("score", 50))
+                        job["reasoning"] = ranking.get("reasoning", "")
+                        ranked_jobs.append(job)
+
+                # Sort by score descending
+                ranked_jobs.sort(key=lambda x: x.get("score", 0), reverse=True)
+                return ranked_jobs[:top_n]
+
+        except Exception as e:
+            print(f"Batch ranking failed: {e}")
+
+        # Fallback: return first N jobs with default scores
+        for job in jobs[:top_n]:
+            job["score"] = 50
+            job["reasoning"] = "Batch ranking failed"
+        return jobs[:top_n]
+
     def generate_job_leads(
         self, query: str, resume_text: str, count: int = 5, model: str | None = None, verbose: bool = False
     ) -> list[Dict[str, Any]]:
@@ -132,12 +240,16 @@ class GeminiProvider:
         [{"title":..., "company":..., "location":..., "summary":..., "link":...}, ...]
         """
         prompt = (
-            "You MUST use the google_search tool to find REAL job postings from the internet.\n"
-            "Find and return ONLY a JSON array of open job postings that match the candidate profile and query.\n"
-            f"Return EXACTLY {count} job objects with keys: title, company, location, summary, link.\n"
-            f"CANDIDATE PROFILE:\n{resume_text}\n\n"
-            f"QUERY:\n{query}\n\n"
-            "Return ONLY the JSON array. Do not include any other text, markdown, or formatting."
+            f"Use the google_search tool to find {count} job postings for: {query}\n\n"
+            "Requirements:\n"
+            "- Find specific job postings with direct links (not general career pages)\n"
+            "- Each job should have a unique URL, preferably with a job ID\n"
+            "- Avoid linking to homepage or /careers pages without a specific job\n\n"
+            f"Return a JSON array with {count} jobs in this format:\n"
+            '[{"title": "job title", "company": "company", "location": "city, state", '
+            '"summary": "description", "link": "https://direct-job-url"}]\n\n'
+            f"Context about candidate:\n{resume_text[:1000]}\n\n"
+            "Return ONLY the JSON array."
         )
 
         try:
@@ -157,8 +269,8 @@ class GeminiProvider:
                     )
                     # Also write a full dir() and repr() to a timestamped file for deeper inspection
                     try:
-                        import time
                         import os
+                        import time
 
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
@@ -192,34 +304,20 @@ class GeminiProvider:
             if hasattr(genai, "Client"):
                 try:
                     client = genai.Client(api_key=self.api_key)
-                    # If the types helper exists, build a config enabling google_search
-                    cfg = None
-                    types_mod = getattr(genai, "types", None)
-                    if types_mod is not None:
-                        try:
-                            try:
-                                # Avoid forcing response_mime_type when requesting tools; some backends reject that.
-                                cfg = types_mod.GenerateContentConfig(
-                                    system_instruction="Please return only a JSON array of job objects.",
-                                    tools=[{"google_search": {}}],
-                                )
-                                if verbose:
-                                    print("gemini_provider: created GenerateContentConfig with google_search tool")
-                            except Exception as cfg_err:
-                                if verbose:
-                                    print(f"gemini_provider: GenerateContentConfig failed: {cfg_err}")
-                                cfg = None
-                        except Exception:
-                            cfg = None
-
-                    if cfg is not None:
-                        if verbose:
-                            print(f"gemini_provider: calling generate_content with tool config on {use_model}")
-                        resp = client.models.generate_content(model=use_model, contents=prompt, config=cfg)
-                    else:
-                        if verbose:
-                            print(f"gemini_provider: calling generate_content WITHOUT tool config on {use_model}")
+                    # Note: google_search tool disabled due to MALFORMED_FUNCTION_CALL errors
+                    # and redirect URLs instead of direct links. Simple prompting works better.
+                    if verbose:
+                        print(f"gemini_provider: calling generate_content on {use_model}")
+                    try:
                         resp = client.models.generate_content(model=use_model, contents=prompt)
+                        if verbose:
+                            print(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
+                    except Exception as api_err:
+                        print(f"ERROR calling Gemini API: {api_err}")
+                        import traceback
+
+                        traceback.print_exc()
+                        return []
 
                     # Robustly extract text from various response shapes returned by the
                     # legacy client. The response may contain `candidates` with
@@ -289,10 +387,12 @@ class GeminiProvider:
                             # streaming not available or failed; continue
                             pass
                     if verbose:
-                        import time, traceback
+                        import time
+                        import traceback
 
                         ts = int(time.time())
-                        fname = f".last_gemini_response_{ts}.txt"
+                        os.makedirs("logs", exist_ok=True)
+                        fname = f"logs/last_gemini_response_{ts}.txt"
                         print("gemini_provider: used legacy genai.Client; model=", use_model)
                         # print a short preview to the console
                         try:
@@ -344,8 +444,9 @@ class GeminiProvider:
                     text = str(out)
                 raw_response = str(out)
                 if verbose:
-                    import time, traceback
                     import os
+                    import time
+                    import traceback
 
                     ts = int(time.time())
                     os.makedirs("logs", exist_ok=True)
@@ -384,6 +485,55 @@ class GeminiProvider:
                         print(f"gemini_provider: wrote raw repr to {fname}")
                     except Exception as e:
                         print("gemini_provider: failed to write raw repr file:", e)
+
+            # Case C: `google.generativeai` with GenerativeModel and google_search tool
+            elif genai_name == "google.generativeai" and hasattr(genai, "GenerativeModel"):
+                try:
+                    if verbose:
+                        print("gemini_provider: using google.generativeai.GenerativeModel with google_search")
+
+                    # Configure google_search tool as a dictionary
+                    # Note: google.generativeai SDK doesn't support google_search tool yet
+                    # It only supports 'code_execution' as a string tool
+                    # We'll call without tools and rely on model's knowledge
+                    model = genai.GenerativeModel(use_model)
+
+                    if verbose:
+                        print(
+                            "gemini_provider: created GenerativeModel (note: google_search not available in this SDK)"
+                        )
+
+                    response = model.generate_content(prompt)
+                    text = response.text if hasattr(response, "text") else str(response)
+                    raw_response = str(response)
+
+                    if verbose:
+                        import time
+
+                        ts = int(time.time())
+                        os.makedirs("logs", exist_ok=True)
+                        fname = f"logs/generativemodel_response_{ts}.txt"
+                        print("gemini_provider: used GenerativeModel; model=", use_model)
+                        try:
+                            preview = raw_response[:4000] + "\n...\n" if len(raw_response) > 4000 else raw_response
+                        except Exception:
+                            preview = repr(raw_response)[:4000]
+                        print("gemini_provider: raw response preview:\n", preview)
+                        try:
+                            with open(fname, "w", encoding="utf-8") as fh:
+                                fh.write(repr(response))
+                            print(f"gemini_provider: wrote raw repr to {fname}")
+                        except Exception as e:
+                            print("gemini_provider: failed to write raw repr file:", e)
+
+                except Exception as gm_err:
+                    if verbose:
+                        print(f"gemini_provider: GenerativeModel call failed: {gm_err}")
+                        import traceback
+
+                        traceback.print_exc()
+                    text = ""
+
             else:
                 return []
 

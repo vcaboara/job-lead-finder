@@ -1,14 +1,18 @@
 """Job finder orchestration.
 
-This module adapts legacy worker logic to the starter CLI. It attempts to
-use the Gemini provider when available; otherwise falls back to local
-sample search results.
+This module orchestrates job search across multiple sources:
+1. MCP providers (LinkedIn, Indeed, GitHub) - primary source
+2. Gemini provider - fallback if MCPs unavailable
+3. Local sample data - final fallback
+
+Priority: MCP > Gemini > Local
 """
 
-from typing import List, Dict, Any
-from .gemini_provider import GeminiProvider
-from .main import format_resume, fetch_jobs
 import os
+from typing import Any, Dict, List
+
+from .gemini_provider import GeminiProvider
+from .main import fetch_jobs
 
 
 def generate_job_leads(
@@ -18,35 +22,93 @@ def generate_job_leads(
     model: str | None = None,
     verbose: bool = False,
     evaluate: bool = False,
+    use_mcp: bool = True,
 ) -> List[Dict[str, Any]]:
-    """Generate job leads. Use GeminiProvider.generate_job_leads when possible.
+    """Generate job leads using MCP providers, Gemini, or local fallback.
+
+    Priority:
+    1. MCP providers (if use_mcp=True and MCPs available)
+    2. Gemini provider (if API key configured)
+    3. Local sample data (final fallback)
 
     Args:
         query: Job search query.
         resume_text: Candidate's resume/profile text.
         count: Number of leads to return.
-        model: Optional model name override.
+        model: Optional model name override (for Gemini).
         verbose: Print verbose diagnostics.
         evaluate: If True, score each job against the resume (0-100).
+        use_mcp: If True, try MCP providers first (default: True).
 
     Returns a list of job dicts. On failure returns empty list.
     """
-    # Try to use Gemini provider if API key and SDK present
+    leads: List[Dict[str, Any]] = []
+
+    # 1. Try MCP providers first
+    if use_mcp:
+        try:
+            from .mcp_providers import generate_job_leads_via_mcp
+
+            location = os.getenv("DEFAULT_LOCATION", "United States")
+            # Request 3x from each MCP to get more raw results for filtering
+            count_per_mcp = int(os.getenv("JOBS_PER_MCP", str(count * 3)))
+
+            print("job_finder: Trying MCP providers...")
+            leads = generate_job_leads_via_mcp(
+                query=query, count=count * 3, count_per_provider=count_per_mcp, location=location
+            )
+
+            if leads:
+                print(f"job_finder: MCP providers returned {len(leads)} leads")
+                # Evaluate if requested - use BATCH ranking for speed
+                if evaluate:
+                    try:
+                        provider = GeminiProvider()
+                        print(f"job_finder: Batch ranking {len(leads)} jobs...")
+                        # Rank all leads, return top 'count' with scores
+                        leads = provider.rank_jobs_batch(leads, resume_text, top_n=count)
+                        print(f"job_finder: Ranked and filtered to top {len(leads)} jobs")
+                    except Exception as e:
+                        if verbose:
+                            print(f"job_finder: Batch ranking unavailable: {e}")
+                        # Continue with unranked jobs
+                        for lead in leads[:count]:
+                            lead["score"] = 50
+                            lead["reasoning"] = "Ranking unavailable"
+                        leads = leads[:count]
+                return leads
+            else:
+                print("job_finder: No results from MCP providers, trying Gemini...")
+
+        except Exception as e:
+            if verbose:
+                import traceback
+
+                print(f"job_finder: MCP providers failed: {e}")
+                traceback.print_exc()
+            print("job_finder: MCP unavailable, falling back to Gemini")
+
+    # 2. Try Gemini provider
     try:
         provider = GeminiProvider()
         print("job_finder: Using GeminiProvider")
     except Exception as e:
         provider = None
-        print(f"job_finder: GeminiProvider unavailable ({e}); falling back to local search")
+        if verbose:
+            print(f"job_finder: GeminiProvider unavailable ({e}); falling back to local search")
 
     if provider:
         try:
             leads = provider.generate_job_leads(query, resume_text, count=count, model=model, verbose=verbose)
             print(f"job_finder: Gemini returned {len(leads)} leads")
-            # Evaluate each lead if requested
-            if evaluate:
-                leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
-            return leads
+            # If Gemini returned results, use them
+            if leads:
+                # Evaluate each lead if requested
+                if evaluate:
+                    leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
+                return leads
+            else:
+                print("job_finder: Gemini returned 0 leads, using local fallback")
         except Exception as e:
             # Provide diagnostics when verbose
             if os.getenv("VERBOSE") or verbose:
@@ -54,9 +116,9 @@ def generate_job_leads(
 
                 print("job_finder: Exception while calling GeminiProvider:", e)
                 traceback.print_exc()
-            return []
+            print("job_finder: Gemini failed, using local fallback")
 
-    # Fallback: use simple local search
+    # 3. Fallback: use simple local search
     sample = fetch_jobs(query)
     # Map to lead schema
     leads: List[Dict[str, Any]] = []
@@ -68,10 +130,11 @@ def generate_job_leads(
                 "location": j.get("location"),
                 "summary": j.get("description"),
                 "link": j.get("link", ""),
+                "source": "Local",
             }
         )
     print(f"job_finder: Fallback returned {len(leads)} leads")
-    # Evaluate each lead if requested
+    # Evaluate each lead if requested (requires Gemini)
     if evaluate and provider:
         leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
     return leads

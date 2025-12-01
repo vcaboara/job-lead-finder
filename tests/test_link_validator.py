@@ -95,9 +95,10 @@ class TestValidateLink:
             mock_requests.head.return_value = mock_resp
 
             result = validate_link("https://example.com/forbidden")
-            assert result["valid"] is False
+            # 403 now treated as present but restricted
+            assert result["valid"] is True
             assert result["status_code"] == 403
-            assert result["warning"] == "blocked by site (403)"
+            assert result["warning"] == "access forbidden (treated as present)"
 
     @pytest.mark.skipif(not REQUESTS_AVAILABLE, reason="requests library not installed")
     def test_validate_link_unauthorized_401(self):
@@ -119,10 +120,10 @@ class TestValidateLink:
         with patch("app.link_validator.requests") as mock_requests:
             mock_resp = Mock()
             mock_resp.status_code = 500
-            mock_resp.url = "https://example.com/error"
+            mock_resp.url = "https://example.com/api/endpoint"  # Not caught by soft-404 detector
             mock_requests.head.return_value = mock_resp
 
-            result = validate_link("https://example.com/error")
+            result = validate_link("https://example.com/api/endpoint")
             assert result["valid"] is False
             assert result["status_code"] == 500
             assert result["warning"] == "server error"

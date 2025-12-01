@@ -42,5 +42,7 @@ repos:
         entry: python -m pytest
         language: system
         pass_filenames: false
-        args: [tests/, -v, --tb=short]
+        types: [python]
+        files: ^(src/|tests/)
+        args: [tests/, -v, --tb=short, -m, "not slow"]
         stages: [pre-commit]

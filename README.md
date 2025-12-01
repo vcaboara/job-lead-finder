@@ -1,94 +1,70 @@
 # Job Lead Finder
 
-AI-powered job search tool with Gemini integration, link validation, and FastAPI dashboard.
+AI-powered job search tool aggregating jobs from RemoteOK, Remotive, and direct company career pages.
 
 ## Features
 
-- **CLI**: Find and evaluate job leads from the command line
-- **Web UI**: FastAPI dashboard at http://localhost:8000
-- **AI Evaluation**: Gemini-powered job matching with fallback when tools unavailable
-- **Link Validation**: Verify job application URLs (detect 404s, 403s, redirects)
-- **Docker**: Fully containerized with compose setup
-- **CI**: Automated testing with GitHub Actions
+- **Job Aggregation**: RemoteOK + Remotive + CompanyJobs (Gemini-powered company career page search)
+- **Job Tracking**: Track application status (new, applied, interviewing, rejected, offer, hidden)
+- **Web UI**: FastAPI dashboard at http://localhost:8000 with search, upload, configuration
+- **AI Features**: Job evaluation, custom cover letter generation
+- **Link Discovery**: Find direct company career pages from aggregator listings
+- **Industry Profiles**: Tech, Finance, Healthcare, Gaming, Ecommerce, Automotive, Aerospace, ESG
+- **Link Validation**: Detect 404s, soft-404s, and invalid URLs
+- **Docker**: Fully containerized
 
 ## Quick Start
 
-### Setup
+### Web UI (Recommended)
 
-1. **Clone and install**:
+1. **Start the server**:
    ```powershell
-   python -m venv .venv
-   .venv\Scripts\Activate.ps1
-   pip install -e .[gemini]
+   docker compose up ui
    ```
 
-2. **Configure API key** (create `.env` file):
-   ```
-   GEMINI_API_KEY=your-key-here
-   GOOGLE_API_KEY=your-key-here
-   ```
+2. **Open browser**: http://localhost:8000
 
-3. **Get your API key**: https://aistudio.google.com/app/apikey
+3. **Configure** (optional):
+   - Set `GEMINI_API_KEY` for AI features (cover letters, CompanyJobs search)
+   - Get key: https://aistudio.google.com/app/apikey
 
 ### CLI Usage
 
-**Find jobs**:
 ```powershell
-python -m app.main find -q "remote python developer" --resume "Senior Python dev, Django, FastAPI" -n 5
-```
+# Install
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .[web,gemini]
 
-**With link validation and evaluation**:
-```powershell
-python -m app.main find -q "remote python" --resume "Your resume" -n 3 --validate-links --evaluate --verbose
-```
+# Search
+python -m app.main find -q "remote python developer" --resume "Your resume" -n 10
 
-**Health check**:
-```powershell
+# Health check
 python -m app.main health
 ```
 
-### Web UI
+## Job Tracking API
 
-**Start the UI**:
-```powershell
-docker compose up ui
-```
+See [AGGREGATOR_TO_COMPANY_GUIDE.md](AGGREGATOR_TO_COMPANY_GUIDE.md) for workflow details.
 
-Open http://localhost:8000 in your browser.
-
-## Docker Usage
-
-**CLI in Docker**:
-```powershell
-docker compose run --rm app python -m app.main find -q "python" --resume "Your resume" -n 3
-```
-
-**Run tests**:
-```powershell
-docker compose run --rm app python -m pytest -v
-```
-
-**Build and run UI**:
-```powershell
-docker compose up ui -d
-```
+**Key endpoints**:
+- `GET /api/jobs/tracked?status=applied` - List tracked jobs
+- `POST /api/jobs/{id}/status` - Update job status
+- `POST /api/jobs/{id}/hide` - Hide unwanted jobs
+- `POST /api/jobs/find-company-link/{id}` - Find direct career page
+- `POST /api/jobs/{id}/cover-letter` - Generate custom cover letter
 
 ## Development
 
-**Format code**:
+**Run tests**:
 ```powershell
-python -m black src/ tests/ --line-length 120
-python -m isort src/ tests/
+pytest -v -m "not slow"  # Fast tests (~8s)
+pytest -v               # All tests including slow ones
 ```
 
-**Install pre-commit hooks**:
+**Pre-commit hooks**:
 ```powershell
 pre-commit install
-```
-
-**Run all tests**:
-```powershell
-pytest -v
 ```
 
 ## Project Structure
@@ -96,25 +72,27 @@ pytest -v
 ```
 src/app/
 ├── main.py              # CLI entry point
-├── job_finder.py        # Orchestration logic
-├── gemini_provider.py   # AI provider with fallback
+├── ui_server.py         # FastAPI REST API + web UI
+├── job_finder.py        # Job search orchestration
+├── job_tracker.py       # Track applications and status
+├── mcp_providers.py     # RemoteOK, Remotive, CompanyJobs
+├── gemini_provider.py   # AI provider (evaluation, cover letters)
 ├── link_validator.py    # URL validation
-└── ui_server.py         # FastAPI dashboard
+├── industry_profiles.py # 8 industry-specific company lists
+├── config_manager.py    # Configuration management
+└── templates/           # HTML templates
 
-tests/
-├── test_job_finder.py
-├── test_provider_fallback.py
-└── ...
+tests/                   # 164 passing tests
 ```
 
 ## Configuration
 
-- **`.env`**: API keys (gitignored)
-- **`pyproject.toml`**: Dependencies and tool config
-- **`docker-compose.yml`**: Service definitions
-- **`CODEOWNERS`**: Code review assignments
+- **Web UI**: 5-tab config interface (Industry, Providers, Location, Search, Blocked)
+- **API**: `GET /api/job-config`, `POST /api/job-config/search`
+- **File**: `config.json` (auto-created, gitignored)
+
+See [PERSONAL_CONFIG_GUIDE.md](PERSONAL_CONFIG_GUIDE.md) for details.
 
 ## License
 
 MIT
-

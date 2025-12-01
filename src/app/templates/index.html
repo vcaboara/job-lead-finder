@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Job Lead Finder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .search-panel,
+        .leads-panel {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .search-panel {
+            height: fit-content;
+        }
+
+        .search-panel h2,
+        .leads-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: inherit;
+            font-size: 1em;
+        }
+
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: auto;
+            margin: 0;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .leads-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 800px;
+            overflow-y: auto;
+        }
+
+        .lead-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f9f9f9;
+            transition: all 0.2s;
+        }
+
+        .lead-card:hover {
+            background: #f0f0f0;
+            border-color: #667eea;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .lead-card h3 {
+            color: #333;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+
+        .lead-card .company {
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .lead-card .location {
+            color: #888;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+
+        .lead-card .summary {
+            color: #666;
+            font-size: 0.95em;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .lead-card .score-section {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+            padding-top: 10px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .score-badge {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .score-badge.high {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+
+        .score-badge.medium {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .score-badge.low {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+
+        .reasoning {
+            font-size: 0.85em;
+            color: #666;
+            font-style: italic;
+        }
+
+        .lead-card a {
+            display: inline-block;
+            margin-top: 10px;
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .lead-card a:hover {
+            text-decoration: underline;
+        }
+
+        .status {
+            text-align: center;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.loading {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            header h1 {
+                font-size: 1.8em;
+            }
+        }
+
+        /* Config tabs */
+        .config-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .config-tab {
+            padding: 8px 16px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #666;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+        }
+
+        .config-tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+
+        .config-panel {
+            display: none;
+        }
+
+        .config-panel.active {
+            display: block;
+        }
+
+        .provider-toggle {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background-color: #667eea;
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(24px);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🔍 Job Lead Finder</h1>
+            <p>AI-powered job search with intelligent evaluation</p>
+        </header>
+        <div class="content">
+            <div class="search-panel">
+                <h2>Search</h2>
+                <form id="searchForm">
+                    <div class="form-group">
+                        <label for="query">Query *</label>
+                        <input type="text" id="query" name="query" placeholder="e.g., remote python developer"
+                            value="python remote automation" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Resume (optional)</label>
+                        <input type="file" id="resumeFile" accept=".txt,.md" style="width:100%; margin-bottom:8px;">
+                        <div style="display:flex; gap:8px; margin-bottom:8px;">
+                            <button type="button" id="uploadResumeBtn"
+                                style="flex:1; padding:6px 12px; font-size:0.9em;">Upload</button>
+                            <button type="button" id="deleteResumeBtn"
+                                style="flex:1; padding:6px 12px; font-size:0.9em; background:#d32f2f;">Delete</button>
+                        </div>
+                        <textarea id="resume" name="resume"
+                            placeholder="Paste resume or it will appear here after upload..."
+                            style="background:#f5f5f5;"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="count">Results Count (searches 10x this amount)</label>
+                        <input type="number" id="count" name="count" value="10" min="1" max="50">
+                    </div>
+                    <button type="submit">Search</button>
+                </form>
+                <hr style="margin:28px 0 18px; border:none; border-top:1px solid #ddd;" />
+                <div id="configSection">
+                    <h2 style="font-size:1.3em; margin-bottom:12px;">Configuration</h2>
+
+                    <!-- Config Tabs -->
+                    <div class="config-tabs">
+                        <button class="config-tab active" data-tab="industry">Industry</button>
+                        <button class="config-tab" data-tab="providers">Providers</button>
+                        <button class="config-tab" data-tab="location">Location</button>
+                        <button class="config-tab" data-tab="search">Search</button>
+                        <button class="config-tab" data-tab="blocked">Blocked</button>
+                    </div>
+
+                    <!-- Industry Profile Tab -->
+                    <div class="config-panel active" id="panel-industry">
+                        <div class="form-group">
+                            <label for="industryProfile">Industry Profile</label>
+                            <select id="industryProfile"
+                                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                <option value="tech">Technology & Software</option>
+                                <option value="finance">Financial Technology & Banking</option>
+                                <option value="healthcare">Healthcare & Medical Technology</option>
+                                <option value="gaming">Gaming & Interactive Entertainment</option>
+                                <option value="ecommerce">E-commerce & Retail Technology</option>
+                                <option value="automotive">Automotive & Autonomous Vehicles</option>
+                                <option value="aerospace">Aerospace & Defense</option>
+                                <option value="esg">ESG & Sustainability (Climate Tech, Clean Energy)</option>
+                            </select>
+                        </div>
+                        <button id="saveIndustryBtn" type="button" style="width:100%;"
+                            title="Save this industry profile to customize which companies are targeted in searches">
+                            Save Profile & Update Company List
+                        </button>
+                        <div id="industryInfo"
+                            style="margin-top:12px; padding:10px; background:#f8f9fa; border-radius:6px; font-size:0.9em; color:#666;">
+                        </div>
+                    </div>
+
+                    <!-- Providers Tab -->
+                    <div class="config-panel" id="panel-providers">
+                        <div id="providersList"></div>
+                    </div>
+
+                    <!-- Location Tab -->
+                    <div class="config-panel" id="panel-location">
+                        <div class="form-group">
+                            <label for="defaultLocation">Default Location</label>
+                            <input type="text" id="defaultLocation" placeholder="e.g., United States" />
+                        </div>
+                        <div class="form-group" style="display:flex; gap:20px; flex-wrap:wrap;">
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="preferRemote" />
+                                <span>Prefer Remote</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="allowHybrid" />
+                                <span>Allow Hybrid</span>
+                            </label>
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="allowOnsite" />
+                                <span>Allow On-site</span>
+                            </label>
+                        </div>
+                        <button id="saveLocationBtn" type="button" style="width:100%;">Save Location
+                            Preferences</button>
+                    </div>
+
+                    <!-- Search Parameters Tab -->
+                    <div class="config-panel" id="panel-search">
+                        <div class="form-group">
+                            <label for="defaultCount">Default Result Count</label>
+                            <input type="number" id="defaultCount" min="1" max="50" placeholder="e.g., 10"
+                                title="Number of valid job results to return after filtering" />
+                            <small style="display:block; margin-top:4px; color:#666;">
+                                How many valid jobs to return after filtering out invalid links
+                            </small>
+                        </div>
+                        <div class="form-group">
+                            <label for="oversampleMultiplier">Oversample Multiplier</label>
+                            <input type="number" id="oversampleMultiplier" min="5" max="20" placeholder="e.g., 10"
+                                title="How many extra jobs to fetch to account for invalid links" />
+                            <small style="display:block; margin-top:4px; color:#666;">
+                                Fetches N×count jobs to account for invalid links (e.g., 10× means requesting 100 jobs
+                                to get 10 valid ones)
+                            </small>
+                        </div>
+                        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                            <label style="display:flex; align-items:center; gap:8px;">
+                                <input type="checkbox" id="enableAiRanking" />
+                                <span>Enable AI Ranking</span>
+                            </label>
+                            <small style="display:block; margin-top:4px; color:#666;">
+                                Use AI to rank and filter job relevance (requires resume)
+                            </small>
+                        </div>
+                        <button id="saveSearchBtn" type="button" style="width:100%;">Save Search Parameters</button>
+                    </div>
+
+                    <!-- Blocked Entities Tab -->
+                    <div class="config-panel" id="panel-blocked">
+                        <div class="form-group">
+                            <label for="blockedEntity">Add Blocked Entity</label>
+                            <input type="text" id="blockedEntity" placeholder="domain.com or Employer Name" />
+                        </div>
+                        <div class="form-group">
+                            <label for="blockedType">Type</label>
+                            <select id="blockedType"
+                                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                                <option value="site">Site</option>
+                                <option value="employer">Employer</option>
+                            </select>
+                        </div>
+                        <button id="addBlockedBtn" type="button" style="margin-bottom:18px;">Add to Block List</button>
+                        <div style="margin-bottom:20px;">
+                            <h3 style="margin-bottom:10px; font-size:1.05em;">Blocked Entities</h3>
+                            <ul id="blockedList"
+                                style="list-style:none; padding:0; display:flex; flex-direction:column; gap:8px;"></ul>
+                        </div>
+                    </div>
+
+                    <!-- Link Validator (always visible) -->
+                    <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
+                        <h3 style="margin-bottom:10px; font-size:1.05em;">Validate Link</h3>
+                        <div class="form-group" style="margin-bottom:10px;">
+                            <input type="text" id="validateUrl" placeholder="https://example.com/job" />
+                        </div>
+                        <button id="validateLinkBtn" type="button" style="width:100%;">Validate Link</button>
+                        <div id="validateResult"
+                            style="margin-top:10px; font-size:0.85em; color:#333; min-height:18px;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="leads-panel">
+                <h2>Results <span id="resultsCount" style="color:#666; font-size:0.9em;"></span></h2>
+                <div class="status" id="status"></div>
+                <div class="leads-list" id="leadsList">
+                    <div class="empty-state">
+                        <p>No leads yet. Search to get started!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function loadLeads() {
+            try { const resp = await fetch('/api/leads'); const data = await resp.json(); displayLeads(data.leads); } catch (e) { console.error('Error loading leads:', e); }
+        }
+        function displayLeads(leads) {
+            const container = document.getElementById('leadsList');
+            const countEl = document.getElementById('resultsCount');
+
+            if (!leads || leads.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No leads yet. Search to get started!</p></div>';
+                countEl.textContent = '';
+                return;
+            }
+
+            countEl.textContent = `(${leads.length})`;
+
+            container.innerHTML = leads.map(lead => `
+    <div class="lead-card">
+        <h3>${lead.title}</h3>
+        <div class="company">${lead.company}</div>
+        <div class="location">📍 ${lead.location}</div>
+        <div class="summary">${lead.summary}</div>
+        ${lead.score !== undefined ? `
+            <div class="score-section">
+                <div class="score-badge ${lead.score >= 80 ? 'high' : lead.score >= 60 ? 'medium' : 'low'}">Score: ${lead.score}</div>
+                ${lead.reasoning ? `<div class="reasoning">${lead.reasoning}</div>` : ''}
+            </div>
+        ` : ''}
+        <a href="${lead.link}" target="_blank">View on site →</a>
+    </div>
+`).join('');
+        }
+        function showStatus(message, type) { const status = document.getElementById('status'); status.textContent = message; status.className = `status show ${type}`; if (type !== 'loading') { setTimeout(() => status.classList.remove('show'), 5000); } }
+
+        async function performSearch() {
+            const query = document.getElementById('query').value;
+            const resume = document.getElementById('resume').value;
+            const count = parseInt(document.getElementById('count').value);
+            const evalEl = document.getElementById('evaluate');
+            const evaluate = (!!resume && resume.trim().length > 0) || (evalEl ? !!evalEl.checked : false);
+            showStatus('Searching...', 'loading');
+            try {
+                const resp = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, resume: resume || null, count, evaluate }) });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Search failed');
+
+                // Show detailed results info
+                let resultMsg = `Found ${data.count} job${data.count !== 1 ? 's' : ''}!`;
+                if (data.total_fetched > data.count) {
+                    resultMsg += ` (${data.total_fetched} fetched, ${data.filtered_count} filtered out)`;
+                }
+
+                displayLeads(data.leads);
+                showStatus(resultMsg, 'success');
+            } catch (e) {
+                showStatus(`Error: ${e.message}`, 'error');
+                console.error(e);
+            }
+        }
+
+        document.getElementById('searchForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await performSearch();
+        });
+
+        // --- Configuration UI ---
+        async function loadConfig() {
+            try {
+                const resp = await fetch('/api/config');
+                const cfg = await resp.json();
+                renderBlockedEntities(cfg.blocked_entities || []);
+            } catch (e) { console.error('Failed to load config', e); }
+        }
+
+        function renderBlockedEntities(list) {
+            const ul = document.getElementById('blockedList');
+            if (!list.length) { ul.innerHTML = '<li style="color:#777;">None blocked</li>'; return; }
+            ul.innerHTML = list.map(item => `
+                <li style="background:#f4f4f8; padding:8px 12px; border-radius:6px; display:flex; justify-content:space-between; align-items:center;">
+                    <span><strong>${item.type}</strong>: ${item.value}</span>
+                    <button type="button" data-type="${item.type}" data-value="${item.value}" style="width:auto; padding:6px 10px; font-size:0.75em; background:#d32f2f;">Remove</button>
+                </li>
+            `).join('');
+            [...ul.querySelectorAll('button')].forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const type = btn.getAttribute('data-type');
+                    const value = btn.getAttribute('data-value');
+                    try {
+                        const resp = await fetch(`/api/config/block-entity/${encodeURIComponent(type)}/${encodeURIComponent(value)}`, { method: 'DELETE' });
+                        const cfg = await resp.json();
+                        renderBlockedEntities(cfg.blocked_entities || []);
+                        showStatus(`Removed ${value} from block list`, 'success');
+                    } catch (e) { showStatus('Failed to remove entity', 'error'); }
+                });
+            });
+        }
+
+        document.getElementById('addBlockedBtn').addEventListener('click', async () => {
+            const entity = document.getElementById('blockedEntity').value.trim();
+            const type = document.getElementById('blockedType').value;
+            if (!entity) { showStatus('Enter an entity to block', 'error'); return; }
+            showStatus('Adding to block list...', 'loading');
+            try {
+                const resp = await fetch('/api/config/block-entity', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ entity, entity_type: type }) });
+                const cfg = await resp.json();
+                if (!resp.ok) { throw new Error(cfg.detail?.error || cfg.detail || 'Failed'); }
+                renderBlockedEntities(cfg.blocked_entities || []);
+                document.getElementById('blockedEntity').value = '';
+                showStatus(`Blocked ${entity}`, 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        document.getElementById('validateLinkBtn').addEventListener('click', async () => {
+            const url = document.getElementById('validateUrl').value.trim();
+            const resultBox = document.getElementById('validateResult');
+            if (!url) { resultBox.textContent = 'Enter a URL.'; return; }
+            resultBox.textContent = 'Validating...';
+            try {
+                const resp = await fetch('/api/validate-link', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url }) });
+                const data = await resp.json();
+                if (!resp.ok) { throw new Error(data.error || data.detail || 'Validation failed'); }
+                resultBox.textContent = data.valid ? `OK (status ${data.status_code || 'n/a'})` : `Invalid or unreachable (${data.error || 'unknown'})`;
+            } catch (e) { resultBox.textContent = `Error: ${e.message}`; }
+        });
+
+        // Resume upload handlers
+        document.getElementById('uploadResumeBtn').addEventListener('click', async () => {
+            const fileInput = document.getElementById('resumeFile');
+            const file = fileInput.files[0];
+            if (!file) { showStatus('Please select a file', 'error'); return; }
+            const formData = new FormData();
+            formData.append('file', file);
+            showStatus('Uploading resume...', 'loading');
+            try {
+                const resp = await fetch('/api/upload/resume', { method: 'POST', body: formData });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail?.error || data.detail || 'Upload failed');
+                document.getElementById('resume').value = data.resume;
+                fileInput.value = '';
+                showStatus('Resume uploaded successfully', 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        document.getElementById('deleteResumeBtn').addEventListener('click', async () => {
+            if (!confirm('Delete uploaded resume?')) return;
+            showStatus('Deleting resume...', 'loading');
+            try {
+                const resp = await fetch('/api/resume', { method: 'DELETE' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Delete failed');
+                document.getElementById('resume').value = '';
+                document.getElementById('resumeFile').value = '';
+                showStatus('Resume deleted', 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        // Load existing resume on page load
+        async function loadResume() {
+            try {
+                const resp = await fetch('/api/resume');
+                if (resp.ok) {
+                    const data = await resp.json();
+                    if (data.resume) document.getElementById('resume').value = data.resume;
+                }
+            } catch (e) { /* Resume doesn't exist yet */ }
+        }
+
+        loadResume();
+        loadConfig();
+        loadLeads();
+        // Auto-search disabled to prevent unexpected API quota waste
+        // Users can click the Search button when ready
+        // setTimeout(() => performSearch(), 500);
+
+        // --- Config Tabs ---
+        document.querySelectorAll('.config-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.getAttribute('data-tab');
+                document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.config-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`panel-${targetTab}`).classList.add('active');
+            });
+        });
+
+        // --- Industry Profile ---
+        async function loadIndustryProfile() {
+            try {
+                const resp = await fetch('/api/industry-profile');
+                const data = await resp.json();
+                document.getElementById('industryProfile').value = data.current;
+                const info = document.getElementById('industryInfo');
+                info.innerHTML = `<strong>${data.profile.name}</strong><br>${data.profile.description}<br><small>${data.profile.target_companies?.length || 0} companies targeted</small>`;
+            } catch (e) { console.error('Failed to load industry profile', e); }
+        }
+
+        document.getElementById('saveIndustryBtn').addEventListener('click', async () => {
+            const profile = document.getElementById('industryProfile').value;
+            showStatus('Updating industry profile...', 'loading');
+            try {
+                const resp = await fetch(`/api/industry-profile?profile=${profile}`, { method: 'POST' });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed to update');
+                await loadIndustryProfile();
+                showStatus(`Industry profile updated to ${profile}`, 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        // --- Providers ---
+        async function loadProviders() {
+            try {
+                const resp = await fetch('/api/job-config');
+                const config = await resp.json();
+                const container = document.getElementById('providersList');
+                const providers = config.providers || {};
+
+                container.innerHTML = Object.entries(providers).map(([key, provider]) => `
+                    <div class="provider-toggle">
+                        <span><strong>${provider.name}</strong></span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-provider="${key}" ${provider.enabled ? 'checked' : ''} />
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                `).join('');
+
+                container.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', async (e) => {
+                        const providerKey = e.target.getAttribute('data-provider');
+                        const enabled = e.target.checked;
+                        try {
+                            const resp = await fetch(`/api/job-config/provider/${providerKey}?enabled=${enabled}`, { method: 'POST' });
+                            if (!resp.ok) throw new Error('Failed to update provider');
+                            showStatus(`${providerKey} ${enabled ? 'enabled' : 'disabled'}`, 'success');
+                        } catch (err) {
+                            e.target.checked = !enabled; // Revert on error
+                            showStatus(`Error updating provider`, 'error');
+                        }
+                    });
+                });
+            } catch (e) { console.error('Failed to load providers', e); }
+        }
+
+        // --- Location Preferences ---
+        async function loadLocationPrefs() {
+            try {
+                const resp = await fetch('/api/job-config');
+                const config = await resp.json();
+                const loc = config.location || {};
+                document.getElementById('defaultLocation').value = loc.default_location || '';
+                document.getElementById('preferRemote').checked = loc.prefer_remote || false;
+                document.getElementById('allowHybrid').checked = loc.allow_hybrid || false;
+                document.getElementById('allowOnsite').checked = loc.allow_onsite || false;
+            } catch (e) { console.error('Failed to load location prefs', e); }
+        }
+
+        document.getElementById('saveLocationBtn').addEventListener('click', async () => {
+            const location = document.getElementById('defaultLocation').value;
+            const preferRemote = document.getElementById('preferRemote').checked;
+            const allowHybrid = document.getElementById('allowHybrid').checked;
+            const allowOnsite = document.getElementById('allowOnsite').checked;
+
+            showStatus('Updating location preferences...', 'loading');
+            try {
+                const resp = await fetch('/api/job-config/location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        default_location: location,
+                        prefer_remote: preferRemote,
+                        allow_hybrid: allowHybrid,
+                        allow_onsite: allowOnsite
+                    })
+                });
+                if (!resp.ok) throw new Error('Failed to update location');
+                showStatus('Location preferences updated', 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        // --- Search Parameters ---
+        async function loadSearchParams() {
+            try {
+                const resp = await fetch('/api/job-config');
+                const config = await resp.json();
+                const search = config.search || {};
+                document.getElementById('defaultCount').value = search.default_count || 10;
+                document.getElementById('oversampleMultiplier').value = search.oversample_multiplier || 10;
+                document.getElementById('enableAiRanking').checked = search.enable_ai_ranking !== false;
+            } catch (e) { console.error('Failed to load search params', e); }
+        }
+
+        document.getElementById('saveSearchBtn').addEventListener('click', async () => {
+            const defaultCount = parseInt(document.getElementById('defaultCount').value);
+            const oversampleMultiplier = parseInt(document.getElementById('oversampleMultiplier').value);
+            const enableAiRanking = document.getElementById('enableAiRanking').checked;
+
+            showStatus('Updating search parameters...', 'loading');
+            try {
+                const resp = await fetch('/api/job-config/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        default_count: defaultCount,
+                        oversample_multiplier: oversampleMultiplier,
+                        enable_ai_ranking: enableAiRanking
+                    })
+                });
+                const data = await resp.json();
+                if (!resp.ok) throw new Error(data.detail || 'Failed to update');
+                showStatus('Search parameters updated', 'success');
+            } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
+        });
+
+        // Load all config on page load
+        loadIndustryProfile();
+        loadProviders();
+        loadLocationPrefs();
+        loadSearchParams();
+    </script>
+</body>
+
+</html>

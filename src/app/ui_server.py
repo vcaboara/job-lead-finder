@@ -1,21 +1,34 @@
-"""FastAPI UI server for job lead finder."""
+"""FastAPI UI server for job lead finder.
+
+Reconstructed after refactor: serves HTML template, search API,
+configuration endpoints, and leads retrieval.
+"""
 
 import json
 import os
+import time
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
+from .config_manager import get_search_preferences
+from .config_store import load_config, save_config, scan_entity, scan_instructions, validate_url
 from .job_finder import generate_job_leads, save_to_file
-from .gemini_provider import GeminiProvider
+from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
+from .link_validator import validate_link
 
 app = FastAPI(title="Job Lead Finder", version="0.1.1")
 
-# Leads file path
 LEADS_FILE = Path("leads.json")
+RESUME_FILE = Path("resume.txt")
+UPLOADS_DIR = Path("uploads")
+UPLOADS_DIR.mkdir(exist_ok=True)
+
+# Progress tracking for search operations
+search_progress: Dict[str, dict] = {}
 
 
 class SearchRequest(BaseModel):
@@ -31,408 +44,795 @@ class HealthResponse(BaseModel):
     api_key_configured: bool
 
 
+class SystemInstructionsRequest(BaseModel):
+    instructions: str
+
+
+class BlockedEntity(BaseModel):
+    type: str
+    value: str
+
+
+class ConfigResponse(BaseModel):
+    system_instructions: str
+    blocked_entities: list[BlockedEntity]
+    region: str
+
+
+class BlockedEntityRequest(BaseModel):
+    entity: str
+    entity_type: str  # 'site' or 'employer'
+
+
+class ValidateLinkRequest(BaseModel):
+    url: str
+
+
+@app.get("/", response_class=HTMLResponse)
+def index():
+    html_path = Path(__file__).parent / "templates" / "index.html"
+    try:
+        return HTMLResponse(html_path.read_text(encoding="utf-8"))
+    except Exception:
+        raise HTTPException(status_code=500, detail="UI template not found")
+
+
 @app.get("/health", response_model=HealthResponse)
 def health():
-    """Check API health and configuration."""
     api_key = os.getenv("GEMINI_API_KEY", "")
-    return HealthResponse(
-        status="healthy",
-        api_key_configured=bool(api_key),
+    return HealthResponse(status="healthy", api_key_configured=bool(api_key))
+
+
+@app.get("/api/config", response_model=ConfigResponse)
+def get_config():
+    cfg = load_config()
+    return ConfigResponse(
+        system_instructions=cfg.get("system_instructions", ""),
+        blocked_entities=cfg.get("blocked_entities", []),
+        region=cfg.get("region", ""),
+    )
+
+
+@app.post("/api/config/system-instructions", response_model=ConfigResponse)
+def update_system_instructions(req: SystemInstructionsRequest):
+    findings = scan_instructions(req.instructions)
+    if findings:
+        raise HTTPException(status_code=400, detail={"error": "Rejected by scanner", "findings": findings})
+    cfg = load_config()
+    cfg["system_instructions"] = req.instructions
+    save_config(cfg)
+    return ConfigResponse(
+        system_instructions=cfg.get("system_instructions", ""),
+        blocked_entities=cfg.get("blocked_entities", []),
+        region=cfg.get("region", ""),
     )
 
 
 @app.post("/api/search")
 def search(req: SearchRequest):
-    """Search for jobs and optionally evaluate them."""
-    api_key = os.getenv("GEMINI_API_KEY", "")
-    if not api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+    # Allow search without an API key; provider will fallback internally
+    # Load resume from file if not provided in request
+    resume_text = req.resume
+    if not resume_text and RESUME_FILE.exists():
+        resume_text = RESUME_FILE.read_text(encoding="utf-8")
+
+    # Auto-evaluate if resume is available
+    should_evaluate = req.evaluate or bool(resume_text)
+
+    # Create unique search ID for progress tracking
+    search_id = f"search_{int(time.time() * 1000)}"
+    search_progress[search_id] = {
+        "status": "starting",
+        "message": f"Requesting {req.count} job listings...",
+        "attempt": 0,
+        "valid_count": 0,
+        "timestamp": time.time(),
+    }
 
     try:
-        leads = generate_job_leads(
-            query=req.query,
-            resume_text=req.resume or "No resume provided.",
-            count=req.count,
-            model=req.model,
-            evaluate=req.evaluate,
-            verbose=False,
+        # Request 10x more jobs to account for filtering (oversample strategy)
+        # This helps ensure we get the requested count after validation
+        # With high invalid link rates (soft 404s, hallucinations), we need aggressive oversampling
+        search_prefs = get_search_preferences()
+        oversample_multiplier = search_prefs.get("oversample_multiplier", 10)
+        initial_request_count = req.count * oversample_multiplier
+        max_retries = 1  # Reduced from 2 for faster response
+        all_valid_leads = []
+        seen_links = set()  # Track unique job links to avoid duplicates
+
+        for attempt in range(max_retries + 1):
+            # Calculate how many more we need
+            needed = req.count - len(all_valid_leads)
+            if needed <= 0:
+                break
+
+            # Request extra to account for filtering
+            request_count = needed * oversample_multiplier if attempt > 0 else initial_request_count
+
+            # Update progress
+            search_progress[search_id].update(
+                {
+                    "status": "fetching",
+                    "attempt": attempt + 1,
+                    "message": (
+                        f"Attempt {attempt + 1}/{max_retries + 1}: "
+                        f"Searching {request_count} jobs across providers..."
+                    ),
+                }
+            )
+
+            search_progress[search_id][
+                "message"
+            ] = f"Searching CompanyJobs, RemoteOK, Remotive for {request_count} jobs..."
+            print(f"UI: Starting search for {request_count} jobs (need {needed} more valid results)")
+
+            raw_leads = generate_job_leads(
+                query=req.query,
+                resume_text=resume_text or "No resume provided.",
+                count=request_count,
+                model=req.model,
+                evaluate=should_evaluate,
+                verbose=False,
+            )
+
+            # Update progress with provider stats
+            search_progress[search_id].update(
+                {"status": "filtering", "message": f"Fetched {len(raw_leads)} jobs. Validating links..."}
+            )
+
+            # Process and filter leads
+            valid_leads = _process_and_filter_leads(raw_leads)
+
+            # Deduplicate by link and filter out hidden jobs
+            tracker = get_tracker()
+            for lead in valid_leads:
+                link = lead.get("link", "")
+                if link and link not in seen_links:
+                    # Check if job is hidden
+                    if not tracker.is_job_hidden(lead):
+                        seen_links.add(link)
+                        all_valid_leads.append(lead)
+                        # Track new job automatically as "new" status
+                        tracker.track_job(lead, STATUS_NEW)
+
+            search_progress[search_id].update(
+                {"valid_count": len(all_valid_leads), "message": f"Found {len(all_valid_leads)} valid jobs so far..."}
+            )
+
+            # Stop if we have enough or got no new results
+            if len(all_valid_leads) >= req.count or len(valid_leads) == 0:
+                break
+
+        # Take only the requested count
+        final_leads = all_valid_leads[: req.count]
+
+        # Enrich leads with tracking data (status, notes, etc.)
+        tracker = get_tracker()
+        for lead in final_leads:
+            from .job_tracker import generate_job_id
+
+            job_id = generate_job_id(lead)
+            tracked_job = tracker.get_job(job_id)
+            if tracked_job:
+                lead["job_id"] = job_id
+                lead["tracking_status"] = tracked_job.get("status", STATUS_NEW)
+                lead["tracking_notes"] = tracked_job.get("notes", "")
+                lead["company_link"] = tracked_job.get("company_link")
+
+        search_progress[search_id].update(
+            {
+                "status": "complete",
+                "message": f"Search complete: {len(final_leads)} jobs found",
+                "valid_count": len(final_leads),
+            }
         )
 
-        # Save to file
-        save_to_file(leads, str(LEADS_FILE))
-
+        save_to_file(final_leads, str(LEADS_FILE))
         return JSONResponse(
             {
                 "status": "success",
                 "query": req.query,
-                "count": len(leads),
-                "leads": leads,
+                "count": len(final_leads),
+                "leads": final_leads,
+                "filtered_count": len(all_valid_leads) - len(final_leads),
+                "total_fetched": len(all_valid_leads),
+                "search_id": search_id,
             }
         )
     except Exception as e:
+        search_progress[search_id].update({"status": "error", "message": f"Error: {str(e)}"})
         raise HTTPException(status_code=500, detail=str(e))
+
+
+def _process_and_filter_leads(raw_leads: list) -> list:
+    """Process raw leads and filter out blocked/invalid ones."""
+    # Load config for blocked entities
+    cfg = load_config()
+    blocked = cfg.get("blocked_entities", [])
+    blocked_sites = {e.get("value", "").lower() for e in blocked if e.get("type") == "site"}
+    blocked_employers = {e.get("value", "").lower() for e in blocked if e.get("type") == "employer"}
+
+    def is_blocked(lead_link: str, company: str) -> bool:
+        from urllib.parse import urlparse
+
+        # Company check
+        if company and company.lower() in blocked_employers:
+            return True
+        # Site/domain check
+        if not lead_link:
+            return False
+        try:
+            parsed = urlparse(lead_link)
+            host = parsed.netloc.lower()
+            host = host[4:] if host.startswith("www.") else host
+            # Direct match or suffix match (e.g., sub.domain.com endswith domain.com)
+            for site in blocked_sites:
+                if host == site or host.endswith("." + site):
+                    return True
+        except Exception:
+            return False
+        return False
+
+    # Parallelize link validation for speed
+    import concurrent.futures
+    from urllib.parse import urlparse
+
+    # Pre-filter blocked leads
+    unblocked_leads = [lead for lead in raw_leads if not is_blocked(lead.get("link", ""), lead.get("company", ""))]
+    print(f"_process_and_filter_leads: {len(raw_leads)} raw leads, {len(unblocked_leads)} after blocking filter")
+
+    # Validate all links in parallel (5-10x faster than sequential)
+    links_to_validate = [lead.get("link", "") for lead in unblocked_leads]
+    validated_results = {}
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_link = {
+            executor.submit(validate_link, link, timeout=10, verbose=False): link for link in links_to_validate if link
+        }
+        for future in concurrent.futures.as_completed(future_to_link):
+            link = future_to_link[future]
+            try:
+                validated_results[link] = future.result()
+            except Exception as e:
+                print(f"Link validation exception for {link}: {e}")
+                validated_results[link] = {"valid": False, "status_code": None, "error": "validation_failed"}
+
+    processed_leads = []
+    filtered_reasons = {}
+    for lead in unblocked_leads:
+        link = lead.get("link", "")
+        link_info = validated_results.get(link) if link else {"valid": False, "status_code": None, "error": "no_link"}
+        # Exclude bad links: 403, 404, localhost/127.0.0.1, search-result pages, and generic career pages
+        parsed = urlparse(link) if link else None
+        host = parsed.netloc.lower() if parsed else ""
+        host = host[4:] if host.startswith("www.") else host
+        is_local = host in {"localhost", "127.0.0.1"}
+        path = parsed.path.lower() if parsed else ""
+        query = parsed.query.lower() if parsed else ""
+
+        # Detect generic career/jobs pages (not specific job postings)
+        # Allow job board sites (LinkedIn, Indeed, Glassdoor, etc.)
+        host_is_job_board = any(
+            job_board in host
+            for job_board in [
+                "linkedin.com",
+                "indeed.com",
+                "glassdoor",
+                "github.com",
+                "remote",
+                "workable.com",
+                "greenhouse.io",
+                "lever.co",
+                "jobvite.com",
+                "applytojob.com",
+            ]
+        )
+
+        generic_patterns = [
+            "/careers",
+            "/career",
+            "/employment",
+            "/opportunities",
+            "/join-us",
+            "/work-with-us",
+        ]
+        # Only check generic patterns if NOT on a job board site
+        is_generic_page = False
+        if not host_is_job_board:
+            is_generic_page = any(
+                path.rstrip("/") == pattern or path.rstrip("/") + "/" == pattern + "/" for pattern in generic_patterns
+            )
+
+        # Be more lenient with "search" pages on job boards - they often work
+        looks_like_search = False
+        if not host_is_job_board:
+            looks_like_search = ("/search" in path) or ("jobs/search" in path) or ("q=" in query)
+
+        status = link_info.get("status_code")
+        is_excluded_status = status == 404  # Only exclude 404s, not 403 (soft-valid)
+
+        # Track filtering reasons
+        filter_reason = None
+        if not link_info.get("valid"):
+            # Only filter truly broken links - exclude timeouts and generic errors
+            error = link_info.get("error") or ""
+            if "timeout" not in error.lower() and status == 404:
+                filter_reason = f"invalid_link:{error}"
+        elif is_excluded_status:
+            filter_reason = f"excluded_status:{status}"
+        elif is_local:
+            filter_reason = "localhost"
+        elif looks_like_search:
+            filter_reason = "search_page"
+        elif is_generic_page:
+            filter_reason = "generic_page"
+
+        if filter_reason:
+            filtered_reasons[filter_reason] = filtered_reasons.get(filter_reason, 0) + 1
+            continue
+
+        lead["link_status_code"] = status
+        lead["link_valid"] = True
+        lead["link_warning"] = link_info.get("warning")
+        lead["link_error"] = link_info.get("error")
+        processed_leads.append(lead)
+
+    print(f"_process_and_filter_leads: {len(processed_leads)} passed validation. Filtered: {filtered_reasons}")
+
+    return processed_leads
+
+
+@app.get("/api/search/progress/{search_id}")
+def get_search_progress(search_id: str):
+    """Get the current progress of a search operation."""
+    if search_id not in search_progress:
+        raise HTTPException(status_code=404, detail="Search ID not found")
+    return JSONResponse(search_progress[search_id])
 
 
 @app.get("/api/leads")
 def get_leads():
-    """Retrieve saved leads from leads.json."""
     if not LEADS_FILE.exists():
         return JSONResponse({"leads": []})
-
     try:
-        with open(LEADS_FILE, "r") as f:
-            leads = json.load(f)
+        with open(LEADS_FILE, "r", encoding="utf-8") as fh:
+            leads = json.load(fh)
         return JSONResponse({"leads": leads})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading leads: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error reading leads: {e}")
 
 
-@app.get("/", response_class=HTMLResponse)
-def index():
-    """Serve the UI dashboard."""
-    return """
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Job Lead Finder</title>
-        <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                min-height: 100vh;
-                padding: 20px;
-            }
-            .container {
-                max-width: 1200px;
-                margin: 0 auto;
-            }
-            header {
-                text-align: center;
-                color: white;
-                margin-bottom: 40px;
-            }
-            header h1 {
-                font-size: 2.5em;
-                margin-bottom: 10px;
-            }
-            header p {
-                font-size: 1.1em;
-                opacity: 0.9;
-            }
-            .content {
-                display: grid;
-                grid-template-columns: 1fr 2fr;
-                gap: 20px;
-                margin-bottom: 20px;
-            }
-            .search-panel, .leads-panel {
-                background: white;
-                border-radius: 10px;
-                padding: 30px;
-                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
-            }
-            .search-panel {
-                height: fit-content;
-            }
-            .search-panel h2, .leads-panel h2 {
-                color: #333;
-                margin-bottom: 20px;
-                font-size: 1.5em;
-            }
-            .form-group {
-                margin-bottom: 15px;
-            }
-            .form-group label {
-                display: block;
-                margin-bottom: 5px;
-                color: #555;
-                font-weight: 500;
-            }
-            .form-group input,
-            .form-group textarea {
-                width: 100%;
-                padding: 10px;
-                border: 1px solid #ddd;
-                border-radius: 5px;
-                font-family: inherit;
-                font-size: 1em;
-            }
-            .form-group textarea {
-                min-height: 80px;
-                resize: vertical;
-            }
-            .form-group input:focus,
-            .form-group textarea:focus {
-                outline: none;
-                border-color: #667eea;
-                box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-            }
-            .checkbox-group {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-            }
-            .checkbox-group input[type="checkbox"] {
-                width: auto;
-                margin: 0;
-            }
-            button {
-                width: 100%;
-                padding: 12px;
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                border: none;
-                border-radius: 5px;
-                font-size: 1em;
-                font-weight: 600;
-                cursor: pointer;
-                transition: transform 0.2s, box-shadow 0.2s;
-            }
-            button:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
-            }
-            button:disabled {
-                opacity: 0.6;
-                cursor: not-allowed;
-                transform: none;
-            }
-            .leads-list {
-                display: flex;
-                flex-direction: column;
-                gap: 15px;
-                max-height: 800px;
-                overflow-y: auto;
-            }
-            .lead-card {
-                border: 1px solid #e0e0e0;
-                border-radius: 8px;
-                padding: 20px;
-                background: #f9f9f9;
-                transition: all 0.2s;
-            }
-            .lead-card:hover {
-                background: #f0f0f0;
-                border-color: #667eea;
-                box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
-            }
-            .lead-card h3 {
-                color: #333;
-                margin-bottom: 8px;
-                font-size: 1.1em;
-            }
-            .lead-card .company {
-                color: #667eea;
-                font-weight: 600;
-                margin-bottom: 8px;
-            }
-            .lead-card .location {
-                color: #888;
-                font-size: 0.9em;
-                margin-bottom: 8px;
-            }
-            .lead-card .summary {
-                color: #666;
-                font-size: 0.95em;
-                line-height: 1.4;
-                margin-bottom: 10px;
-            }
-            .lead-card .score-section {
-                display: flex;
-                align-items: center;
-                gap: 10px;
-                margin: 10px 0;
-                padding-top: 10px;
-                border-top: 1px solid #e0e0e0;
-            }
-            .score-badge {
-                background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                color: white;
-                padding: 8px 12px;
-                border-radius: 5px;
-                font-weight: 600;
-                font-size: 0.9em;
-            }
-            .score-badge.high {
-                background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            }
-            .score-badge.medium {
-                background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            }
-            .score-badge.low {
-                background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-            }
-            .reasoning {
-                font-size: 0.85em;
-                color: #666;
-                font-style: italic;
-            }
-            .lead-card a {
-                display: inline-block;
-                margin-top: 10px;
-                color: #667eea;
-                text-decoration: none;
-                font-weight: 500;
-            }
-            .lead-card a:hover {
-                text-decoration: underline;
-            }
-            .status {
-                text-align: center;
-                padding: 20px;
-                margin-bottom: 20px;
-                border-radius: 8px;
-                display: none;
-            }
-            .status.show {
-                display: block;
-            }
-            .status.loading {
-                background: #e3f2fd;
-                color: #1976d2;
-            }
-            .status.success {
-                background: #e8f5e9;
-                color: #388e3c;
-            }
-            .status.error {
-                background: #ffebee;
-                color: #d32f2f;
-            }
-            .empty-state {
-                text-align: center;
-                padding: 40px 20px;
-                color: #999;
-            }
-            @media (max-width: 768px) {
-                .content {
-                    grid-template-columns: 1fr;
-                }
-                header h1 {
-                    font-size: 1.8em;
-                }
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <header>
-                <h1>🔍 Job Lead Finder</h1>
-                <p>AI-powered job search with intelligent evaluation</p>
-            </header>
+@app.post("/api/config/block-entity", response_model=ConfigResponse)
+def add_blocked_entity(req: BlockedEntityRequest):
+    """Add a site or employer to the block list."""
+    entity = req.entity.strip()
+    entity_type = req.entity_type.lower()
 
-            <div class="content">
-                <div class="search-panel">
-                    <h2>Search</h2>
-                    <form id="searchForm">
-                        <div class="form-group">
-                            <label for="query">Query *</label>
-                            <input type="text" id="query" name="query" placeholder="e.g., remote python developer" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="resume">Resume (optional)</label>
-                            <textarea id="resume" name="resume" placeholder="Paste your resume or profile summary..."></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="count">Results Count</label>
-                            <input type="number" id="count" name="count" value="5" min="1" max="20">
-                        </div>
-                        <div class="form-group checkbox-group">
-                            <input type="checkbox" id="evaluate" name="evaluate">
-                            <label for="evaluate" style="margin: 0;">Evaluate against resume</label>
-                        </div>
-                        <button type="submit">Search</button>
-                    </form>
-                </div>
+    if entity_type not in ("site", "employer"):
+        raise HTTPException(status_code=400, detail="entity_type must be 'site' or 'employer'")
 
-                <div class="leads-panel">
-                    <h2>Results</h2>
-                    <div id="status" class="status"></div>
-                    <div id="leadsList" class="leads-list">
-                        <div class="empty-state">
-                            <p>No leads yet. Search to get started!</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    # Validate site domain format
+    if entity_type == "site" and not validate_url(entity):
+        raise HTTPException(status_code=400, detail="Invalid site domain format")
 
-        <script>
-            async function loadLeads() {
-                try {
-                    const resp = await fetch('/api/leads');
-                    const data = await resp.json();
-                    displayLeads(data.leads);
-                } catch (e) {
-                    console.error('Error loading leads:', e);
-                }
-            }
+    # Scan for injection
+    findings = scan_entity(entity)
+    if findings:
+        raise HTTPException(status_code=400, detail={"error": "Rejected by scanner", "findings": findings})
 
-            function displayLeads(leads) {
-                const container = document.getElementById('leadsList');
-                if (!leads || leads.length === 0) {
-                    container.innerHTML = '<div class="empty-state"><p>No leads yet. Search to get started!</p></div>';
-                    return;
-                }
-                container.innerHTML = leads.map(lead => `
-                    <div class="lead-card">
-                        <h3>${lead.title}</h3>
-                        <div class="company">${lead.company}</div>
-                        <div class="location">📍 ${lead.location}</div>
-                        <div class="summary">${lead.summary}</div>
-                        ${lead.score !== undefined ? `
-                            <div class="score-section">
-                                <div class="score-badge ${lead.score >= 80 ? 'high' : lead.score >= 60 ? 'medium' : 'low'}">
-                                    Score: ${lead.score}
-                                </div>
-                                ${lead.reasoning ? `<div class="reasoning">${lead.reasoning}</div>` : ''}
-                            </div>
-                        ` : ''}
-                        <a href="${lead.link}" target="_blank">View on site →</a>
-                    </div>
-                `).join('');
-            }
+    cfg = load_config()
+    blocked = cfg.get("blocked_entities", [])
 
-            function showStatus(message, type) {
-                const status = document.getElementById('status');
-                status.textContent = message;
-                status.className = `status show ${type}`;
-                if (type !== 'loading') {
-                    setTimeout(() => status.classList.remove('show'), 5000);
-                }
-            }
+    # Store as dict with type
+    entry = {"type": entity_type, "value": entity}
+    if entry not in blocked:
+        blocked.append(entry)
+        cfg["blocked_entities"] = blocked
+        save_config(cfg)
 
-            document.getElementById('searchForm').addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const query = document.getElementById('query').value;
-                const resume = document.getElementById('resume').value;
-                const count = parseInt(document.getElementById('count').value);
-                const evaluate = document.getElementById('evaluate').checked;
+    return ConfigResponse(
+        system_instructions=cfg.get("system_instructions", ""),
+        blocked_entities=cfg.get("blocked_entities", []),
+        region=cfg.get("region", ""),
+    )
 
-                showStatus('Searching...', 'loading');
 
-                try {
-                    const resp = await fetch('/api/search', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query, resume: resume || null, count, evaluate })
-                    });
-                    const data = await resp.json();
-                    if (!resp.ok) throw new Error(data.detail || 'Search failed');
-                    displayLeads(data.leads);
-                    showStatus(`Found ${data.count} job${data.count !== 1 ? 's' : ''}!`, 'success');
-                } catch (e) {
-                    showStatus(`Error: ${e.message}`, 'error');
-                    console.error(e);
-                }
-            });
+@app.delete("/api/config/block-entity/{entity_type}/{entity}", response_model=ConfigResponse)
+def remove_blocked_entity(entity_type: str, entity: str):
+    """Remove a site or employer from the block list."""
+    entity = entity.strip()
+    entity_type = entity_type.lower()
 
-            // Load initial leads on page load
-            loadLeads();
-        </script>
-    </body>
-    </html>
+    cfg = load_config()
+    blocked = cfg.get("blocked_entities", [])
+    entry = {"type": entity_type, "value": entity}
+
+    if entry in blocked:
+        blocked.remove(entry)
+        cfg["blocked_entities"] = blocked
+        save_config(cfg)
+
+    return ConfigResponse(
+        system_instructions=cfg.get("system_instructions", ""),
+        blocked_entities=cfg.get("blocked_entities", []),
+        region=cfg.get("region", ""),
+    )
+
+
+@app.post("/api/validate-link")
+def check_link(req: ValidateLinkRequest):
+    """Validate a link is accessible."""
+    result = validate_link(req.url, verbose=False)
+    return JSONResponse(
+        {
+            "url": result.get("url", req.url),
+            "valid": result.get("valid", False),
+            "status_code": result.get("status_code"),
+            "error": result.get("error"),
+        }
+    )
+
+
+@app.post("/api/upload/resume")
+async def upload_resume(file: UploadFile = File(...)):
+    """Upload resume file for job matching."""
+    # Validate file size (max 1MB)
+    content = await file.read()
+    if len(content) > 1_000_000:
+        raise HTTPException(status_code=400, detail="File too large (max 1MB)")
+
+    # Validate file type - only text files for now
+    if not file.filename.endswith((".txt", ".md")):
+        raise HTTPException(status_code=400, detail="Only .txt and .md files supported currently")
+
+    try:
+        text = content.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text")
+
+    # Scan for injection patterns
+    findings = scan_instructions(text[:5000])  # Scan first 5000 chars
+    if findings:
+        raise HTTPException(status_code=400, detail={"error": "Rejected by scanner", "findings": findings})
+
+    # Save to resume.txt
+    RESUME_FILE.write_text(text, encoding="utf-8")
+
+    return JSONResponse({"message": "Resume uploaded successfully", "resume": text, "filename": file.filename})
+
+
+@app.get("/api/resume")
+def get_resume():
+    """Get current resume text."""
+    if not RESUME_FILE.exists():
+        return JSONResponse({"resume": None})
+    try:
+        text = RESUME_FILE.read_text(encoding="utf-8")
+        return JSONResponse({"resume": text})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading resume: {e}")
+
+
+@app.delete("/api/resume")
+def delete_resume():
+    """Delete resume file."""
+    if not RESUME_FILE.exists():
+        raise HTTPException(status_code=404, detail="Resume not found")
+    RESUME_FILE.unlink()
+    return JSONResponse({"message": "Resume deleted"})
+
+
+# ============================================================================
+# Job Search Configuration Endpoints
+# ============================================================================
+
+
+@app.get("/api/job-config")
+def get_job_config():
+    """Get job search configuration (location, providers, search params)."""
+    from .config_manager import load_config
+
+    config = load_config()
+    return JSONResponse(config)
+
+
+@app.post("/api/job-config/location")
+def update_location_config(
+    default_location: Optional[str] = None,
+    prefer_remote: Optional[bool] = None,
+    allow_hybrid: Optional[bool] = None,
+    allow_onsite: Optional[bool] = None,
+):
+    """Update location and remote/onsite preferences."""
+    from .config_manager import update_location_preferences
+
+    success = update_location_preferences(
+        default_location=default_location,
+        prefer_remote=prefer_remote,
+        allow_hybrid=allow_hybrid,
+        allow_onsite=allow_onsite,
+    )
+    if success:
+        return JSONResponse({"message": "Location preferences updated"})
+    raise HTTPException(status_code=500, detail="Failed to update location preferences")
+
+
+@app.post("/api/job-config/provider/{provider_key}")
+def toggle_provider(provider_key: str, enabled: bool):
+    """Enable or disable a job search provider."""
+    from .config_manager import update_provider_status
+
+    success = update_provider_status(provider_key, enabled)
+    if success:
+        return JSONResponse({"message": f"Provider {provider_key} {'enabled' if enabled else 'disabled'}"})
+    raise HTTPException(status_code=404, detail=f"Provider {provider_key} not found")
+
+
+@app.post("/api/job-config/search")
+def update_search_config(req: Dict[str, Any]):
+    """Update search parameters."""
+    from .config_manager import update_search_preferences
+
+    success = update_search_preferences(
+        default_count=req.get("default_count"),
+        oversample_multiplier=req.get("oversample_multiplier"),
+        enable_ai_ranking=req.get("enable_ai_ranking"),
+    )
+    if success:
+        return JSONResponse({"message": "Search preferences updated"})
+    raise HTTPException(status_code=500, detail="Failed to update search preferences")
+
+
+@app.get("/api/industry-profiles")
+def get_industry_profiles():
+    """Get list of available industry profiles."""
+    from .industry_profiles import list_profiles
+
+    return JSONResponse({"profiles": list_profiles()})
+
+
+@app.get("/api/industry-profile")
+def get_current_industry_profile():
+    """Get current industry profile."""
+    from .config_manager import get_industry_profile
+    from .industry_profiles import get_profile
+
+    current = get_industry_profile()
+    profile = get_profile(current)
+    return JSONResponse({"current": current, "profile": profile})
+
+
+@app.post("/api/industry-profile")
+def update_industry_profile_endpoint(profile: str):
+    """Update industry profile."""
+    from .config_manager import update_industry_profile
+
+    try:
+        update_industry_profile(profile)
+        return JSONResponse({"message": f"Industry profile updated to {profile}"})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# ============ Job Tracking Endpoints ============
+
+
+class JobStatusUpdateRequest(BaseModel):
+    status: str
+    notes: Optional[str] = None
+
+
+class CompanyLinkRequest(BaseModel):
+    company_link: str
+
+
+class CoverLetterRequest(BaseModel):
+    job_description: str
+    resume_text: Optional[str] = None
+
+
+@app.get("/api/jobs/tracked")
+def get_tracked_jobs(status: Optional[str] = None, include_hidden: bool = False):
+    """Get all tracked jobs, optionally filtered by status."""
+    tracker = get_tracker()
+
+    # Parse status filter (comma-separated)
+    status_filter = None
+    if status:
+        status_filter = [s.strip() for s in status.split(",") if s.strip()]
+
+    jobs = tracker.get_all_jobs(status_filter=status_filter, include_hidden=include_hidden)
+    return JSONResponse({"jobs": jobs, "count": len(jobs)})
+
+
+@app.get("/api/jobs/{job_id}")
+def get_job_details(job_id: str):
+    """Get details for a specific job."""
+    tracker = get_tracker()
+    job = tracker.get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    return JSONResponse({"job": job})
+
+
+@app.post("/api/jobs/{job_id}/status")
+def update_job_status(job_id: str, req: JobStatusUpdateRequest):
+    """Update job status and optionally add notes."""
+    tracker = get_tracker()
+
+    if req.status not in VALID_STATUSES:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid status '{req.status}'. Valid statuses: {', '.join(VALID_STATUSES)}"
+        )
+
+    success = tracker.update_status(job_id, req.status, req.notes)
+
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    job = tracker.get_job(job_id)
+    return JSONResponse({"message": "Status updated", "job": job})
+
+
+@app.post("/api/jobs/{job_id}/hide")
+def hide_job(job_id: str):
+    """Hide a job (won't appear in search results)."""
+    tracker = get_tracker()
+    success = tracker.hide_job(job_id)
+
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    return JSONResponse({"message": "Job hidden"})
+
+
+@app.post("/api/jobs/{job_id}/company-link")
+def set_company_link(job_id: str, req: CompanyLinkRequest):
+    """Set the direct company career page link for a job."""
+    tracker = get_tracker()
+
+    # Validate URL format
+    if not req.company_link.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="Invalid URL format")
+
+    success = tracker.set_company_link(job_id, req.company_link)
+
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    job = tracker.get_job(job_id)
+    return JSONResponse({"message": "Company link updated", "job": job})
+
+
+@app.post("/api/jobs/{job_id}/cover-letter")
+def generate_cover_letter(job_id: str, req: CoverLetterRequest):
+    """Generate a customized cover letter for a job using Gemini."""
+    from .gemini_provider import GeminiProvider
+
+    tracker = get_tracker()
+    job = tracker.get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    # Get resume text
+    resume_text = req.resume_text
+    if not resume_text and RESUME_FILE.exists():
+        resume_text = RESUME_FILE.read_text(encoding="utf-8")
+
+    if not resume_text:
+        raise HTTPException(status_code=400, detail="No resume text provided")
+
+    # Use provided job description or job summary
+    job_description = req.job_description or job.get("summary", "")
+
+    if not job_description:
+        raise HTTPException(status_code=400, detail="No job description available")
+
+    # Generate cover letter using Gemini
+    try:
+        provider = GeminiProvider()
+
+        prompt = f"""Generate a professional cover letter for this job application.
+
+Job Title: {job.get('title', 'N/A')}
+Company: {job.get('company', 'N/A')}
+Location: {job.get('location', 'N/A')}
+
+Job Description:
+{job_description}
+
+Candidate Resume:
+{resume_text}
+
+Write a concise, professional cover letter (3-4 paragraphs) that:
+1. Expresses interest in the specific role
+2. Highlights relevant experience from the resume
+3. Explains why the candidate is a good fit
+4. Ends with a call to action
+
+Return ONLY the cover letter text, no additional commentary."""
+
+        response = provider.query(prompt)
+        cover_letter = response.get("response", "")
+
+        if not cover_letter:
+            raise HTTPException(status_code=500, detail="Failed to generate cover letter")
+
+        return JSONResponse(
+            {"cover_letter": cover_letter, "job_title": job.get("title"), "company": job.get("company")}
+        )
+
+    except Exception as e:
+        print(f"Cover letter generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate cover letter: {str(e)}")
+
+
+@app.post("/api/jobs/find-company-link/{job_id}")
+async def find_company_link(job_id: str):
+    """Find direct company career page link for an aggregator job.
+
+    Extracts company name from job and searches for direct company careers page.
     """
+    from .mcp_providers import generate_job_leads_via_mcp
+
+    tracker = get_tracker()
+    job = tracker.get_job(job_id)
+
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    company = job.get("company", "")
+    title = job.get("title", "")
+
+    if not company:
+        raise HTTPException(status_code=400, detail="Job has no company name")
+
+    # Search for this specific company's jobs using CompanyJobs
+    try:
+        search_query = f"{title} at {company}"
+        print(f"Finding company link: searching for '{search_query}'")
+
+        # Use CompanyJobs provider to find company career page
+        leads = generate_job_leads_via_mcp(
+            query=search_query, count=5, count_per_provider=5, location=job.get("location", "Remote")
+        )
+
+        # Filter results to only this company's jobs (case-insensitive)
+        company_lower = company.lower()
+        company_jobs = [
+            lead
+            for lead in leads
+            if lead.get("company", "").lower() == company_lower
+            and lead.get("source") == "CompanyJobs"  # Only direct company links
+        ]
+
+        if not company_jobs:
+            return JSONResponse(
+                {
+                    "found": False,
+                    "message": f"No direct company links found for {company}. Try searching their website directly.",
+                }
+            )
+
+        # Return the first match (most relevant)
+        direct_link = company_jobs[0].get("link", "")
+
+        # Automatically save it to the job
+        if direct_link:
+            tracker.set_company_link(job_id, direct_link)
+
+        return JSONResponse(
+            {
+                "found": True,
+                "company_link": direct_link,
+                "job": company_jobs[0],
+                "message": f"Found direct link at {company}",
+            }
+        )
+
+    except Exception as e:
+        print(f"Error finding company link: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to find company link: {str(e)}")
