@@ -779,8 +779,6 @@ def set_company_link(job_id: str, req: CompanyLinkRequest):
 @app.post("/api/jobs/{job_id}/cover-letter")
 def generate_cover_letter(job_id: str, req: CoverLetterRequest):
     """Generate a customized cover letter for a job using Gemini."""
-    from .gemini_provider import GeminiProvider
-
     tracker = get_tracker()
     job = tracker.get_job(job_id)
 
@@ -803,7 +801,7 @@ def generate_cover_letter(job_id: str, req: CoverLetterRequest):
 
     # Generate cover letter using Gemini
     try:
-        provider = GeminiProvider()
+        from .gemini_provider import simple_gemini_query
 
         prompt = f"""Generate a professional cover letter for this job application.
 
@@ -825,8 +823,7 @@ Write a concise, professional cover letter (3-4 paragraphs) that:
 
 Return ONLY the cover letter text, no additional commentary."""
 
-        response = provider.query(prompt)
-        cover_letter = response.get("response", "")
+        cover_letter = simple_gemini_query(prompt)
 
         if not cover_letter:
             raise HTTPException(status_code=500, detail="Failed to generate cover letter")
