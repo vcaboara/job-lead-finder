@@ -163,8 +163,19 @@ class TestMCPProviders:
 class TestMCPAggregator:
     """Test MCPAggregator class."""
 
-    def test_aggregator_initialization(self):
+    @patch("app.config_manager.load_config")
+    def test_aggregator_initialization(self, mock_load_config):
         """Test MCPAggregator initialization with default providers."""
+        # Mock config with CompanyJobs disabled, RemoteOK, Remotive, and WeWorkRemotely enabled
+        mock_load_config.return_value = {
+            "providers": {
+                "companyjobs": {"enabled": False},
+                "remoteok": {"enabled": True},
+                "remotive": {"enabled": True},
+                "weworkremotely": {"enabled": True},
+            }
+        }
+        
         agg = MCPAggregator()
         # CompanyJobs disabled by default (slow), RemoteOK, Remotive, and WeWorkRemotely enabled
         assert len(agg.providers) == 3  # RemoteOK, Remotive, and WeWorkRemotely
@@ -183,34 +194,68 @@ class TestMCPAggregator:
         assert len(agg.providers) == 1
         assert agg.providers[0].name == "Custom"
 
+    @patch("app.mcp_providers.CompanyJobsMCP.is_available")
     @patch("app.mcp_providers.WeWorkRemotelyMCP.is_available")
     @patch("app.mcp_providers.RemotiveMCP.is_available")
     @patch("app.mcp_providers.RemoteOKMCP.is_available")
-    def test_get_available_providers(self, mock_remoteok, mock_remotive, mock_weworkremotely):
+    @patch("app.config_manager.load_config")
+    def test_get_available_providers(
+        self, mock_load_config, mock_remoteok, mock_remotive, mock_weworkremotely, mock_companyjobs
+    ):
         """Test get_available_providers filters correctly."""
-        # CompanyJobs disabled by default in config, RemoteOK and Remotive enabled
+        # Mock config with all providers enabled
+        mock_load_config.return_value = {
+            "providers": {
+                "companyjobs": {"enabled": True},
+                "remoteok": {"enabled": True},
+                "remotive": {"enabled": True},
+                "weworkremotely": {"enabled": True},
+            }
+        }
+        
+        # Only Remotive is available (others mocked as unavailable)
         mock_remotive.return_value = True
         mock_remoteok.return_value = False
         mock_weworkremotely.return_value = False
+        mock_companyjobs.return_value = False
 
         agg = MCPAggregator()
         available = agg.get_available_providers()
 
-        assert len(available) == 1  # Only Remotive is available (RemoteOK and WWR mocked as unavailable)
+        assert len(available) == 1  # Only Remotive is available (others mocked as unavailable)
         assert any(p.name == "Remotive" for p in available)
 
+    @patch("app.mcp_providers.CompanyJobsMCP.is_available")
     @patch("app.mcp_providers.WeWorkRemotelyMCP.is_available")
     @patch("app.mcp_providers.RemotiveMCP.search_jobs")
     @patch("app.mcp_providers.RemotiveMCP.is_available")
     @patch("app.mcp_providers.RemoteOKMCP.is_available")
+    @patch("app.config_manager.load_config")
     def test_search_jobs_aggregation(
-        self, mock_remoteok_avail, mock_remotive_avail, mock_search, mock_wwr_avail
+        self,
+        mock_load_config,
+        mock_remoteok_avail,
+        mock_remotive_avail,
+        mock_search,
+        mock_wwr_avail,
+        mock_companyjobs_avail,
     ):
         """Test search_jobs aggregates from multiple providers."""
-        # Only Remotive available (CompanyJobs disabled by default, WWR mocked unavailable)
+        # Mock config with all providers enabled
+        mock_load_config.return_value = {
+            "providers": {
+                "companyjobs": {"enabled": True},
+                "remoteok": {"enabled": True},
+                "remotive": {"enabled": True},
+                "weworkremotely": {"enabled": True},
+            }
+        }
+        
+        # Only Remotive available (CompanyJobs, RemoteOK, and WWR mocked unavailable)
         mock_remotive_avail.return_value = True
         mock_remoteok_avail.return_value = False
         mock_wwr_avail.return_value = False
+        mock_companyjobs_avail.return_value = False
 
         mock_search.return_value = [
             {
@@ -238,16 +283,37 @@ class TestMCPAggregator:
         assert jobs[0]["title"] == "Job 1"
         assert jobs[1]["title"] == "Job 2"
 
+    @patch("app.mcp_providers.CompanyJobsMCP.is_available")
     @patch("app.mcp_providers.WeWorkRemotelyMCP.is_available")
     @patch("app.mcp_providers.RemoteOKMCP.search_jobs")
     @patch("app.mcp_providers.RemoteOKMCP.is_available")
     @patch("app.mcp_providers.RemotiveMCP.is_available")
-    def test_deduplication(self, mock_remotive_avail, mock_remoteok_avail, mock_search, mock_wwr_avail):
+    @patch("app.config_manager.load_config")
+    def test_deduplication(
+        self,
+        mock_load_config,
+        mock_remotive_avail,
+        mock_remoteok_avail,
+        mock_search,
+        mock_wwr_avail,
+        mock_companyjobs_avail,
+    ):
         """Test deduplication removes duplicate job links."""
-        # Only RemoteOK available (Remotive and WWR unavailable)
+        # Mock config with all providers enabled
+        mock_load_config.return_value = {
+            "providers": {
+                "companyjobs": {"enabled": True},
+                "remoteok": {"enabled": True},
+                "remotive": {"enabled": True},
+                "weworkremotely": {"enabled": True},
+            }
+        }
+        
+        # Only RemoteOK available (Remotive, WWR, and CompanyJobs unavailable)
         mock_remoteok_avail.return_value = True
         mock_remotive_avail.return_value = False
         mock_wwr_avail.return_value = False
+        mock_companyjobs_avail.return_value = False
 
         # Return duplicate jobs
         mock_search.return_value = [
