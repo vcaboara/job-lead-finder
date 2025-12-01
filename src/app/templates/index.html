@@ -707,8 +707,9 @@
         loadResume();
         loadConfig();
         loadLeads();
-        // Auto-search on page load
-        setTimeout(() => performSearch(), 500);
+        // Auto-search disabled to prevent unexpected API quota waste
+        // Users can click the Search button when ready
+        // setTimeout(() => performSearch(), 500);
 
         // --- Config Tabs ---
         document.querySelectorAll('.config-tab').forEach(tab => {

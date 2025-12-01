@@ -14,6 +14,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
+from .config_manager import get_search_preferences
 from .config_store import load_config, save_config, scan_entity, scan_instructions, validate_url
 from .job_finder import generate_job_leads, save_to_file
 from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
@@ -132,7 +133,8 @@ def search(req: SearchRequest):
         # Request 10x more jobs to account for filtering (oversample strategy)
         # This helps ensure we get the requested count after validation
         # With high invalid link rates (soft 404s, hallucinations), we need aggressive oversampling
-        oversample_multiplier = 10
+        search_prefs = get_search_preferences()
+        oversample_multiplier = search_prefs.get("oversample_multiplier", 10)
         initial_request_count = req.count * oversample_multiplier
         max_retries = 1  # Reduced from 2 for faster response
         all_valid_leads = []

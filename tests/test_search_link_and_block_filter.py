@@ -97,7 +97,7 @@ def test_search_filters_blocked_site(monkeypatch):
             },
         ]
 
-    def fake_validate(url: str, verbose: bool = False):  # noqa: ANN001
+    def fake_validate(url: str, timeout: int = 5, verbose: bool = False):  # noqa: ANN001
         return {"url": url, "valid": True, "status_code": 200, "error": None}
 
     monkeypatch.setattr("app.ui_server.generate_job_leads", fake_generate)
@@ -138,7 +138,7 @@ def test_search_filters_blocked_employer(monkeypatch):
             },
         ]
 
-    def fake_validate(url: str, verbose: bool = False):  # noqa: ANN001
+    def fake_validate(url: str, timeout: int = 5, verbose: bool = False):  # noqa: ANN001
         return {"url": url, "valid": True, "status_code": 200, "error": None}
 
     monkeypatch.setattr("app.ui_server.generate_job_leads", fake_generate)
