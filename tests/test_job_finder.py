@@ -12,6 +12,7 @@ from app.gemini_provider import GeminiProvider
 class TestGenerateJobLeads:
     """Tests for generate_job_leads function."""
 
+    @pytest.mark.slow
     def test_generate_job_leads_fallback_no_provider(self):
         """Test fallback to local search when Gemini isn't configured."""
         with patch("app.job_finder.GeminiProvider", side_effect=Exception("No API key")):
@@ -83,6 +84,7 @@ class TestGenerateJobLeads:
             call_args = mock_provider.generate_job_leads.call_args
             assert call_args[1]["verbose"] is True
 
+    @pytest.mark.slow
     def test_generate_job_leads_with_evaluate(self):
         """Test evaluation adds score and reasoning to leads."""
         mock_leads = [
@@ -120,6 +122,7 @@ class TestGenerateJobLeads:
                 assert "source" in leads[0]
                 assert leads[0]["source"] == "Local"
 
+    @pytest.mark.slow
     def test_generate_job_leads_fallback_structure(self):
         """Test fallback results have correct structure."""
         with patch("app.job_finder.GeminiProvider", side_effect=Exception("No provider")):
