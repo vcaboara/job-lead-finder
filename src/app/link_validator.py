@@ -15,6 +15,18 @@ except ImportError:
     REQUESTS_AVAILABLE = False
 
 
+# Soft 404 URL patterns - defined at module level for performance
+SOFT_404_PATTERNS = [
+    "/404",
+    "/error",
+    "/not-found",
+    "/notfound",
+    "/page-not-found",
+    "/errorpages/404",
+    "/errors/404",
+]
+
+
 def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str, Any]:
     """Validate a single URL by making a HEAD/GET request and following redirects.
 
@@ -66,18 +78,7 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
 
         # Detect "soft 404s" - sites that return 200 but redirect to error pages
         final_url_lower = str(final_url).lower()
-        is_soft_404 = any(
-            pattern in final_url_lower
-            for pattern in [
-                "/404",
-                "/error",
-                "/not-found",
-                "/notfound",
-                "/page-not-found",
-                "/errorpages/404",
-                "/errors/404",
-            ]
-        )
+        is_soft_404 = any(pattern in final_url_lower for pattern in SOFT_404_PATTERNS)
 
         # Consider 2xx/3xx as valid; treat 403 as soft-valid (site may block automation but link exists)
         # But mark as invalid if it's a soft 404

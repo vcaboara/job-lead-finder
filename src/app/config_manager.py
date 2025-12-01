@@ -26,13 +26,10 @@ DEFAULT_CONFIG = {
         "allow_onsite": False,
     },
     "providers": {
-        "companyjobs": {"enabled": True, "name": "CompanyJobs"},  # Direct company career pages via google_search
+        "companyjobs": {"enabled": True, "name": "CompanyJobs"},  # Direct company career pages via Gemini
         "remoteok": {"enabled": True, "name": "RemoteOK"},
         "remotive": {"enabled": True, "name": "Remotive"},
         "duckduckgo": {"enabled": False, "name": "DuckDuckGo"},
-        "github": {"enabled": False, "name": "GitHub Jobs"},
-        "linkedin": {"enabled": False, "name": "LinkedIn"},
-        "indeed": {"enabled": False, "name": "Indeed"},
     },
     "search": {
         "default_count": 10,
@@ -126,12 +123,12 @@ def update_search_preferences(
 ) -> bool:
     """Update search preferences."""
     config = load_config()
-    if default_count is not None and default_count > 0:
-        config["search"]["default_count"] = default_count
-    if oversample_multiplier is not None and oversample_multiplier > 0:
-        config["search"]["oversample_multiplier"] = oversample_multiplier
-    if enable_ai_ranking is not None:
-        config["search"]["enable_ai_ranking"] = enable_ai_ranking
+    if (default_count_val := default_count) is not None and default_count_val > 0:
+        config["search"]["default_count"] = default_count_val
+    if (oversample_val := oversample_multiplier) is not None and oversample_val > 0:
+        config["search"]["oversample_multiplier"] = oversample_val
+    if (ai_ranking_val := enable_ai_ranking) is not None:
+        config["search"]["enable_ai_ranking"] = ai_ranking_val
     return save_config(config)
 
 

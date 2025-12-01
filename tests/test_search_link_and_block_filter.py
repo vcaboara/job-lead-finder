@@ -153,3 +153,59 @@ def test_search_filters_blocked_employer(monkeypatch):
     companies = {lead["company"] for lead in data["leads"]}
     assert "BadCorp" not in companies
     assert "GoodCorp" in companies
+
+
+def test_search_filters_hidden_jobs(monkeypatch):
+    """Test that hidden jobs don't appear in search results."""
+    client = TestClient(app)
+    from app.job_tracker import generate_job_id, get_tracker
+
+    def fake_generate(*args, **kwargs):  # noqa: ANN001
+        return [
+            {
+                "title": "Job1",
+                "company": "Company1",
+                "location": "Remote",
+                "summary": "Desc",
+                "link": "https://example.com/jobs/1",
+            },
+            {
+                "title": "Job2 (will be hidden)",
+                "company": "Company2",
+                "location": "Remote",
+                "summary": "Desc",
+                "link": "https://example.com/jobs/2",
+            },
+            {
+                "title": "Job3",
+                "company": "Company3",
+                "location": "Remote",
+                "summary": "Desc",
+                "link": "https://example.com/jobs/3",
+            },
+        ]
+
+    def fake_validate(url: str, timeout: int = 5, verbose: bool = False):  # noqa: ANN001
+        return {"url": url, "valid": True, "status_code": 200, "error": None}
+
+    monkeypatch.setattr("app.ui_server.generate_job_leads", fake_generate)
+    monkeypatch.setattr("app.ui_server.validate_link", fake_validate)
+
+    # Hide one job before searching
+    tracker = get_tracker()
+    hidden_job = {"title": "Job2 (will be hidden)", "link": "https://example.com/jobs/2"}
+    tracker.track_job(hidden_job)
+    tracker.hide_job(generate_job_id(hidden_job))
+
+    resp = client.post(
+        "/api/search",
+        json={"query": "engineer", "resume": None, "count": 3, "evaluate": False},
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    # Should only return 2 jobs (Job1 and Job3), not the hidden one
+    titles = {lead["title"] for lead in data["leads"]}
+    assert "Job1" in titles
+    assert "Job2 (will be hidden)" not in titles
+    assert "Job3" in titles
+    assert len(data["leads"]) == 2  # Requested 3 but only 2 non-hidden available

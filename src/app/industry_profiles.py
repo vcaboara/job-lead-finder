@@ -2,6 +2,9 @@
 
 Defines company lists, search parameters, and preferences for different industries.
 Users can select a profile to customize their job search.
+
+TODO: Allow users to create custom profile(s) for industries not listed here.
+      Add /api/config/profiles endpoint for CRUD operations on custom profiles.
 """
 
 from typing import Any, Dict, List

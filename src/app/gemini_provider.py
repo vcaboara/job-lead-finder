@@ -6,6 +6,8 @@ clear errors when the dependency or API key is missing.
 """
 
 import os
+import time
+import traceback
 from typing import Any, Dict
 
 # Support either the newer `google.generativeai` package or the older
@@ -269,9 +271,6 @@ class GeminiProvider:
                     )
                     # Also write a full dir() and repr() to a timestamped file for deeper inspection
                     try:
-                        import os
-                        import time
-
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname_dir = f"logs/gemini_dir_{ts}.txt"
@@ -314,8 +313,6 @@ class GeminiProvider:
                             print(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
                     except Exception as api_err:
                         print(f"ERROR calling Gemini API: {api_err}")
-                        import traceback
-
                         traceback.print_exc()
                         return []
 
@@ -387,9 +384,6 @@ class GeminiProvider:
                             # streaming not available or failed; continue
                             pass
                     if verbose:
-                        import time
-                        import traceback
-
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname = f"logs/last_gemini_response_{ts}.txt"
@@ -445,8 +439,6 @@ class GeminiProvider:
                 raw_response = str(out)
                 if verbose:
                     import os
-                    import time
-                    import traceback
 
                     ts = int(time.time())
                     os.makedirs("logs", exist_ok=True)
@@ -508,8 +500,6 @@ class GeminiProvider:
                     raw_response = str(response)
 
                     if verbose:
-                        import time
-
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname = f"logs/generativemodel_response_{ts}.txt"
@@ -529,7 +519,6 @@ class GeminiProvider:
                 except Exception as gm_err:
                     if verbose:
                         print(f"gemini_provider: GenerativeModel call failed: {gm_err}")
-                        import traceback
 
                         traceback.print_exc()
                     text = ""
@@ -595,8 +584,6 @@ class GeminiProvider:
             return jobs
         except Exception as e:
             if verbose:
-                import traceback
-
                 print("gemini_provider: exception in generate_job_leads:", e)
                 traceback.print_exc()
             # On any failure return empty list; caller will fallback
