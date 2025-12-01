@@ -75,11 +75,19 @@ class ValidateLinkRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def index():
+    """Serve the main web UI interface.
+    
+    Returns:
+        HTMLResponse: The main application HTML page.
+        
+    Raises:
+        HTTPException: 500 if template file cannot be read.
+    """
     html_path = Path(__file__).parent / "templates" / "index.html"
     try:
         return HTMLResponse(html_path.read_text(encoding="utf-8"))
-    except Exception:
-        raise HTTPException(status_code=500, detail="UI template not found")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="UI template not found") from exc
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -311,7 +319,7 @@ def search(req: SearchRequest):
         )
     except Exception as e:
         search_progress[search_id].update({"status": "error", "message": f"Error: {str(e)}"})
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 def _process_and_filter_leads(raw_leads: list) -> list:
@@ -469,7 +477,7 @@ def get_leads():
             leads = json.load(fh)
         return JSONResponse({"leads": leads})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading leads: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading leads: {e}") from e
 
 
 @app.post("/api/config/block-entity", response_model=ConfigResponse)
@@ -557,8 +565,8 @@ async def upload_resume(file: UploadFile = File(...)):
 
     try:
         text = content.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text") from exc
 
     # Scan for injection patterns
     findings = scan_instructions(text[:5000])  # Scan first 5000 chars
@@ -580,7 +588,7 @@ def get_resume():
         text = RESUME_FILE.read_text(encoding="utf-8")
         return JSONResponse({"resume": text})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading resume: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading resume: {e}") from e
 
 
 @app.delete("/api/resume")
@@ -681,7 +689,7 @@ def update_industry_profile_endpoint(profile: str):
         update_industry_profile(profile)
         return JSONResponse({"message": f"Industry profile updated to {profile}"})
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 # ============ Job Tracking Endpoints ============
@@ -834,7 +842,7 @@ Return ONLY the cover letter text, no additional commentary."""
 
     except Exception as e:
         print(f"Cover letter generation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate cover letter: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate cover letter: {str(e)}") from e
 
 
 @app.post("/api/jobs/find-company-link/{job_id}")
@@ -902,4 +910,4 @@ async def find_company_link(job_id: str):
 
     except Exception as e:
         print(f"Error finding company link: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to find company link: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to find company link: {str(e)}") from e
