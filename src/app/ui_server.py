@@ -128,6 +128,7 @@ def search(req: SearchRequest):
     search_id = f"search_{int(time.time() * 1000)}"
     start_time = time.time()
     search_progress[search_id] = {
+        "search_id": search_id,
         "status": "starting",
         "message": f"Requesting {req.count} job listings...",
         "attempt": 0,
@@ -268,8 +269,10 @@ def search(req: SearchRequest):
                 lead["tracking_notes"] = tracked_job.get("notes", "")
                 lead["company_link"] = tracked_job.get("company_link")
 
-        # Filter by minimum score if evaluation was performed
-        if should_evaluate and req.min_score > 0:
+        # Filter by minimum score if evaluation was performed AND jobs have scores
+        # Only apply filter if at least some jobs were actually scored
+        jobs_with_scores = [lead for lead in final_leads if lead.get("score") is not None]
+        if should_evaluate and req.min_score > 0 and len(jobs_with_scores) > 0:
             before_filter = len(final_leads)
             final_leads = [
                 lead for lead in final_leads if lead.get("score") is not None and lead.get("score", 0) >= req.min_score
@@ -277,6 +280,10 @@ def search(req: SearchRequest):
             filtered_count = before_filter - len(final_leads)
             if filtered_count > 0:
                 logger.info(f"[{search_id}] Filtered out {filtered_count} jobs below score threshold {req.min_score}")
+        elif should_evaluate and req.min_score > 0 and len(jobs_with_scores) == 0:
+            logger.warning(
+                f"[{search_id}] Score filter requested but no jobs have scores - showing all {len(final_leads)} jobs"
+            )
 
         total_elapsed = time.time() - start_time
         logger.info(f"[{search_id}] Search complete: {len(final_leads)} jobs returned in {total_elapsed:.1f}s")
