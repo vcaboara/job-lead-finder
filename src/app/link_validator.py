@@ -4,8 +4,9 @@ This module provides functions to validate URLs returned by Gemini job search,
 following redirects and identifying broken links (404s, etc.).
 """
 
+import logging
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 try:
     import requests
@@ -13,6 +14,20 @@ try:
     REQUESTS_AVAILABLE = True
 except ImportError:
     REQUESTS_AVAILABLE = False
+
+logger = logging.getLogger(__name__)
+
+
+# Soft 404 URL patterns - defined at module level for performance
+SOFT_404_PATTERNS = [
+    "/404",
+    "/error",
+    "/not-found",
+    "/notfound",
+    "/page-not-found",
+    "/errorpages/404",
+    "/errors/404",
+]
 
 
 def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str, Any]:
@@ -66,25 +81,14 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
 
         # Detect "soft 404s" - sites that return 200 but redirect to error pages
         final_url_lower = str(final_url).lower()
-        is_soft_404 = any(
-            pattern in final_url_lower
-            for pattern in [
-                "/404",
-                "/error",
-                "/not-found",
-                "/notfound",
-                "/page-not-found",
-                "/errorpages/404",
-                "/errors/404",
-            ]
-        )
+        is_soft_404 = any(pattern in final_url_lower for pattern in SOFT_404_PATTERNS)
 
         # Consider 2xx/3xx as valid; treat 403 as soft-valid (site may block automation but link exists)
         # But mark as invalid if it's a soft 404
         valid = (200 <= status_code < 400 or status_code == 403) and not is_soft_404
 
         # Map status codes to soft warnings (non-breaking)
-        warning: Optional[str] = None
+        warning: str | None = None
         if is_soft_404:
             warning = "soft 404 (redirected to error page)"
         elif status_code == 403:
@@ -98,7 +102,7 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
                 warning = "server error"
 
         if verbose:
-            print(f"link_validator: {url} -> {status_code} (valid={valid}, soft_404={is_soft_404})")
+            logger.info("%s -> %s (valid=%s, soft_404=%s)", url, status_code, valid, is_soft_404)
 
         return {
             "valid": valid,
@@ -110,7 +114,7 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
     except Exception as e:
         error_msg = str(e)
         if verbose:
-            print(f"link_validator: {url} -> ERROR: {error_msg}")
+            logger.error("%s -> ERROR: %s", url, error_msg)
         return {
             "valid": False,
             "status_code": None,
@@ -147,13 +151,13 @@ def validate_leads(
         return leads
 
     if verbose:
-        print(f"link_validator: validating {len(leads)} leads")
+        logger.info("Validating %d leads", len(leads))
 
     validated = []
     for i, lead in enumerate(leads):
         url = lead.get("link", "")
         if verbose:
-            print(f"link_validator: [{i+1}/{len(leads)}] validating {url}")
+            logger.info("[%d/%d] validating %s", i+1, len(leads), url)
 
         validation = validate_link(url, timeout=timeout, verbose=verbose)
 
@@ -171,7 +175,7 @@ def validate_leads(
 
     if verbose:
         valid_count = sum(1 for lead in validated if lead.get("link_valid"))
-        print(f"link_validator: {valid_count}/{len(validated)} links valid")
+        logger.info("%d/%d links valid", valid_count, len(validated))
 
     return validated
 

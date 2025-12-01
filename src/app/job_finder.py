@@ -8,11 +8,14 @@ This module orchestrates job search across multiple sources:
 Priority: MCP > Gemini > Local
 """
 
+import logging
 import os
 from typing import Any, Dict, List
 
 from .gemini_provider import GeminiProvider
 from .main import fetch_jobs
+
+logger = logging.getLogger(__name__)
 
 
 def generate_job_leads(
@@ -53,21 +56,21 @@ def generate_job_leads(
             # Request 3x from each MCP to get more raw results for filtering
             count_per_mcp = int(os.getenv("JOBS_PER_MCP", str(count * 3)))
 
-            print("job_finder: Trying MCP providers...")
+            logger.info("Trying MCP providers (count=%d, per_provider=%d, location=%s)", count * 3, count_per_mcp, location)
             leads = generate_job_leads_via_mcp(
                 query=query, count=count * 3, count_per_provider=count_per_mcp, location=location
             )
 
             if leads:
-                print(f"job_finder: MCP providers returned {len(leads)} leads")
+                logger.info("MCP providers returned %d leads", len(leads))
                 # Evaluate if requested - use BATCH ranking for speed
                 if evaluate:
                     try:
                         provider = GeminiProvider()
-                        print(f"job_finder: Batch ranking {len(leads)} jobs...")
+                        logger.info("Batch ranking %d jobs...", len(leads))
                         # Rank all leads, return top 'count' with scores
                         leads = provider.rank_jobs_batch(leads, resume_text, top_n=count)
-                        print(f"job_finder: Ranked and filtered to top {len(leads)} jobs")
+                        logger.info("Ranked and filtered to top %d jobs", len(leads))
                     except Exception as e:
                         if verbose:
                             print(f"job_finder: Batch ranking unavailable: {e}")
@@ -105,7 +108,7 @@ def generate_job_leads(
             if leads:
                 # Evaluate each lead if requested
                 if evaluate:
-                    leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
+                    leads = _evaluate_leads(leads, resume_text, provider, verbose)
                 return leads
             else:
                 print("job_finder: Gemini returned 0 leads, using local fallback")
@@ -136,7 +139,7 @@ def generate_job_leads(
     print(f"job_finder: Fallback returned {len(leads)} leads")
     # Evaluate each lead if requested (requires Gemini)
     if evaluate and provider:
-        leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
+        leads = _evaluate_leads(leads, resume_text, provider, verbose)
     return leads
 
 
@@ -144,10 +147,19 @@ def _evaluate_leads(
     leads: List[Dict[str, Any]],
     resume_text: str,
     provider: GeminiProvider,
-    model: str | None = None,
     verbose: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Evaluate each lead against resume and add score/reasoning."""
+    """Evaluate each lead against resume and add score/reasoning.
+    
+    Args:
+        leads: List of job leads to evaluate.
+        resume_text: Candidate's resume text for matching.
+        provider: GeminiProvider instance for job evaluation.
+        verbose: If True, print diagnostic information.
+        
+    Returns:
+        List of evaluated leads with score and reasoning fields added.
+    """
     evaluated = []
     for lead in leads:
         try:

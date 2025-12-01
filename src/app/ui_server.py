@@ -5,20 +5,23 @@ configuration endpoints, and leads retrieval.
 """
 
 import json
+import logging
 import os
 import time
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
-from .config_manager import get_search_preferences
-from .config_store import load_config, save_config, scan_entity, scan_instructions, validate_url
+from .config_manager import get_search_preferences, load_config, save_config, scan_entity, scan_instructions, validate_url
 from .job_finder import generate_job_leads, save_to_file
 from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
 from .link_validator import validate_link
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 app = FastAPI(title="Job Lead Finder", version="0.1.1")
 
@@ -33,10 +36,11 @@ search_progress: Dict[str, dict] = {}
 
 class SearchRequest(BaseModel):
     query: str
-    resume: Optional[str] = None
+    resume: str | None = None
     count: int = 5
-    model: Optional[str] = None
+    model: str | None = None
     evaluate: bool = False
+    min_score: int = 60  # Minimum score threshold for filtering results
 
 
 class HealthResponse(BaseModel):
@@ -70,11 +74,19 @@ class ValidateLinkRequest(BaseModel):
 
 @app.get("/", response_class=HTMLResponse)
 def index():
+    """Serve the main web UI interface.
+    
+    Returns:
+        HTMLResponse: The main application HTML page.
+        
+    Raises:
+        HTTPException: 500 if template file cannot be read.
+    """
     html_path = Path(__file__).parent / "templates" / "index.html"
     try:
         return HTMLResponse(html_path.read_text(encoding="utf-8"))
-    except Exception:
-        raise HTTPException(status_code=500, detail="UI template not found")
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="UI template not found") from exc
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -110,6 +122,11 @@ def update_system_instructions(req: SystemInstructionsRequest):
 
 @app.post("/api/search")
 def search(req: SearchRequest):
+    """Search for job leads with timeout protection.
+    
+    Implements a maximum search timeout of 5 minutes to prevent indefinite hangs.
+    Progress can be monitored via /api/search/progress/{search_id} endpoint.
+    """
     # Allow search without an API key; provider will fallback internally
     # Load resume from file if not provided in request
     resume_text = req.resume
@@ -121,13 +138,21 @@ def search(req: SearchRequest):
 
     # Create unique search ID for progress tracking
     search_id = f"search_{int(time.time() * 1000)}"
+    start_time = time.time()
     search_progress[search_id] = {
+        "search_id": search_id,
         "status": "starting",
         "message": f"Requesting {req.count} job listings...",
         "attempt": 0,
         "valid_count": 0,
-        "timestamp": time.time(),
+        "timestamp": start_time,
+        "start_time": start_time,
     }
+
+    logger.info("[%s] Search started: query='%s', count=%d, model=%s", search_id, req.query, req.count, req.model)
+
+    # Maximum search timeout: 5 minutes
+    MAX_SEARCH_TIMEOUT = 300  # seconds
 
     try:
         # Request 10x more jobs to account for filtering (oversample strategy)
@@ -140,7 +165,33 @@ def search(req: SearchRequest):
         all_valid_leads = []
         seen_links = set()  # Track unique job links to avoid duplicates
 
+        logger.info(
+            "[%s] Configuration: oversample=%dx, initial_request=%d, max_retries=%d",
+            search_id,
+            oversample_multiplier,
+            initial_request_count,
+            max_retries
+        )
+
         for attempt in range(max_retries + 1):
+            # Check if we've exceeded maximum search time
+            elapsed_time = time.time() - start_time
+            if elapsed_time > MAX_SEARCH_TIMEOUT:
+                logger.warning(
+                    "[%s] Search timeout after %.1fs (max: %ds) - returning %d jobs found so far",
+                    search_id,
+                    elapsed_time,
+                    MAX_SEARCH_TIMEOUT,
+                    len(all_valid_leads),
+                )
+                search_progress[search_id].update(
+                    {
+                        "status": "timeout",
+                        "message": f"Search timeout after {elapsed_time:.0f}s - returning {len(all_valid_leads)} jobs",
+                    }
+                )
+                break
+
             # Calculate how many more we need
             needed = req.count - len(all_valid_leads)
             if needed <= 0:
@@ -150,21 +201,28 @@ def search(req: SearchRequest):
             request_count = needed * oversample_multiplier if attempt > 0 else initial_request_count
 
             # Update progress
+            attempt_start = time.time()
+            elapsed = attempt_start - start_time
             search_progress[search_id].update(
                 {
                     "status": "fetching",
                     "attempt": attempt + 1,
                     "message": (
                         f"Attempt {attempt + 1}/{max_retries + 1}: "
-                        f"Searching {request_count} jobs across providers..."
+                        f"Searching {request_count} jobs across providers... (elapsed: {elapsed:.1f}s)"
                     ),
                 }
             )
 
-            search_progress[search_id][
-                "message"
-            ] = f"Searching CompanyJobs, RemoteOK, Remotive for {request_count} jobs..."
-            print(f"UI: Starting search for {request_count} jobs (need {needed} more valid results)")
+            logger.info(
+                "[%s] Attempt %d/%d: requesting %d jobs (need %d more valid), elapsed=%.1fs",
+                search_id,
+                attempt + 1,
+                max_retries + 1,
+                request_count,
+                needed,
+                elapsed
+            )
 
             raw_leads = generate_job_leads(
                 query=req.query,
@@ -175,16 +233,35 @@ def search(req: SearchRequest):
                 verbose=False,
             )
 
+            fetch_elapsed = time.time() - attempt_start
+            logger.info("[%s] Fetched %d raw jobs in %.1fs", search_id, len(raw_leads), fetch_elapsed)
+
             # Update progress with provider stats
+            total_elapsed = time.time() - start_time
             search_progress[search_id].update(
-                {"status": "filtering", "message": f"Fetched {len(raw_leads)} jobs. Validating links..."}
+                {
+                    "status": "filtering",
+                    "message": (
+                        f"Fetched {len(raw_leads)} jobs in {fetch_elapsed:.1f}s. "
+                        f"Validating links... (total: {total_elapsed:.1f}s)"
+                    ),
+                }
             )
 
             # Process and filter leads
+            filter_start = time.time()
             valid_leads = _process_and_filter_leads(raw_leads)
+            logger.info(
+                "[%s] Filtered to %d valid jobs (removed %d invalid)",
+                search_id,
+                len(valid_leads),
+                len(raw_leads) - len(valid_leads)
+            )
 
             # Deduplicate by link and filter out hidden jobs
             tracker = get_tracker()
+            hidden_count = 0
+            duplicate_count = 0
             for lead in valid_leads:
                 link = lead.get("link", "")
                 if link and link not in seen_links:
@@ -194,9 +271,27 @@ def search(req: SearchRequest):
                         all_valid_leads.append(lead)
                         # Track new job automatically as "new" status
                         tracker.track_job(lead, STATUS_NEW)
+                    else:
+                        hidden_count += 1
+                elif link:
+                    duplicate_count += 1
 
+            filter_elapsed = time.time() - filter_start
+            logger.info(
+                "[%s] After deduplication: %d unique jobs (filtered %d hidden, %d duplicates) in %.1fs",
+                search_id,
+                len(all_valid_leads),
+                hidden_count,
+                duplicate_count,
+                filter_elapsed
+            )
+
+            total_elapsed = time.time() - start_time
             search_progress[search_id].update(
-                {"valid_count": len(all_valid_leads), "message": f"Found {len(all_valid_leads)} valid jobs so far..."}
+                {
+                    "valid_count": len(all_valid_leads),
+                    "message": f"Found {len(all_valid_leads)} valid jobs so far... (total: {total_elapsed:.1f}s)",
+                }
             )
 
             # Stop if we have enough or got no new results
@@ -219,11 +314,33 @@ def search(req: SearchRequest):
                 lead["tracking_notes"] = tracked_job.get("notes", "")
                 lead["company_link"] = tracked_job.get("company_link")
 
+        # Filter by minimum score if evaluation was performed AND jobs have scores
+        # Only apply filter if at least some jobs were actually scored
+        jobs_with_scores = [lead for lead in final_leads if lead.get("score") is not None]
+        if should_evaluate and req.min_score > 0 and len(jobs_with_scores) > 0:
+            before_filter = len(final_leads)
+            final_leads = [
+                lead for lead in final_leads if lead.get("score") is not None and lead.get("score", 0) >= req.min_score
+            ]
+            filtered_count = before_filter - len(final_leads)
+            if filtered_count > 0:
+                logger.info("[%s] Filtered out %d jobs below score threshold %d", search_id, filtered_count, req.min_score)
+        elif should_evaluate and req.min_score > 0 and len(jobs_with_scores) == 0:
+            logger.warning(
+                "[%s] Score filter requested but no jobs have scores - showing all %d jobs",
+                search_id,
+                len(final_leads)
+            )
+
+        total_elapsed = time.time() - start_time
+        logger.info("[%s] Search complete: %d jobs returned in %.1fs", search_id, len(final_leads), total_elapsed)
+
         search_progress[search_id].update(
             {
                 "status": "complete",
-                "message": f"Search complete: {len(final_leads)} jobs found",
+                "message": f"Search complete: {len(final_leads)} jobs found in {total_elapsed:.1f}s",
                 "valid_count": len(final_leads),
+                "elapsed": total_elapsed,
             }
         )
 
@@ -241,7 +358,31 @@ def search(req: SearchRequest):
         )
     except Exception as e:
         search_progress[search_id].update({"status": "error", "message": f"Error: {str(e)}"})
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/api/search/progress/{search_id}")
+def get_search_progress(search_id: str):
+    """Get real-time progress updates for an active search.
+    
+    Returns current status, message, elapsed time, and job count for a search.
+    Useful for polling during long-running searches.
+    
+    Args:
+        search_id: Unique search identifier from /api/search response
+        
+    Returns:
+        Progress object with status, message, elapsed time, and valid_count
+    """
+    if search_id not in search_progress:
+        raise HTTPException(status_code=404, detail=f"Search {search_id} not found")
+    
+    progress = search_progress[search_id].copy()
+    # Calculate elapsed time if search is still running
+    if "start_time" in progress and progress.get("status") not in ["complete", "error", "timeout"]:
+        progress["elapsed"] = time.time() - progress["start_time"]
+    
+    return JSONResponse(progress)
 
 
 def _process_and_filter_leads(raw_leads: list) -> list:
@@ -399,7 +540,7 @@ def get_leads():
             leads = json.load(fh)
         return JSONResponse({"leads": leads})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading leads: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading leads: {e}") from e
 
 
 @app.post("/api/config/block-entity", response_model=ConfigResponse)
@@ -487,8 +628,8 @@ async def upload_resume(file: UploadFile = File(...)):
 
     try:
         text = content.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text") from exc
 
     # Scan for injection patterns
     findings = scan_instructions(text[:5000])  # Scan first 5000 chars
@@ -510,7 +651,7 @@ def get_resume():
         text = RESUME_FILE.read_text(encoding="utf-8")
         return JSONResponse({"resume": text})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading resume: {e}")
+        raise HTTPException(status_code=500, detail=f"Error reading resume: {e}") from e
 
 
 @app.delete("/api/resume")
@@ -529,19 +670,21 @@ def delete_resume():
 
 @app.get("/api/job-config")
 def get_job_config():
-    """Get job search configuration (location, providers, search params)."""
-    from .config_manager import load_config
-
+    """Get job search configuration (location, providers, search params).
+    
+    Returns:
+        JSONResponse: Complete configuration including providers, location, and search settings.
+    """
     config = load_config()
     return JSONResponse(config)
 
 
 @app.post("/api/job-config/location")
 def update_location_config(
-    default_location: Optional[str] = None,
-    prefer_remote: Optional[bool] = None,
-    allow_hybrid: Optional[bool] = None,
-    allow_onsite: Optional[bool] = None,
+    default_location: str | None = None,
+    prefer_remote: bool | None = None,
+    allow_hybrid: bool | None = None,
+    allow_onsite: bool | None = None,
 ):
     """Update location and remote/onsite preferences."""
     from .config_manager import update_location_preferences
@@ -611,7 +754,7 @@ def update_industry_profile_endpoint(profile: str):
         update_industry_profile(profile)
         return JSONResponse({"message": f"Industry profile updated to {profile}"})
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 # ============ Job Tracking Endpoints ============
@@ -619,7 +762,7 @@ def update_industry_profile_endpoint(profile: str):
 
 class JobStatusUpdateRequest(BaseModel):
     status: str
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 class CompanyLinkRequest(BaseModel):
@@ -627,12 +770,13 @@ class CompanyLinkRequest(BaseModel):
 
 
 class CoverLetterRequest(BaseModel):
+    """Request model for cover letter generation."""
     job_description: str
-    resume_text: Optional[str] = None
+    resume_text: str | None = None
 
 
 @app.get("/api/jobs/tracked")
-def get_tracked_jobs(status: Optional[str] = None, include_hidden: bool = False):
+def get_tracked_jobs(status: str | None = None, include_hidden: bool = False):
     """Get all tracked jobs, optionally filtered by status."""
     tracker = get_tracker()
 
@@ -709,8 +853,6 @@ def set_company_link(job_id: str, req: CompanyLinkRequest):
 @app.post("/api/jobs/{job_id}/cover-letter")
 def generate_cover_letter(job_id: str, req: CoverLetterRequest):
     """Generate a customized cover letter for a job using Gemini."""
-    from .gemini_provider import GeminiProvider
-
     tracker = get_tracker()
     job = tracker.get_job(job_id)
 
@@ -733,7 +875,7 @@ def generate_cover_letter(job_id: str, req: CoverLetterRequest):
 
     # Generate cover letter using Gemini
     try:
-        provider = GeminiProvider()
+        from .gemini_provider import simple_gemini_query
 
         prompt = f"""Generate a professional cover letter for this job application.
 
@@ -755,8 +897,7 @@ Write a concise, professional cover letter (3-4 paragraphs) that:
 
 Return ONLY the cover letter text, no additional commentary."""
 
-        response = provider.query(prompt)
-        cover_letter = response.get("response", "")
+        cover_letter = simple_gemini_query(prompt)
 
         if not cover_letter:
             raise HTTPException(status_code=500, detail="Failed to generate cover letter")
@@ -767,7 +908,7 @@ Return ONLY the cover letter text, no additional commentary."""
 
     except Exception as e:
         print(f"Cover letter generation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate cover letter: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate cover letter: {str(e)}") from e
 
 
 @app.post("/api/jobs/find-company-link/{job_id}")
@@ -835,4 +976,4 @@ async def find_company_link(job_id: str):
 
     except Exception as e:
         print(f"Error finding company link: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to find company link: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to find company link: {str(e)}") from e

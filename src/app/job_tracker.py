@@ -8,7 +8,7 @@ import hashlib
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # Job statuses
 STATUS_NEW = "new"
@@ -114,7 +114,7 @@ class JobTracker:
         self.save()
         return job_id
 
-    def update_status(self, job_id: str, status: str, notes: Optional[str] = None) -> bool:
+    def update_status(self, job_id: str, status: str, notes: str | None = None) -> bool:
         """Update job status and optionally add notes.
 
         Returns True if successful, False if job not found or invalid status.
@@ -155,12 +155,12 @@ class JobTracker:
         self.save()
         return True
 
-    def get_job(self, job_id: str) -> Optional[Dict[str, Any]]:
+    def get_job(self, job_id: str) -> Dict[str, Any] | None:
         """Get job data by ID."""
         return self.jobs.get(job_id)
 
     def get_all_jobs(
-        self, status_filter: Optional[List[str]] = None, include_hidden: bool = False
+        self, status_filter: List[str] | None = None, include_hidden: bool = False
     ) -> List[Dict[str, Any]]:
         """Get all tracked jobs, optionally filtered by status.
 
@@ -213,7 +213,7 @@ class JobTracker:
 
 
 # Global tracker instance
-_tracker: Optional[JobTracker] = None
+_tracker: JobTracker | None = None
 
 
 def get_tracker() -> JobTracker:

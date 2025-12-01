@@ -86,6 +86,7 @@ class TestSearchEndpoint:
                             "query": "python developer",
                             "resume": "I am a Python expert",
                             "count": 2,
+                            "min_score": 0,  # Don't filter by score in this test
                         },
                     )
 

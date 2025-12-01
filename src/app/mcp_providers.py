@@ -8,6 +8,7 @@ This module provides a unified interface for multiple job search MCPs:
 Each MCP can be queried independently and results can be aggregated.
 """
 
+import logging
 import os
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
@@ -28,7 +29,7 @@ class MCPProvider(ABC):
         self.enabled = enabled
 
     @abstractmethod
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search for jobs using this MCP.
 
         Args:
@@ -65,7 +66,7 @@ class LinkedInMCP(MCPProvider):
         except Exception:
             return False
 
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search LinkedIn jobs via MCP."""
         if not self.is_available():
             print(f"LinkedIn MCP not available at {self.mcp_server_url}")
@@ -114,7 +115,7 @@ class IndeedMCP(MCPProvider):
         except Exception:
             return False
 
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search Indeed jobs via MCP."""
         if not self.is_available():
             print(f"Indeed MCP not available at {self.mcp_server_url}")
@@ -172,7 +173,7 @@ class GitHubJobsMCP(MCPProvider):
         except Exception:
             return False
 
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search GitHub for job postings."""
         if not self.is_available():
             print(f"GitHub MCP not available (token: {'set' if self.github_token else 'missing'})")
@@ -235,7 +236,7 @@ class DuckDuckGoMCP(MCPProvider):
         """DuckDuckGo is available if BeautifulSoup4 is installed."""
         return BS4_AVAILABLE
 
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
         """Search for jobs using DuckDuckGo."""
         if not BS4_AVAILABLE:
             print("DuckDuckGo MCP error: BeautifulSoup4 not installed")
@@ -503,26 +504,26 @@ class CompanyJobsMCP(MCPProvider):
             companies_to_search = profile_companies if profile_companies else self.companies
 
             # Build search query targeting company career pages
-            # Use more companies for better coverage (30 vs 10)
-            companies_str = ", ".join(companies_to_search[:30])  # Top 30 companies
+            # Reduce scope for faster response - use top 15 companies instead of 30
+            companies_str = ", ".join(companies_to_search[:15])  # Top 15 companies
+            
+            # More focused prompt with explicit search constraints to reduce API calls
             search_prompt = (
-                f"Use the google_search tool to find {count} REAL {query} job postings "
-                f"currently listed on company career pages (including {companies_str} and similar companies). "
-                f"CRITICAL: Only return jobs you actually found via google_search. "
-                f"DO NOT make up or hallucinate job URLs. "
-                f"DO NOT generate fake job IDs or paths. "
-                f"Each job MUST have a real, working URL from an actual search result. "
-                f"Include jobs from BOTH large companies (e.g., Google, Microsoft) "
-                f"and smaller tech companies/startups. "
+                f"Find {min(count, 50)} {query} jobs on company career pages. "
+                f"Focus on: {companies_str}. "
+                f"REQUIREMENTS:\n"
+                f"- Use google_search to find REAL job postings\n"
+                f"- Each job needs a direct URL (with job ID/slug)\n"
+                f"- NO fake URLs or hallucinated links\n"
+                f"- NO general /careers pages\n"
             )
             if location:
-                search_prompt += f"Location: {location}. "
+                search_prompt += f"- Location: {location}\n"
             search_prompt += (
-                "Return ONLY a JSON array with this exact format:\n"
-                '[{"title": "Job Title", "company": "Company Name", "location": "City/Remote", '
-                '"summary": "Brief description", "link": "https://company.com/careers/actual-job-url"}]\n'
-                "IMPORTANT: Use only real URLs from your search results. "
-                "If you cannot find enough real jobs, return fewer results."
+                f"\nReturn EXACTLY {min(count, 50)} jobs as JSON array:\n"
+                '[{"title": "Title", "company": "Company", "location": "Location", '
+                '"summary": "Brief desc", "link": "https://real-url"}]\n'
+                "If you can't find enough real jobs, return what you found (minimum 10)."
             )
 
             print(
@@ -767,25 +768,32 @@ class MCPAggregator:
             # Filter to requested providers
             available = [p for p in available if p.name in providers]
 
+        logger = logging.getLogger(__name__)
+
         if not available:
-            print("No MCP providers available")
+            logger.warning("No MCP providers available")
             return []
 
-        print(f"Searching {len(available)} MCP providers: {[p.name for p in available]}")
+        logger.info("Searching %d MCP providers: %s", len(available), [p.name for p in available])
 
         # Parallelize provider searches for speed (3-5x faster)
         import concurrent.futures
+        import time
 
         all_jobs = []
+        search_start = time.time()
 
         def search_provider(provider):
             """Helper to search a single provider."""
+            provider_start = time.time()
             try:
                 jobs = provider.search_jobs(query, count_per_provider, location)
-                print(f"  {provider.name}: found {len(jobs)} jobs")
+                elapsed = time.time() - provider_start
+                logger.info("  %s: found %d jobs in %.2fs", provider.name, len(jobs), elapsed)
                 return jobs
             except Exception as e:
-                print(f"  {provider.name}: error - {e}")
+                elapsed = time.time() - provider_start
+                logger.error("  %s: error after %.2fs - %s", provider.name, elapsed, e)
                 return []
 
         # Run searches in parallel (much faster than sequential)
@@ -794,6 +802,9 @@ class MCPAggregator:
             for future in concurrent.futures.as_completed(futures):
                 provider_jobs = future.result()
                 all_jobs.extend(provider_jobs)
+
+        search_elapsed = time.time() - search_start
+        logger.info("All providers completed in %.2fs, total jobs: %d", search_elapsed, len(all_jobs))
 
         # Deduplicate by link
         seen_links = set()

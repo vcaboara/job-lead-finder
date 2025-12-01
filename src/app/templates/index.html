@@ -183,8 +183,8 @@
 
         .lead-card .score-section {
             display: flex;
-            align-items: center;
-            gap: 10px;
+            flex-direction: column;
+            gap: 8px;
             margin: 10px 0;
             padding-top: 10px;
             border-top: 1px solid #e0e0e0;
@@ -197,6 +197,8 @@
             border-radius: 5px;
             font-weight: 600;
             font-size: 0.9em;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
 
         .score-badge.high {
@@ -212,9 +214,34 @@
         }
 
         .reasoning {
-            font-size: 0.85em;
-            color: #666;
-            font-style: italic;
+            font-size: 0.9em;
+            color: #444;
+            line-height: 1.5;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #667eea;
+        }
+
+        .reasoning strong {
+            color: #333;
+            font-weight: 600;
+        }
+
+        .source-badge {
+            display: inline-block;
+            background: #4CAF50;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 600;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+
+        .source-badge.aggregator {
+            background: #9e9e9e;
         }
 
         .lead-card a {
@@ -392,6 +419,11 @@
                         <label for="count">Results Count (searches 10x this amount)</label>
                         <input type="number" id="count" name="count" value="10" min="1" max="50">
                     </div>
+                    <div class="form-group">
+                        <label for="minScore">Min Score (0-100, default 60)</label>
+                        <input type="number" id="minScore" name="minScore" value="60" min="0" max="100"
+                            title="Only show jobs with scores at or above this threshold">
+                    </div>
                     <button type="submit">Search</button>
                 </form>
                 <hr style="margin:28px 0 18px; border:none; border-top:1px solid #ddd;" />
@@ -489,6 +521,14 @@
                                 Use AI to rank and filter job relevance (requires resume)
                             </small>
                         </div>
+                        <div class="form-group">
+                            <label for="minScore">Minimum Score Threshold</label>
+                            <input type="number" id="minScore" min="0" max="100" placeholder="e.g., 60"
+                                title="Only show jobs scoring at or above this threshold" />
+                            <small style="display:block; margin-top:4px; color:#666;">
+                                Filter out jobs with scores below this threshold (0 = show all, 60 = good matches only)
+                            </small>
+                        </div>
                         <button id="saveSearchBtn" type="button" style="width:100%;">Save Search Parameters</button>
                     </div>
 
@@ -553,35 +593,65 @@
 
             countEl.textContent = `(${leads.length})`;
 
-            container.innerHTML = leads.map(lead => `
-    <div class="lead-card">
-        <h3>${lead.title}</h3>
-        <div class="company">${lead.company}</div>
-        <div class="location">📍 ${lead.location}</div>
-        <div class="summary">${lead.summary}</div>
-        ${lead.score !== undefined ? `
-            <div class="score-section">
-                <div class="score-badge ${lead.score >= 80 ? 'high' : lead.score >= 60 ? 'medium' : 'low'}">Score: ${lead.score}</div>
-                ${lead.reasoning ? `<div class="reasoning">${lead.reasoning}</div>` : ''}
-            </div>
-        ` : ''}
-        <a href="${lead.link}" target="_blank">View on site →</a>
-    </div>
-`).join('');
+            container.innerHTML = leads.map(lead => {
+                const scoreSection = lead.score !== undefined ?
+                    `<div class="score-section"><div class="score-badge ${lead.score >= 80 ? 'high' : lead.score >= 60 ? 'medium' : 'low'}">Score: ${lead.score}</div>${lead.reasoning ? `<div class="reasoning"><strong>Why this score:</strong> ${lead.reasoning}</div>` : ''}</div>` : '';
+
+                const sourceBadge = lead.source === 'CompanyDirect' ?
+                    '<span class="source-badge" title="Direct link to company career page">🎯 Direct Company Link</span>' :
+                    (lead.source ? `<span class="source-badge aggregator" title="Job board aggregator">${lead.source}</span>` : '');
+
+                return `<div class="lead-card"><h3>${lead.title}${sourceBadge}</h3><div class="company">${lead.company}</div><div class="location">📍 ${lead.location}</div><div class="summary">${lead.summary}</div>${scoreSection}<a href="${lead.link}" target="_blank">View on site →</a></div>`;
+            }).join('');
         }
         function showStatus(message, type) { const status = document.getElementById('status'); status.textContent = message; status.className = `status show ${type}`; if (type !== 'loading') { setTimeout(() => status.classList.remove('show'), 5000); } }
+
+        let progressInterval = null;
+
+        async function pollProgress(searchId) {
+            try {
+                const resp = await fetch(`/api/search/progress/${searchId}`);
+                if (!resp.ok) return;
+                const progress = await resp.json();
+
+                if (progress.status === 'fetching' || progress.status === 'processing') {
+                    const elapsed = progress.elapsed ? `${progress.elapsed.toFixed(1)}s` : '';
+                    showStatus(`${progress.message || 'Searching...'} ${elapsed}`, 'loading');
+                } else if (progress.status === 'complete') {
+                    if (progressInterval) {
+                        clearInterval(progressInterval);
+                        progressInterval = null;
+                    }
+                }
+            } catch (e) {
+                console.error('Progress poll error:', e);
+            }
+        }
 
         async function performSearch() {
             const query = document.getElementById('query').value;
             const resume = document.getElementById('resume').value;
             const count = parseInt(document.getElementById('count').value);
+            const minScore = parseInt(document.getElementById('minScore')?.value || 60);
             const evalEl = document.getElementById('evaluate');
             const evaluate = (!!resume && resume.trim().length > 0) || (evalEl ? !!evalEl.checked : false);
-            showStatus('Searching...', 'loading');
+            showStatus('Starting search...', 'loading');
+
+            // Clear any existing progress polling
+            if (progressInterval) {
+                clearInterval(progressInterval);
+                progressInterval = null;
+            }
+
             try {
-                const resp = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, resume: resume || null, count, evaluate }) });
+                const resp = await fetch('/api/search', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ query, resume: resume || null, count, evaluate, min_score: minScore }) });
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.detail || 'Search failed');
+
+                // Start polling for progress updates if we have a search_id
+                if (data.search_id) {
+                    progressInterval = setInterval(() => pollProgress(data.search_id), 500);
+                }
 
                 // Show detailed results info
                 let resultMsg = `Found ${data.count} job${data.count !== 1 ? 's' : ''}!`;
@@ -591,9 +661,19 @@
 
                 displayLeads(data.leads);
                 showStatus(resultMsg, 'success');
+
+                // Stop polling
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
             } catch (e) {
                 showStatus(`Error: ${e.message}`, 'error');
                 console.error(e);
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
             }
         }
 
@@ -741,7 +821,9 @@
                 const data = await resp.json();
                 if (!resp.ok) throw new Error(data.detail || 'Failed to update');
                 await loadIndustryProfile();
-                showStatus(`Industry profile updated to ${profile}`, 'success');
+                // Clear current results since they're from the old profile
+                displayLeads([]);
+                showStatus(`Industry profile updated to ${profile}. Click Search to find jobs with the new profile.`, 'success');
             } catch (e) { showStatus(`Error: ${e.message}`, 'error'); }
         });
 

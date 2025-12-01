@@ -6,6 +6,8 @@ clear errors when the dependency or API key is missing.
 """
 
 import os
+import time
+import traceback
 from typing import Any, Dict
 
 # Support either the newer `google.generativeai` package or the older
@@ -38,7 +40,14 @@ class GeminiProvider:
       - Set `GOOGLE_API_KEY` environment variable
     """
 
-    def __init__(self, api_key: str | None = None, model: str | None = None):
+    def __init__(self, api_key: str | None = None, model: str | None = None, request_timeout: int = 90):
+        """Initialize Gemini provider.
+        
+        Args:
+            api_key: Google API key for Gemini (falls back to env vars)
+            model: Model name to use (default: gemini-2.5-flash-preview-09-2025)
+            request_timeout: Request timeout in seconds (default: 90)
+        """
         # Accept either GEMINI_API_KEY (preferred) or GOOGLE_API_KEY for backward compatibility
         self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
@@ -56,6 +65,7 @@ class GeminiProvider:
             pass
         # Default to a modern model that supports google_search tool; allow overriding
         self.model = model or "gemini-2.5-flash-preview-09-2025"
+        self.request_timeout = request_timeout
 
     def evaluate(self, job: Dict[str, Any], resume_text: str) -> Dict[str, Any]:
         """Evaluate a job using the Gemini client.
@@ -63,14 +73,23 @@ class GeminiProvider:
         Returns a dict with `score` (0-100) and `reasoning`.
         """
         prompt = (
-            "Evaluate the relevance of this job posting for the candidate. "
-            "Return a JSON object.\n"
-            f"CANDIDATE PROFILE:\n{resume_text}\n\n"
-            f"JOB:\nTitle: {job.get('title', '')}\n"
+            "You are an expert career advisor evaluating job fit for a candidate.\n\n"
+            "Analyze how well this job matches the candidate's profile based on:\n"
+            "1. REQUIRED SKILLS MATCH (40 points): How many required skills does the candidate have?\n"
+            "2. EXPERIENCE LEVEL (25 points): Does the seniority level match (junior/mid/senior)?\n"
+            "3. DOMAIN KNOWLEDGE (20 points): Relevant industry/domain experience?\n"
+            "4. ROLE FIT (15 points): Does the role align with career trajectory?\n\n"
+            f"CANDIDATE RESUME:\n{resume_text}\n\n"
+            f"JOB POSTING:\n"
+            f"Title: {job.get('title', '')}\n"
             f"Company: {job.get('company', '')}\n"
             f"Location: {job.get('location', '')}\n"
-            f"Description: {job.get('description', '')}\n\n"
-            'Return ONLY this JSON object: {"score": <0-100>, "reasoning": "<string>"}'
+            f"Description: {job.get('description', job.get('summary', ''))}\n\n"
+            "Provide a score (0-100) and detailed reasoning explaining:\n"
+            "- Which key skills match (list 3-5 specific skills)\n"
+            "- Experience level alignment\n"
+            "- Any significant gaps or mismatches\n\n"
+            'Return ONLY this JSON: {"score": <0-100>, "reasoning": "<detailed explanation>"}'
         )
 
         try:
@@ -163,15 +182,25 @@ class GeminiProvider:
         for i, job in enumerate(jobs, 1):
             jobs_text += f"\n{i}. {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}\n"
             jobs_text += f"   Location: {job.get('location', 'Unknown')}\n"
-            jobs_text += f"   Description: {job.get('summary', job.get('description', ''))[:200]}...\n"
+            desc = job.get("summary", job.get("description", ""))[:300]
+            jobs_text += f"   Description: {desc}...\n"
 
         prompt = (
-            f"You are a job matching expert. Rank these {len(jobs)} jobs for this candidate.\n\n"
-            f"CANDIDATE RESUME:\n{resume_text[:2000]}\n\n"  # Limit resume to 2000 chars
+            f"You are an expert career advisor. Rank these {len(jobs)} jobs for this candidate based on:\n\n"
+            "EVALUATION CRITERIA (total 100 points):\n"
+            "1. Required Skills Match (40 pts): Technical skills, tools, languages\n"
+            "2. Experience Level Fit (25 pts): Junior/Mid/Senior alignment\n"
+            "3. Domain/Industry Match (20 pts): Relevant sector experience\n"
+            "4. Role Alignment (15 pts): Career growth and trajectory fit\n\n"
+            f"CANDIDATE RESUME:\n{resume_text[:3000]}\n\n"
             f"JOBS TO RANK:{jobs_text}\n\n"
-            f"Return a JSON array of the top {min(top_n, len(jobs))} jobs with scores (0-100) and brief reasoning.\n"
-            f'Format: [{{"index": 1, "score": 85, "reasoning": "Great match because..."}}, ...]\n'
-            f"Return ONLY the JSON array, nothing else."
+            f"Return the top {min(top_n, len(jobs))} jobs as a JSON array. For each job, explain:\n"
+            "- Specific matching skills (name 3-5)\\n"
+            "- Experience level match\\n"
+            "- Why this job ranks where it does\\n\\n"
+            'Format: [{{"index": 1, "score": 85, "reasoning": "Strong match: '
+            'Python, AWS, Docker. Senior level aligns. Missing: Kubernetes"}}, ...]\\n'
+            "Return ONLY the JSON array, nothing else."
         )
 
         try:
@@ -269,9 +298,6 @@ class GeminiProvider:
                     )
                     # Also write a full dir() and repr() to a timestamped file for deeper inspection
                     try:
-                        import os
-                        import time
-
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname_dir = f"logs/gemini_dir_{ts}.txt"
@@ -303,19 +329,20 @@ class GeminiProvider:
             # Case A: `google.genai` style with Client and models.generate_content
             if hasattr(genai, "Client"):
                 try:
-                    client = genai.Client(api_key=self.api_key)
+                    # Configure httpx client with timeout
+                    import httpx
+                    http_options = httpx.Timeout(timeout=self.request_timeout)
+                    client = genai.Client(api_key=self.api_key, http_options={"timeout": http_options})
                     # Note: google_search tool disabled due to MALFORMED_FUNCTION_CALL errors
                     # and redirect URLs instead of direct links. Simple prompting works better.
                     if verbose:
-                        print(f"gemini_provider: calling generate_content on {use_model}")
+                        print(f"gemini_provider: calling generate_content on {use_model} (timeout={self.request_timeout}s)")
                     try:
                         resp = client.models.generate_content(model=use_model, contents=prompt)
                         if verbose:
                             print(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
                     except Exception as api_err:
                         print(f"ERROR calling Gemini API: {api_err}")
-                        import traceback
-
                         traceback.print_exc()
                         return []
 
@@ -387,9 +414,6 @@ class GeminiProvider:
                             # streaming not available or failed; continue
                             pass
                     if verbose:
-                        import time
-                        import traceback
-
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname = f"logs/last_gemini_response_{ts}.txt"
@@ -445,8 +469,6 @@ class GeminiProvider:
                 raw_response = str(out)
                 if verbose:
                     import os
-                    import time
-                    import traceback
 
                     ts = int(time.time())
                     os.makedirs("logs", exist_ok=True)
@@ -508,8 +530,6 @@ class GeminiProvider:
                     raw_response = str(response)
 
                     if verbose:
-                        import time
-
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname = f"logs/generativemodel_response_{ts}.txt"
@@ -529,7 +549,6 @@ class GeminiProvider:
                 except Exception as gm_err:
                     if verbose:
                         print(f"gemini_provider: GenerativeModel call failed: {gm_err}")
-                        import traceback
 
                         traceback.print_exc()
                     text = ""
@@ -595,8 +614,6 @@ class GeminiProvider:
             return jobs
         except Exception as e:
             if verbose:
-                import traceback
-
                 print("gemini_provider: exception in generate_job_leads:", e)
                 traceback.print_exc()
             # On any failure return empty list; caller will fallback
