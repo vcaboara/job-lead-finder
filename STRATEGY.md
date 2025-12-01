@@ -1,8 +1,8 @@
 # Job Lead Finder - Strategic Analysis & Recommendations
 
 **Date:** December 1, 2025  
-**Branch:** fix/post-merge-improvements  
-**Status:** Ready for PR review
+**Branch:** feature/add-weworkremotely-provider  
+**Status:** Implementing fast aggregator providers
 
 ---
 
@@ -26,6 +26,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as execut
 **Performance:**
 - RemoteOK: ~0.13s (fast API)
 - Remotive: ~1.0s (fast API)
+- WeWorkRemotely: ~0.5s (RSS feeds - estimated)
 - CompanyJobs (Gemini): 90-325s (SLOW - 90s timeout now enforced)
 
 ---
@@ -38,6 +39,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as execut
 |----------|-------|---------|----------|------------|
 | **RemoteOK** | 0.13s | High | 50-100 jobs | ✅ Tech-focused |
 | **Remotive** | 1.0s | High | 20-50 jobs | ✅ Tech-focused |
+| **WeWorkRemotely** | ~0.5s | High | 50-100 jobs | ✅ Tech-focused (RSS feeds) |
 
 ### ⚠️ Problematic Provider
 
@@ -100,26 +102,34 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as execut
 
 **Approach:**
 1. Find 3-5 more aggregators with public APIs (no auth required)
-2. Focus on tech-specific boards with REST APIs
+2. Focus on tech-specific boards with REST APIs or RSS feeds
 3. Leverage parallel execution (already implemented)
 
 **Candidate Aggregators:**
 
-| Source | API | Auth | Coverage | Difficulty |
-|--------|-----|------|----------|------------|
-| **We Work Remotely** | HTML scraping | None | ~100 jobs | Easy |
-| **Remote.co** | HTML scraping | None | ~50 jobs | Easy |
-| **FlexJobs** | Paid API | API key | 1000+ jobs | Medium |
-| **AngelList (Wellfound)** | GraphQL API | API key | 500+ startups | Medium |
-| **Stack Overflow Jobs** | REST API | API key | 100+ jobs | Medium |
-| **Adzuna** | REST API | API key | 5000+ jobs | Medium |
-| **Jooble** | REST API | API key | 1000+ jobs | Medium |
+| Source | API | Auth | Coverage | Difficulty | Status |
+|--------|-----|------|----------|------------|--------|
+| **We Work Remotely** | RSS feeds | None | ~100 jobs | Easy | ✅ Implemented |
+| **Remote.co** | HTML scraping | None | ~50 jobs | Easy | 🔄 Next |
+| **FlexJobs** | Paid API | API key | 1000+ jobs | Medium | ⏸️ Requires payment |
+| **AngelList (Wellfound)** | GraphQL API | API key | 500+ startups | Medium | 🔄 Planned |
+| **Stack Overflow Jobs** | REST API | API key | 100+ jobs | Medium | ⏸️ Requires key |
+| **Adzuna** | REST API | API key | 5000+ jobs | Medium | ⏸️ Requires key |
+| **Jooble** | REST API | API key | 1000+ jobs | Medium | ⏸️ Requires key |
 
 **Implementation:**
 - Create new MCP classes (similar to RemoteOK pattern)
+- RSS feeds: Use xml.etree.ElementTree (standard library) ✅
 - HTML scraping: Use BeautifulSoup/httpx (already used)
 - API-based: Add API keys to config
 - All run in parallel (no code changes needed)
+
+**Progress:**
+- ✅ We Work Remotely: Implemented using RSS feeds (Dec 1, 2025)
+- 🔄 Remote.co: Next target
+- 🔄 AngelList: Planned
+
+**Timeline:** 1 day per aggregator (RSS/scraping), 2 days for API-based
 
 **Timeline:** 1-2 days per aggregator
 
@@ -256,8 +266,8 @@ Title: Post-merge improvements - timeout handling and code quality
 ## Future Roadmap (Post-PR)
 
 ### Phase 1: More Aggregators (Week 1-2)
-- [ ] We Work Remotely MCP
-- [ ] Remote.co MCP
+- [x] We Work Remotely MCP (✅ Completed Dec 1, 2025)
+- [ ] Remote.co MCP (🔄 Next)
 - [ ] AngelList/Wellfound MCP (requires API key)
 - [ ] Stack Overflow Jobs MCP (requires API key)
 
