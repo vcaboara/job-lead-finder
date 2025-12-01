@@ -65,14 +65,23 @@ class GeminiProvider:
         Returns a dict with `score` (0-100) and `reasoning`.
         """
         prompt = (
-            "Evaluate the relevance of this job posting for the candidate. "
-            "Return a JSON object.\n"
-            f"CANDIDATE PROFILE:\n{resume_text}\n\n"
-            f"JOB:\nTitle: {job.get('title', '')}\n"
+            "You are an expert career advisor evaluating job fit for a candidate.\n\n"
+            "Analyze how well this job matches the candidate's profile based on:\n"
+            "1. REQUIRED SKILLS MATCH (40 points): How many required skills does the candidate have?\n"
+            "2. EXPERIENCE LEVEL (25 points): Does the seniority level match (junior/mid/senior)?\n"
+            "3. DOMAIN KNOWLEDGE (20 points): Relevant industry/domain experience?\n"
+            "4. ROLE FIT (15 points): Does the role align with career trajectory?\n\n"
+            f"CANDIDATE RESUME:\n{resume_text}\n\n"
+            f"JOB POSTING:\n"
+            f"Title: {job.get('title', '')}\n"
             f"Company: {job.get('company', '')}\n"
             f"Location: {job.get('location', '')}\n"
-            f"Description: {job.get('description', '')}\n\n"
-            'Return ONLY this JSON object: {"score": <0-100>, "reasoning": "<string>"}'
+            f"Description: {job.get('description', job.get('summary', ''))}\n\n"
+            "Provide a score (0-100) and detailed reasoning explaining:\n"
+            "- Which key skills match (list 3-5 specific skills)\n"
+            "- Experience level alignment\n"
+            "- Any significant gaps or mismatches\n\n"
+            'Return ONLY this JSON: {"score": <0-100>, "reasoning": "<detailed explanation>"}'
         )
 
         try:
@@ -165,15 +174,25 @@ class GeminiProvider:
         for i, job in enumerate(jobs, 1):
             jobs_text += f"\n{i}. {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}\n"
             jobs_text += f"   Location: {job.get('location', 'Unknown')}\n"
-            jobs_text += f"   Description: {job.get('summary', job.get('description', ''))[:200]}...\n"
+            desc = job.get("summary", job.get("description", ""))[:300]
+            jobs_text += f"   Description: {desc}...\n"
 
         prompt = (
-            f"You are a job matching expert. Rank these {len(jobs)} jobs for this candidate.\n\n"
-            f"CANDIDATE RESUME:\n{resume_text[:2000]}\n\n"  # Limit resume to 2000 chars
+            f"You are an expert career advisor. Rank these {len(jobs)} jobs for this candidate based on:\n\n"
+            "EVALUATION CRITERIA (total 100 points):\n"
+            "1. Required Skills Match (40 pts): Technical skills, tools, languages\n"
+            "2. Experience Level Fit (25 pts): Junior/Mid/Senior alignment\n"
+            "3. Domain/Industry Match (20 pts): Relevant sector experience\n"
+            "4. Role Alignment (15 pts): Career growth and trajectory fit\n\n"
+            f"CANDIDATE RESUME:\n{resume_text[:3000]}\n\n"
             f"JOBS TO RANK:{jobs_text}\n\n"
-            f"Return a JSON array of the top {min(top_n, len(jobs))} jobs with scores (0-100) and brief reasoning.\n"
-            f'Format: [{{"index": 1, "score": 85, "reasoning": "Great match because..."}}, ...]\n'
-            f"Return ONLY the JSON array, nothing else."
+            f"Return the top {min(top_n, len(jobs))} jobs as a JSON array. For each job, explain:\n"
+            "- Specific matching skills (name 3-5)\\n"
+            "- Experience level match\\n"
+            "- Why this job ranks where it does\\n\\n"
+            'Format: [{{"index": 1, "score": 85, "reasoning": "Strong match: '
+            'Python, AWS, Docker. Senior level aligns. Missing: Kubernetes"}}, ...]\\n'
+            "Return ONLY the JSON array, nothing else."
         )
 
         try:
