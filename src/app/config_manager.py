@@ -18,6 +18,7 @@ DEFAULT_CONFIG = {
     "system_instructions": "",
     "blocked_entities": [],
     "region": "",
+    "industry_profile": "tech",  # Default to tech industry
     "location": {
         "default_location": "United States",
         "prefer_remote": True,
@@ -25,7 +26,7 @@ DEFAULT_CONFIG = {
         "allow_onsite": False,
     },
     "providers": {
-        "companyjobs": {"enabled": False, "name": "CompanyJobs"},  # Requires google.genai SDK with google_search tool
+        "companyjobs": {"enabled": True, "name": "CompanyJobs"},  # Direct company career pages via google_search
         "remoteok": {"enabled": True, "name": "RemoteOK"},
         "remotive": {"enabled": True, "name": "Remotive"},
         "duckduckgo": {"enabled": False, "name": "DuckDuckGo"},
@@ -132,3 +133,21 @@ def update_search_preferences(
     if enable_ai_ranking is not None:
         config["search"]["enable_ai_ranking"] = enable_ai_ranking
     return save_config(config)
+
+
+def update_industry_profile(profile: str) -> bool:
+    """Update industry profile selection."""
+    from .industry_profiles import INDUSTRY_PROFILES
+
+    if profile not in INDUSTRY_PROFILES:
+        raise ValueError(f"Invalid profile. Must be one of: {list(INDUSTRY_PROFILES.keys())}")
+
+    config = load_config()
+    config["industry_profile"] = profile
+    return save_config(config)
+
+
+def get_industry_profile() -> str:
+    """Get current industry profile."""
+    config = load_config()
+    return config.get("industry_profile", "tech")

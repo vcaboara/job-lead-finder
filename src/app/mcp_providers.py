@@ -330,29 +330,146 @@ class DuckDuckGoMCP(MCPProvider):
 class CompanyJobsMCP(MCPProvider):
     """Search directly on company career pages using Gemini's google_search tool."""
 
-    def __init__(self):
+    def __init__(self, excluded_companies: Optional[List[str]] = None):
         super().__init__("CompanyJobs")
-        # Major tech companies with career pages
-        self.companies = [
-            "NVIDIA",
-            "Apple",
-            "Google",
-            "Microsoft",
-            "Amazon",
+
+        # Excluded companies (Musk/Zuckerberg by default)
+        self.excluded = excluded_companies or [
             "Meta",
+            "Facebook",
+            "Instagram",
+            "WhatsApp",  # Zuckerberg
             "Tesla",
             "SpaceX",
-            "Netflix",
-            "Salesforce",
-            "Adobe",
-            "Intel",
-            "AMD",
+            "X Corp",
+            "Twitter",
+            "Neuralink",
+            "Boring Company",  # Musk
+        ]
+
+        # Top 100 tech companies (excluding Musk/Zuckerberg companies)
+        all_companies = [
+            # Top 10
+            "Apple",
+            "Microsoft",
+            "NVIDIA",
+            "Alphabet",
+            "Google",
+            "Amazon",
+            "Broadcom",
             "Oracle",
+            "SAP",
+            "Salesforce",
+            # Cloud/Enterprise
+            "ServiceNow",
+            "Snowflake",
+            "Workday",
+            "Adobe",
             "IBM",
             "Cisco",
             "VMware",
             "Red Hat",
+            "Dell",
+            "HPE",
+            "Lenovo",
+            "NetApp",
+            "Palo Alto Networks",
+            "Fortinet",
+            "CrowdStrike",
+            "Okta",
+            "Datadog",
+            "MongoDB",
+            # Semiconductors
+            "Intel",
+            "AMD",
+            "Qualcomm",
+            "Texas Instruments",
+            "Micron",
+            "Applied Materials",
+            "ASML",
+            "Marvell",
+            "Analog Devices",
+            "NXP",
+            "Microchip",
+            "ON Semiconductor",
+            "Skyworks",
+            "Qorvo",
+            # Software/Cloud
+            "Atlassian",
+            "Shopify",
+            "Stripe",
+            "Square",
+            "Block",
+            "PayPal",
+            "Intuit",
+            "Autodesk",
+            "Splunk",
+            "Twilio",
+            "Zoom",
+            "Slack",
+            "Dropbox",
+            "Box",
+            "DocuSign",
+            "HubSpot",
+            "Zendesk",
+            "GitLab",
+            "GitHub",
+            # Gaming/Entertainment
+            "Netflix",
+            "Spotify",
+            "Roblox",
+            "Unity",
+            "Epic Games",
+            "Activision",
+            "Electronic Arts",
+            "Take-Two",
+            "Ubisoft",
+            "Nintendo",
+            "Sony Interactive",
+            "Valve",
+            # E-commerce/Retail Tech
+            "Shopify",
+            "eBay",
+            "Etsy",
+            "Wayfair",
+            "Chewy",
+            "Carvana",
+            # Fintech
+            "Visa",
+            "Mastercard",
+            "American Express",
+            "Fidelity",
+            "Charles Schwab",
+            "Robinhood",
+            "Coinbase",
+            # Cybersecurity
+            "Cloudflare",
+            "Zscaler",
+            "SentinelOne",
+            "Check Point",
+            "F5 Networks",
+            # AI/Data
+            "Palantir",
+            "C3.ai",
+            "UiPath",
+            "Databricks",
+            "Scale AI",
+            "OpenAI",
+            "Anthropic",
+            "Cohere",
+            # Other Major Tech
+            "Uber",
+            "Lyft",
+            "DoorDash",
+            "Instacart",
+            "Airbnb",
+            "Booking",
+            "Expedia",
         ]
+
+        # Filter out excluded companies (case-insensitive)
+        excluded_lower = [e.lower() for e in self.excluded]
+        self.companies = [company for company in all_companies if company.lower() not in excluded_lower]
 
     def is_available(self) -> bool:
         """Check if Gemini API is available for google_search."""
@@ -363,8 +480,8 @@ class CompanyJobsMCP(MCPProvider):
 
             # CompanyJobsMCP requires google.genai SDK with google_search tool
             # google.generativeai SDK doesn't support google_search
-            if genai_name == "google.generativeai":
-                return False  # google_search not available
+            if genai_name != "google.genai":
+                return False  # Require google.genai SDK
 
             return True
         except Exception:
@@ -373,12 +490,21 @@ class CompanyJobsMCP(MCPProvider):
     def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
         """Search company career pages using Gemini's google_search tool."""
         try:
+            from .config_manager import get_industry_profile
             from .gemini_provider import GeminiProvider
+            from .industry_profiles import get_companies_for_profile
 
             provider = GeminiProvider()
 
+            # Get companies from current industry profile
+            industry = get_industry_profile()
+            profile_companies = get_companies_for_profile(industry)
+
+            # Use profile companies if available, otherwise use default list
+            companies_to_search = profile_companies if profile_companies else self.companies
+
             # Build search query targeting company career pages
-            companies_str = ", ".join(self.companies[:8])  # First 8 companies
+            companies_str = ", ".join(companies_to_search[:10])  # First 10 companies
             search_prompt = (
                 f"Find {count} {query} job postings directly on company career pages "
                 f"(like {companies_str}). "
@@ -393,7 +519,9 @@ class CompanyJobsMCP(MCPProvider):
                 "Make sure links go directly to company career pages, not job boards."
             )
 
-            print(f"CompanyJobsMCP: Searching with prompt (first 100 chars): {search_prompt[:100]}...")
+            print(
+                f"CompanyJobsMCP: Searching {industry} industry with prompt (first 100 chars): {search_prompt[:100]}..."
+            )
 
             # Use Gemini to search with google_search tool
             jobs_data = provider.generate_job_leads(

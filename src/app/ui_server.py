@@ -555,3 +555,34 @@ def update_search_config(
     if success:
         return JSONResponse({"message": "Search preferences updated"})
     raise HTTPException(status_code=500, detail="Failed to update search preferences")
+
+
+@app.get("/api/industry-profiles")
+def get_industry_profiles():
+    """Get list of available industry profiles."""
+    from .industry_profiles import list_profiles
+
+    return JSONResponse({"profiles": list_profiles()})
+
+
+@app.get("/api/industry-profile")
+def get_current_industry_profile():
+    """Get current industry profile."""
+    from .config_manager import get_industry_profile
+    from .industry_profiles import get_profile
+
+    current = get_industry_profile()
+    profile = get_profile(current)
+    return JSONResponse({"current": current, "profile": profile})
+
+
+@app.post("/api/industry-profile")
+def update_industry_profile_endpoint(profile: str):
+    """Update industry profile."""
+    from .config_manager import update_industry_profile
+
+    try:
+        update_industry_profile(profile)
+        return JSONResponse({"message": f"Industry profile updated to {profile}"})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
