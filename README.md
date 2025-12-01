@@ -1,10 +1,11 @@
 # Job Lead Finder
 
-AI-powered job search tool aggregating jobs from RemoteOK, Remotive, and direct company career pages.
+AI-powered job search tool aggregating jobs from multiple providers including WeWorkRemotely, RemoteOK, Remotive, and direct company career pages.
 
 ## Features
 
-- **Job Aggregation**: RemoteOK + Remotive + CompanyJobs (Gemini-powered company career page search)
+- **Job Aggregation**: WeWorkRemotely + RemoteOK + Remotive + CompanyJobs (Gemini-powered company career page search)
+  - Round-robin distribution ensures diversity across all providers
 - **Job Tracking**: Track application status (new, applied, interviewing, rejected, offer, hidden)
 - **Web UI**: FastAPI dashboard at http://localhost:8000 with search, upload, configuration
 - **AI Features**: Job evaluation, custom cover letter generation
@@ -75,7 +76,7 @@ src/app/
 ├── ui_server.py         # FastAPI REST API + web UI
 ├── job_finder.py        # Job search orchestration
 ├── job_tracker.py       # Track applications and status
-├── mcp_providers.py     # RemoteOK, Remotive, CompanyJobs
+├── mcp_providers.py     # WeWorkRemotely, RemoteOK, Remotive, CompanyJobs
 ├── gemini_provider.py   # AI provider (evaluation, cover letters)
 ├── link_validator.py    # URL validation
 ├── industry_profiles.py # 8 industry-specific company lists

@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Expected performance: ~0.5s
   - Enabled by default
   - Comprehensive test coverage (6 test cases)
+- **Round-Robin Provider Distribution** - MCPAggregator now uses round-robin selection
+  - Ensures diversity by cycling through all available providers
+  - Prevents single provider from dominating results
+  - Test coverage: `test_provider_diversity_round_robin`
   
 ### Security
 - Upgraded XML parsing to use `defusedxml` library to prevent XXE attacks
@@ -22,9 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Query filtering now supports short tech terms (Go, R, UI, UX, C#, etc.)
 - Improved code efficiency: moved `re` module import out of nested loop
 - Removed redundant `BeautifulSoup` import in RSS parsing
+- MCPAggregator deduplication strategy changed from simple concatenation to round-robin
 
 ### Fixed
 - Test isolation: Added mock for `WeWorkRemotelyMCP.is_available()` in `test_no_providers_available`
+- XML test mocks: Escaped HTML entities (`&lt;`, `&gt;`) to allow proper XML parsing
 
 ## [0.1.1] - 2025-12-01
 
