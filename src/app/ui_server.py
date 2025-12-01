@@ -490,3 +490,68 @@ def delete_resume():
         raise HTTPException(status_code=404, detail="Resume not found")
     RESUME_FILE.unlink()
     return JSONResponse({"message": "Resume deleted"})
+
+
+# ============================================================================
+# Job Search Configuration Endpoints
+# ============================================================================
+
+
+@app.get("/api/job-config")
+def get_job_config():
+    """Get job search configuration (location, providers, search params)."""
+    from .config_manager import load_config
+
+    config = load_config()
+    return JSONResponse(config)
+
+
+@app.post("/api/job-config/location")
+def update_location_config(
+    default_location: Optional[str] = None,
+    prefer_remote: Optional[bool] = None,
+    allow_hybrid: Optional[bool] = None,
+    allow_onsite: Optional[bool] = None,
+):
+    """Update location and remote/onsite preferences."""
+    from .config_manager import update_location_preferences
+
+    success = update_location_preferences(
+        default_location=default_location,
+        prefer_remote=prefer_remote,
+        allow_hybrid=allow_hybrid,
+        allow_onsite=allow_onsite,
+    )
+    if success:
+        return JSONResponse({"message": "Location preferences updated"})
+    raise HTTPException(status_code=500, detail="Failed to update location preferences")
+
+
+@app.post("/api/job-config/provider/{provider_key}")
+def toggle_provider(provider_key: str, enabled: bool):
+    """Enable or disable a job search provider."""
+    from .config_manager import update_provider_status
+
+    success = update_provider_status(provider_key, enabled)
+    if success:
+        return JSONResponse({"message": f"Provider {provider_key} {'enabled' if enabled else 'disabled'}"})
+    raise HTTPException(status_code=404, detail=f"Provider {provider_key} not found")
+
+
+@app.post("/api/job-config/search")
+def update_search_config(
+    default_count: Optional[int] = None,
+    oversample_multiplier: Optional[int] = None,
+    enable_ai_ranking: Optional[bool] = None,
+):
+    """Update search parameters."""
+    from .config_manager import update_search_preferences
+
+    success = update_search_preferences(
+        default_count=default_count,
+        oversample_multiplier=oversample_multiplier,
+        enable_ai_ranking=enable_ai_ranking,
+    )
+    if success:
+        return JSONResponse({"message": "Search preferences updated"})
+    raise HTTPException(status_code=500, detail="Failed to update search preferences")

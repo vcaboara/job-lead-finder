@@ -459,10 +459,41 @@ class MCPAggregator:
     """Aggregates results from multiple MCP providers."""
 
     def __init__(self, providers: Optional[List[MCPProvider]] = None):
-        # Default: RemoteOK + Remotive (real job board APIs) and DuckDuckGo (web search)
-        # These provide actual diverse job postings from 2 major remote job boards
-        # LinkedIn removed (requires cookies), GitHub removed (just finds random repos)
-        self.providers = providers or [RemoteOKMCP(), RemotiveMCP(), DuckDuckGoMCP()]
+        if providers is None:
+            # Load providers from config
+            providers = self._load_providers_from_config()
+        self.providers = providers
+
+    def _load_providers_from_config(self) -> List[MCPProvider]:
+        """Load enabled providers from configuration."""
+        try:
+            from .config_manager import load_config
+
+            config = load_config()
+            provider_map = {
+                "remoteok": RemoteOKMCP,
+                "remotive": RemotiveMCP,
+                "duckduckgo": DuckDuckGoMCP,
+                "github": GitHubJobsMCP,
+                "linkedin": LinkedInMCP,
+                "indeed": IndeedMCP,
+            }
+
+            enabled_providers = []
+            for key, provider_class in provider_map.items():
+                if config["providers"].get(key, {}).get("enabled", False):
+                    enabled_providers.append(provider_class())
+
+            # Fallback if no providers enabled
+            if not enabled_providers:
+                print("Warning: No providers enabled in config, using defaults")
+                enabled_providers = [RemoteOKMCP(), RemotiveMCP(), DuckDuckGoMCP()]
+
+            return enabled_providers
+        except Exception as e:
+            print(f"Warning: Could not load config, using default providers: {e}")
+            # Default: RemoteOK + Remotive (real job board APIs) and DuckDuckGo (web search)
+            return [RemoteOKMCP(), RemotiveMCP(), DuckDuckGoMCP()]
 
     def get_available_providers(self) -> List[MCPProvider]:
         """Get list of available MCP providers."""
