@@ -159,10 +159,9 @@ def search(req: SearchRequest):
                 }
             )
 
-            search_progress[search_id]["message"] = (
-                f"Searching CompanyJobs, RemoteOK, Remotive for {request_count} jobs..."
-            )
-            )
+            search_progress[search_id][
+                "message"
+            ] = f"Searching CompanyJobs, RemoteOK, Remotive for {request_count} jobs..."
             print(f"UI: Starting search for {request_count} jobs (need {needed} more valid results)")
 
             raw_leads = generate_job_leads(

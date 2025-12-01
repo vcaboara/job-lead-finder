@@ -18,7 +18,6 @@ try:
     BS4_AVAILABLE = True
 except ImportError:
     BS4_AVAILABLE = False
-    print("Warning: BeautifulSoup4 not available. DuckDuckGo search will be disabled.")
 
 
 class MCPProvider(ABC):

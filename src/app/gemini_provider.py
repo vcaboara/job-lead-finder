@@ -99,6 +99,7 @@ class GeminiProvider:
                     if hasattr(genai, "configure"):
                         genai.configure(api_key=self.api_key)
                 except Exception:
+                    # Safe to ignore configuration errors - model can be used without explicit configuration
                     pass
                 model = genai.GenerativeModel(self.model)
                 resp = model.generate_content(prompt)
@@ -564,7 +565,6 @@ class GeminiProvider:
 
                         traceback.print_exc()
                     text = ""
-                    raw_response = ""
 
             else:
                 return []
