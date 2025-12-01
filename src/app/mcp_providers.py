@@ -774,7 +774,7 @@ class MCPAggregator:
             logger.warning("No MCP providers available")
             return []
 
-        logger.info(f"Searching {len(available)} MCP providers: {[p.name for p in available]}")
+        logger.info("Searching %d MCP providers: %s", len(available), [p.name for p in available])
 
         # Parallelize provider searches for speed (3-5x faster)
         import concurrent.futures
@@ -789,11 +789,11 @@ class MCPAggregator:
             try:
                 jobs = provider.search_jobs(query, count_per_provider, location)
                 elapsed = time.time() - provider_start
-                logger.info(f"  {provider.name}: found {len(jobs)} jobs in {elapsed:.2f}s")
+                logger.info("  %s: found %d jobs in %.2fs", provider.name, len(jobs), elapsed)
                 return jobs
             except Exception as e:
                 elapsed = time.time() - provider_start
-                logger.error(f"  {provider.name}: error after {elapsed:.2f}s - {e}")
+                logger.error("  %s: error after %.2fs - %s", provider.name, elapsed, e)
                 return []
 
         # Run searches in parallel (much faster than sequential)
@@ -804,7 +804,7 @@ class MCPAggregator:
                 all_jobs.extend(provider_jobs)
 
         search_elapsed = time.time() - search_start
-        logger.info(f"All providers completed in {search_elapsed:.2f}s, total jobs: {len(all_jobs)}")
+        logger.info("All providers completed in %.2fs, total jobs: %d", search_elapsed, len(all_jobs))
 
         # Deduplicate by link
         seen_links = set()

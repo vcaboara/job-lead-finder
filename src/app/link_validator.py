@@ -102,7 +102,7 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
                 warning = "server error"
 
         if verbose:
-            logger.info(f"{url} -> {status_code} (valid={valid}, soft_404={is_soft_404})")
+            logger.info("%s -> %s (valid=%s, soft_404=%s)", url, status_code, valid, is_soft_404)
 
         return {
             "valid": valid,
@@ -114,7 +114,7 @@ def validate_link(url: str, timeout: int = 5, verbose: bool = False) -> Dict[str
     except Exception as e:
         error_msg = str(e)
         if verbose:
-            logger.error(f"{url} -> ERROR: {error_msg}")
+            logger.error("%s -> ERROR: %s", url, error_msg)
         return {
             "valid": False,
             "status_code": None,
@@ -151,13 +151,13 @@ def validate_leads(
         return leads
 
     if verbose:
-        logger.info(f"Validating {len(leads)} leads")
+        logger.info("Validating %d leads", len(leads))
 
     validated = []
     for i, lead in enumerate(leads):
         url = lead.get("link", "")
         if verbose:
-            logger.info(f"[{i+1}/{len(leads)}] validating {url}")
+            logger.info("[%d/%d] validating %s", i+1, len(leads), url)
 
         validation = validate_link(url, timeout=timeout, verbose=verbose)
 
@@ -175,7 +175,7 @@ def validate_leads(
 
     if verbose:
         valid_count = sum(1 for lead in validated if lead.get("link_valid"))
-        logger.info(f"{valid_count}/{len(validated)} links valid")
+        logger.info("%d/%d links valid", valid_count, len(validated))
 
     return validated
 

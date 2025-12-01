@@ -144,7 +144,7 @@ def search(req: SearchRequest):
         "start_time": start_time,
     }
 
-    logger.info(f"[{search_id}] Search started: query='{req.query}', count={req.count}, model={req.model}")
+    logger.info("[%s] Search started: query='%s', count=%d, model=%s", search_id, req.query, req.count, req.model)
 
     try:
         # Request 10x more jobs to account for filtering (oversample strategy)
@@ -201,7 +201,7 @@ def search(req: SearchRequest):
             )
 
             fetch_elapsed = time.time() - attempt_start
-            logger.info(f"[{search_id}] Fetched {len(raw_leads)} raw jobs in {fetch_elapsed:.1f}s")
+            logger.info("[%s] Fetched %d raw jobs in %.1fs", search_id, len(raw_leads), fetch_elapsed)
 
             # Update progress with provider stats
             total_elapsed = time.time() - start_time
@@ -286,14 +286,14 @@ def search(req: SearchRequest):
             ]
             filtered_count = before_filter - len(final_leads)
             if filtered_count > 0:
-                logger.info(f"[{search_id}] Filtered out {filtered_count} jobs below score threshold {req.min_score}")
+                logger.info("[%s] Filtered out %d jobs below score threshold %d", search_id, filtered_count, req.min_score)
         elif should_evaluate and req.min_score > 0 and len(jobs_with_scores) == 0:
             logger.warning(
                 f"[{search_id}] Score filter requested but no jobs have scores - showing all {len(final_leads)} jobs"
             )
 
         total_elapsed = time.time() - start_time
-        logger.info(f"[{search_id}] Search complete: {len(final_leads)} jobs returned in {total_elapsed:.1f}s")
+        logger.info("[%s] Search complete: %d jobs returned in %.1fs", search_id, len(final_leads), total_elapsed)
 
         search_progress[search_id].update(
             {
