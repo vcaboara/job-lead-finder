@@ -15,7 +15,14 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
-from .config_manager import get_search_preferences, load_config, save_config, scan_entity, scan_instructions, validate_url
+from .config_manager import (
+    get_search_preferences,
+    load_config,
+    save_config,
+    scan_entity,
+    scan_instructions,
+    validate_url,
+)
 from .job_finder import generate_job_leads, save_to_file
 from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
 from .link_validator import validate_link
@@ -75,10 +82,10 @@ class ValidateLinkRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 def index():
     """Serve the main web UI interface.
-    
+
     Returns:
         HTMLResponse: The main application HTML page.
-        
+
     Raises:
         HTTPException: 500 if template file cannot be read.
     """
@@ -123,7 +130,7 @@ def update_system_instructions(req: SystemInstructionsRequest):
 @app.post("/api/search")
 def search(req: SearchRequest):
     """Search for job leads with timeout protection.
-    
+
     Implements a maximum search timeout of 5 minutes to prevent indefinite hangs.
     Progress can be monitored via /api/search/progress/{search_id} endpoint.
     """
@@ -170,7 +177,7 @@ def search(req: SearchRequest):
             search_id,
             oversample_multiplier,
             initial_request_count,
-            max_retries
+            max_retries,
         )
 
         for attempt in range(max_retries + 1):
@@ -221,7 +228,7 @@ def search(req: SearchRequest):
                 max_retries + 1,
                 request_count,
                 needed,
-                elapsed
+                elapsed,
             )
 
             raw_leads = generate_job_leads(
@@ -255,7 +262,7 @@ def search(req: SearchRequest):
                 "[%s] Filtered to %d valid jobs (removed %d invalid)",
                 search_id,
                 len(valid_leads),
-                len(raw_leads) - len(valid_leads)
+                len(raw_leads) - len(valid_leads),
             )
 
             # Deduplicate by link and filter out hidden jobs
@@ -283,7 +290,7 @@ def search(req: SearchRequest):
                 len(all_valid_leads),
                 hidden_count,
                 duplicate_count,
-                filter_elapsed
+                filter_elapsed,
             )
 
             total_elapsed = time.time() - start_time
@@ -324,12 +331,12 @@ def search(req: SearchRequest):
             ]
             filtered_count = before_filter - len(final_leads)
             if filtered_count > 0:
-                logger.info("[%s] Filtered out %d jobs below score threshold %d", search_id, filtered_count, req.min_score)
+                logger.info(
+                    "[%s] Filtered out %d jobs below score threshold %d", search_id, filtered_count, req.min_score
+                )
         elif should_evaluate and req.min_score > 0 and len(jobs_with_scores) == 0:
             logger.warning(
-                "[%s] Score filter requested but no jobs have scores - showing all %d jobs",
-                search_id,
-                len(final_leads)
+                "[%s] Score filter requested but no jobs have scores - showing all %d jobs", search_id, len(final_leads)
             )
 
         total_elapsed = time.time() - start_time
@@ -364,24 +371,24 @@ def search(req: SearchRequest):
 @app.get("/api/search/progress/{search_id}")
 def get_search_progress(search_id: str):
     """Get real-time progress updates for an active search.
-    
+
     Returns current status, message, elapsed time, and job count for a search.
     Useful for polling during long-running searches.
-    
+
     Args:
         search_id: Unique search identifier from /api/search response
-        
+
     Returns:
         Progress object with status, message, elapsed time, and valid_count
     """
     if search_id not in search_progress:
         raise HTTPException(status_code=404, detail=f"Search {search_id} not found")
-    
+
     progress = search_progress[search_id].copy()
     # Calculate elapsed time if search is still running
     if "start_time" in progress and progress.get("status") not in ["complete", "error", "timeout"]:
         progress["elapsed"] = time.time() - progress["start_time"]
-    
+
     return JSONResponse(progress)
 
 
@@ -521,14 +528,6 @@ def _process_and_filter_leads(raw_leads: list) -> list:
     print(f"_process_and_filter_leads: {len(processed_leads)} passed validation. Filtered: {filtered_reasons}")
 
     return processed_leads
-
-
-@app.get("/api/search/progress/{search_id}")
-def get_search_progress(search_id: str):
-    """Get the current progress of a search operation."""
-    if search_id not in search_progress:
-        raise HTTPException(status_code=404, detail="Search ID not found")
-    return JSONResponse(search_progress[search_id])
 
 
 @app.get("/api/leads")
@@ -671,7 +670,7 @@ def delete_resume():
 @app.get("/api/job-config")
 def get_job_config():
     """Get job search configuration (location, providers, search params).
-    
+
     Returns:
         JSONResponse: Complete configuration including providers, location, and search settings.
     """
@@ -771,8 +770,15 @@ class CompanyLinkRequest(BaseModel):
 
 class CoverLetterRequest(BaseModel):
     """Request model for cover letter generation."""
+
     job_description: str
     resume_text: str | None = None
+
+
+class JobNotesRequest(BaseModel):
+    """Request model for updating job notes."""
+
+    notes: str
 
 
 @app.get("/api/jobs/tracked")
@@ -848,6 +854,26 @@ def set_company_link(job_id: str, req: CompanyLinkRequest):
 
     job = tracker.get_job(job_id)
     return JSONResponse({"message": "Company link updated", "job": job})
+
+
+@app.post("/api/jobs/{job_id}/notes")
+def update_job_notes(job_id: str, req: JobNotesRequest):
+    """Update notes for a job."""
+    tracker = get_tracker()
+
+    # Get existing job to preserve status
+    job = tracker.get_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    current_status = job.get("status", STATUS_NEW)
+    success = tracker.update_status(job_id, current_status, req.notes)
+
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    job = tracker.get_job(job_id)
+    return JSONResponse({"message": "Notes updated", "job": job})
 
 
 @app.post("/api/jobs/{job_id}/cover-letter")

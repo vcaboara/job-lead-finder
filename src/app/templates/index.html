@@ -256,6 +256,103 @@
             text-decoration: underline;
         }
 
+        .job-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e0e0e0;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .job-actions select {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.85em;
+            background: white;
+            cursor: pointer;
+        }
+
+        .job-actions button {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.85em;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        .job-actions button:hover {
+            opacity: 0.8;
+        }
+
+        .btn-hide {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-notes {
+            background: #2196F3;
+            color: white;
+        }
+
+        .job-notes {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .job-notes.show {
+            display: block;
+        }
+
+        .job-notes textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9em;
+            resize: vertical;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 0.75em;
+            font-weight: 600;
+            text-transform: uppercase;
+            margin-left: 8px;
+        }
+
+        .status-badge.new {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .status-badge.applied {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .status-badge.interviewing {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .status-badge.offer {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .status-badge.rejected {
+            background: #ffebee;
+            color: #d32f2f;
+        }
+
         .status {
             text-align: center;
             padding: 20px;
@@ -601,10 +698,136 @@
                     '<span class="source-badge" title="Direct link to company career page">🎯 Direct Company Link</span>' :
                     (lead.source ? `<span class="source-badge aggregator" title="Job board aggregator">${lead.source}</span>` : '');
 
-                return `<div class="lead-card"><h3>${lead.title}${sourceBadge}</h3><div class="company">${lead.company}</div><div class="location">📍 ${lead.location}</div><div class="summary">${lead.summary}</div>${scoreSection}<a href="${lead.link}" target="_blank">View on site →</a></div>`;
+                const statusBadge = lead.tracking_status && lead.tracking_status !== 'new' ?
+                    `<span class="status-badge ${lead.tracking_status}">${lead.tracking_status}</span>` : '';
+
+                const jobId = lead.job_id || generateJobId(lead);
+                const currentStatus = lead.tracking_status || 'new';
+                const notes = lead.tracking_notes || '';
+
+                return `<div class="lead-card" data-job-id="${jobId}">
+                    <h3>${lead.title}${sourceBadge}${statusBadge}</h3>
+                    <div class="company">${lead.company}</div>
+                    <div class="location">📍 ${lead.location}</div>
+                    <div class="summary">${lead.summary}</div>
+                    ${scoreSection}
+                    <a href="${lead.link}" target="_blank">View on site →</a>
+                    <div class="job-actions">
+                        <select class="status-select" data-job-id="${jobId}" onchange="updateJobStatus('${jobId}', this.value)">
+                            <option value="new" ${currentStatus === 'new' ? 'selected' : ''}>New</option>
+                            <option value="applied" ${currentStatus === 'applied' ? 'selected' : ''}>Applied</option>
+                            <option value="interviewing" ${currentStatus === 'interviewing' ? 'selected' : ''}>Interviewing</option>
+                            <option value="offer" ${currentStatus === 'offer' ? 'selected' : ''}>Offer</option>
+                            <option value="rejected" ${currentStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
+                        </select>
+                        <button class="btn-notes" onclick="toggleNotes('${jobId}')">📝 Notes</button>
+                        <button class="btn-hide" onclick="hideJob('${jobId}')">🚫 Hide</button>
+                    </div>
+                    <div class="job-notes" id="notes-${jobId}">
+                        <textarea placeholder="Add notes about this job..." onblur="saveNotes('${jobId}', this.value)">${notes}</textarea>
+                    </div>
+                </div>`;
             }).join('');
         }
         function showStatus(message, type) { const status = document.getElementById('status'); status.textContent = message; status.className = `status show ${type}`; if (type !== 'loading') { setTimeout(() => status.classList.remove('show'), 5000); } }
+
+        // Job ID generation (client-side hash)
+        function generateJobId(job) {
+            const link = job.link || '';
+            if (link) {
+                // Simple hash function
+                let hash = 0;
+                for (let i = 0; i < link.length; i++) {
+                    const char = link.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash;
+                }
+                return Math.abs(hash).toString(16).substring(0, 16);
+            }
+            const key = `${job.company || ''}::${job.title || ''}`.toLowerCase();
+            let hash = 0;
+            for (let i = 0; i < key.length; i++) {
+                const char = key.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash;
+            }
+            return Math.abs(hash).toString(16).substring(0, 16);
+        }
+
+        // Job tracking functions
+        async function updateJobStatus(jobId, status) {
+            try {
+                const resp = await fetch(`/api/jobs/${jobId}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                if (!resp.ok) throw new Error('Failed to update status');
+
+                // Update status badge in UI
+                const card = document.querySelector(`[data-job-id="${jobId}"]`);
+                if (card) {
+                    const h3 = card.querySelector('h3');
+                    const existingBadge = h3.querySelector('.status-badge');
+                    if (existingBadge) existingBadge.remove();
+
+                    if (status !== 'new') {
+                        const badge = document.createElement('span');
+                        badge.className = `status-badge ${status}`;
+                        badge.textContent = status;
+                        h3.appendChild(badge);
+                    }
+                }
+
+                showStatus(`Job status updated to ${status}`, 'success');
+            } catch (e) {
+                showStatus(`Error updating status: ${e.message}`, 'error');
+                console.error(e);
+            }
+        }
+
+        async function hideJob(jobId) {
+            if (!confirm('Hide this job? It will not appear in future searches.')) return;
+
+            try {
+                const resp = await fetch(`/api/jobs/${jobId}/hide`, { method: 'POST' });
+                if (!resp.ok) throw new Error('Failed to hide job');
+
+                // Remove card from UI
+                const card = document.querySelector(`[data-job-id="${jobId}"]`);
+                if (card) {
+                    card.style.opacity = '0';
+                    setTimeout(() => card.remove(), 300);
+                }
+
+                showStatus('Job hidden successfully', 'success');
+            } catch (e) {
+                showStatus(`Error hiding job: ${e.message}`, 'error');
+                console.error(e);
+            }
+        }
+
+        function toggleNotes(jobId) {
+            const notesDiv = document.getElementById(`notes-${jobId}`);
+            if (notesDiv) {
+                notesDiv.classList.toggle('show');
+            }
+        }
+
+        async function saveNotes(jobId, notes) {
+            try {
+                const resp = await fetch(`/api/jobs/${jobId}/notes`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ notes })
+                });
+                if (!resp.ok) throw new Error('Failed to save notes');
+                showStatus('Notes saved', 'success');
+            } catch (e) {
+                showStatus(`Error saving notes: ${e.message}`, 'error');
+                console.error(e);
+            }
+        }
 
         let progressInterval = null;
 
