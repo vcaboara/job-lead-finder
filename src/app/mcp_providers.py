@@ -327,13 +327,77 @@ class DuckDuckGoMCP(MCPProvider):
             return []
 
 
+class RemoteOKMCP(MCPProvider):
+    """RemoteOK job board - public API, no auth required."""
+
+    def __init__(self):
+        super().__init__("RemoteOK")
+
+    def is_available(self) -> bool:
+        """RemoteOK API is always available."""
+        return True
+
+    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+        """Search RemoteOK jobs via their public API."""
+        try:
+            import httpx
+
+            # RemoteOK API endpoint (no auth needed!)
+            url = "https://remoteok.com/api"
+
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            }
+
+            resp = httpx.get(url, headers=headers, timeout=10.0, follow_redirects=True)
+            resp.raise_for_status()
+
+            all_jobs = resp.json()
+            # First item is metadata, skip it
+            if all_jobs and isinstance(all_jobs[0], dict) and all_jobs[0].get("id") == "legal":
+                all_jobs = all_jobs[1:]
+
+            jobs = []
+            query_lower = query.lower()
+            for job_data in all_jobs:
+                if len(jobs) >= count:
+                    break
+
+                # Filter by query
+                position = job_data.get("position", "").lower()
+                tags = " ".join(job_data.get("tags", [])).lower()
+                description = job_data.get("description", "").lower()
+
+                if not any(term in position or term in tags or term in description for term in query_lower.split()):
+                    continue
+
+                jobs.append(
+                    {
+                        "title": job_data.get("position", "Unknown Position"),
+                        "company": job_data.get("company", "Unknown Company"),
+                        "location": job_data.get("location", "Remote"),
+                        "summary": (
+                            job_data.get("description", "")[:500] or f"Tags: {', '.join(job_data.get('tags', []))}"
+                        ),
+                        "link": job_data.get("url", f"https://remoteok.com/remote-jobs/{job_data.get('slug', '')}"),
+                        "source": "RemoteOK",
+                    }
+                )
+
+            return jobs
+        except Exception as e:
+            print(f"RemoteOK MCP error: {e}")
+            return []
+
+
 class MCPAggregator:
     """Aggregates results from multiple MCP providers."""
 
     def __init__(self, providers: Optional[List[MCPProvider]] = None):
-        # Default: GitHub (primary - real job postings) and DuckDuckGo (secondary)
-        # LinkedIn removed from defaults (requires browser cookies)
-        self.providers = providers or [GitHubJobsMCP(), DuckDuckGoMCP()]
+        # Default: RemoteOK (real job board API) and DuckDuckGo (web search)
+        # These provide actual diverse job postings
+        # LinkedIn removed (requires cookies), GitHub removed (just finds random repos)
+        self.providers = providers or [RemoteOKMCP(), DuckDuckGoMCP()]
 
     def get_available_providers(self) -> List[MCPProvider]:
         """Get list of available MCP providers."""

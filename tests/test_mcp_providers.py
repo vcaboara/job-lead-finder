@@ -106,11 +106,11 @@ class TestMCPAggregator:
     """Test MCPAggregator class."""
 
     def test_aggregator_initialization(self):
-        """Test MCPAggregator initializes with default providers."""
+        """Test MCPAggregator initialization with default providers."""
         agg = MCPAggregator()
-        assert len(agg.providers) == 2  # DuckDuckGo and GitHub (LinkedIn removed)
+        assert len(agg.providers) == 2  # RemoteOK and DuckDuckGo
+        assert any(p.name == "RemoteOK" for p in agg.providers)
         assert any(p.name == "DuckDuckGo" for p in agg.providers)
-        assert any(p.name == "GitHub" for p in agg.providers)
 
     def test_aggregator_custom_providers(self):
         """Test MCPAggregator with custom provider list."""
@@ -123,29 +123,29 @@ class TestMCPAggregator:
         assert agg.providers[0].name == "Custom"
 
     @patch("app.mcp_providers.DuckDuckGoMCP.is_available")
-    @patch("app.mcp_providers.GitHubJobsMCP.is_available")
-    def test_get_available_providers(self, mock_github, mock_ddg):
+    @patch("app.mcp_providers.RemoteOKMCP.is_available")
+    def test_get_available_providers(self, mock_remoteok, mock_ddg):
         """Test get_available_providers filters correctly."""
         mock_ddg.return_value = True
-        mock_github.return_value = False
+        mock_remoteok.return_value = False
 
         agg = MCPAggregator()
         available = agg.get_available_providers()
 
         assert len(available) == 1  # Only DuckDuckGo is available
         assert any(p.name == "DuckDuckGo" for p in available)
-        assert not any(p.name == "GitHub" for p in available)
+        assert not any(p.name == "RemoteOK" for p in available)
 
     @patch("app.mcp_providers.DuckDuckGoMCP.search_jobs")
     @patch("app.mcp_providers.DuckDuckGoMCP.is_available")
     @patch("app.mcp_providers.LinkedInMCP.is_available")
-    @patch("app.mcp_providers.GitHubJobsMCP.is_available")
-    def test_search_jobs_aggregation(self, mock_github_avail, mock_linkedin_avail, mock_ddg_avail, mock_search):
+    @patch("app.mcp_providers.RemoteOKMCP.is_available")
+    def test_search_jobs_aggregation(self, mock_remoteok_avail, mock_linkedin_avail, mock_ddg_avail, mock_search):
         """Test search_jobs aggregates from multiple providers."""
         # Only DuckDuckGo available
         mock_ddg_avail.return_value = True
         mock_linkedin_avail.return_value = False
-        mock_github_avail.return_value = False
+        mock_remoteok_avail.return_value = False
 
         mock_search.return_value = [
             {
@@ -176,12 +176,12 @@ class TestMCPAggregator:
     @patch("app.mcp_providers.DuckDuckGoMCP.search_jobs")
     @patch("app.mcp_providers.DuckDuckGoMCP.is_available")
     @patch("app.mcp_providers.LinkedInMCP.is_available")
-    @patch("app.mcp_providers.GitHubJobsMCP.is_available")
-    def test_deduplication(self, mock_github_avail, mock_linkedin_avail, mock_ddg_avail, mock_search):
+    @patch("app.mcp_providers.RemoteOKMCP.is_available")
+    def test_deduplication(self, mock_remoteok_avail, mock_linkedin_avail, mock_ddg_avail, mock_search):
         """Test deduplication removes duplicate job links."""
         mock_ddg_avail.return_value = True
         mock_linkedin_avail.return_value = False
-        mock_github_avail.return_value = False
+        mock_remoteok_avail.return_value = False
 
         # Return duplicate jobs
         mock_search.return_value = [
@@ -212,16 +212,12 @@ class TestMCPAggregator:
 
     @patch("app.mcp_providers.DuckDuckGoMCP.is_available")
     @patch("app.mcp_providers.LinkedInMCP.is_available")
-    @patch("app.mcp_providers.GitHubJobsMCP.is_available")
-    def test_no_providers_available(self, mock_github, mock_linkedin, mock_ddg):
+    @patch("app.mcp_providers.RemoteOKMCP.is_available")
+    def test_no_providers_available(self, mock_remoteok, mock_linkedin, mock_ddg):
         """Test search_jobs returns empty list when no providers available."""
         mock_ddg.return_value = False
         mock_linkedin.return_value = False
-        mock_github.return_value = False
-
-        agg = MCPAggregator()
-        jobs = agg.search_jobs("python developer", count_per_provider=5)
-        mock_github.return_value = False
+        mock_remoteok.return_value = False
 
         agg = MCPAggregator()
         jobs = agg.search_jobs("python developer", count_per_provider=5)
