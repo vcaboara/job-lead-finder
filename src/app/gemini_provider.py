@@ -40,7 +40,14 @@ class GeminiProvider:
       - Set `GOOGLE_API_KEY` environment variable
     """
 
-    def __init__(self, api_key: str | None = None, model: str | None = None):
+    def __init__(self, api_key: str | None = None, model: str | None = None, request_timeout: int = 90):
+        """Initialize Gemini provider.
+        
+        Args:
+            api_key: Google API key for Gemini (falls back to env vars)
+            model: Model name to use (default: gemini-2.5-flash-preview-09-2025)
+            request_timeout: Request timeout in seconds (default: 90)
+        """
         # Accept either GEMINI_API_KEY (preferred) or GOOGLE_API_KEY for backward compatibility
         self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
@@ -58,6 +65,7 @@ class GeminiProvider:
             pass
         # Default to a modern model that supports google_search tool; allow overriding
         self.model = model or "gemini-2.5-flash-preview-09-2025"
+        self.request_timeout = request_timeout
 
     def evaluate(self, job: Dict[str, Any], resume_text: str) -> Dict[str, Any]:
         """Evaluate a job using the Gemini client.
@@ -321,11 +329,14 @@ class GeminiProvider:
             # Case A: `google.genai` style with Client and models.generate_content
             if hasattr(genai, "Client"):
                 try:
-                    client = genai.Client(api_key=self.api_key)
+                    # Configure httpx client with timeout
+                    import httpx
+                    http_options = httpx.Timeout(timeout=self.request_timeout)
+                    client = genai.Client(api_key=self.api_key, http_options={"timeout": http_options})
                     # Note: google_search tool disabled due to MALFORMED_FUNCTION_CALL errors
                     # and redirect URLs instead of direct links. Simple prompting works better.
                     if verbose:
-                        print(f"gemini_provider: calling generate_content on {use_model}")
+                        print(f"gemini_provider: calling generate_content on {use_model} (timeout={self.request_timeout}s)")
                     try:
                         resp = client.models.generate_content(model=use_model, contents=prompt)
                         if verbose:

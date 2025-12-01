@@ -504,26 +504,26 @@ class CompanyJobsMCP(MCPProvider):
             companies_to_search = profile_companies if profile_companies else self.companies
 
             # Build search query targeting company career pages
-            # Use more companies for better coverage (30 vs 10)
-            companies_str = ", ".join(companies_to_search[:30])  # Top 30 companies
+            # Reduce scope for faster response - use top 15 companies instead of 30
+            companies_str = ", ".join(companies_to_search[:15])  # Top 15 companies
+            
+            # More focused prompt with explicit search constraints to reduce API calls
             search_prompt = (
-                f"Use the google_search tool to find {count} REAL {query} job postings "
-                f"currently listed on company career pages (including {companies_str} and similar companies). "
-                f"CRITICAL: Only return jobs you actually found via google_search. "
-                f"DO NOT make up or hallucinate job URLs. "
-                f"DO NOT generate fake job IDs or paths. "
-                f"Each job MUST have a real, working URL from an actual search result. "
-                f"Include jobs from BOTH large companies (e.g., Google, Microsoft) "
-                f"and smaller tech companies/startups. "
+                f"Find {min(count, 50)} {query} jobs on company career pages. "
+                f"Focus on: {companies_str}. "
+                f"REQUIREMENTS:\n"
+                f"- Use google_search to find REAL job postings\n"
+                f"- Each job needs a direct URL (with job ID/slug)\n"
+                f"- NO fake URLs or hallucinated links\n"
+                f"- NO general /careers pages\n"
             )
             if location:
-                search_prompt += f"Location: {location}. "
+                search_prompt += f"- Location: {location}\n"
             search_prompt += (
-                "Return ONLY a JSON array with this exact format:\n"
-                '[{"title": "Job Title", "company": "Company Name", "location": "City/Remote", '
-                '"summary": "Brief description", "link": "https://company.com/careers/actual-job-url"}]\n'
-                "IMPORTANT: Use only real URLs from your search results. "
-                "If you cannot find enough real jobs, return fewer results."
+                f"\nReturn EXACTLY {min(count, 50)} jobs as JSON array:\n"
+                '[{"title": "Title", "company": "Company", "location": "Location", '
+                '"summary": "Brief desc", "link": "https://real-url"}]\n'
+                "If you can't find enough real jobs, return what you found (minimum 10)."
             )
 
             print(

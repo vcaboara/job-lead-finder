@@ -122,6 +122,11 @@ def update_system_instructions(req: SystemInstructionsRequest):
 
 @app.post("/api/search")
 def search(req: SearchRequest):
+    """Search for job leads with timeout protection.
+    
+    Implements a maximum search timeout of 5 minutes to prevent indefinite hangs.
+    Progress can be monitored via /api/search/progress/{search_id} endpoint.
+    """
     # Allow search without an API key; provider will fallback internally
     # Load resume from file if not provided in request
     resume_text = req.resume
@@ -146,6 +151,9 @@ def search(req: SearchRequest):
 
     logger.info("[%s] Search started: query='%s', count=%d, model=%s", search_id, req.query, req.count, req.model)
 
+    # Maximum search timeout: 5 minutes
+    MAX_SEARCH_TIMEOUT = 300  # seconds
+
     try:
         # Request 10x more jobs to account for filtering (oversample strategy)
         # This helps ensure we get the requested count after validation
@@ -163,6 +171,24 @@ def search(req: SearchRequest):
         )
 
         for attempt in range(max_retries + 1):
+            # Check if we've exceeded maximum search time
+            elapsed_time = time.time() - start_time
+            if elapsed_time > MAX_SEARCH_TIMEOUT:
+                logger.warning(
+                    "[%s] Search timeout after %.1fs (max: %ds) - returning %d jobs found so far",
+                    search_id,
+                    elapsed_time,
+                    MAX_SEARCH_TIMEOUT,
+                    len(all_valid_leads),
+                )
+                search_progress[search_id].update(
+                    {
+                        "status": "timeout",
+                        "message": f"Search timeout after {elapsed_time:.0f}s - returning {len(all_valid_leads)} jobs",
+                    }
+                )
+                break
+
             # Calculate how many more we need
             needed = req.count - len(all_valid_leads)
             if needed <= 0:
@@ -319,6 +345,30 @@ def search(req: SearchRequest):
     except Exception as e:
         search_progress[search_id].update({"status": "error", "message": f"Error: {str(e)}"})
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/api/search/progress/{search_id}")
+def get_search_progress(search_id: str):
+    """Get real-time progress updates for an active search.
+    
+    Returns current status, message, elapsed time, and job count for a search.
+    Useful for polling during long-running searches.
+    
+    Args:
+        search_id: Unique search identifier from /api/search response
+        
+    Returns:
+        Progress object with status, message, elapsed time, and valid_count
+    """
+    if search_id not in search_progress:
+        raise HTTPException(status_code=404, detail=f"Search {search_id} not found")
+    
+    progress = search_progress[search_id].copy()
+    # Calculate elapsed time if search is still running
+    if "start_time" in progress and progress.get("status") not in ["complete", "error", "timeout"]:
+        progress["elapsed"] = time.time() - progress["start_time"]
+    
+    return JSONResponse(progress)
 
 
 def _process_and_filter_leads(raw_leads: list) -> list:
