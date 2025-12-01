@@ -10,8 +10,15 @@ Each MCP can be queried independently and results can be aggregated.
 
 import logging
 import os
+import re
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
+
+try:
+    import httpx
+    HTTPX_AVAILABLE = True
+except ImportError:
+    HTTPX_AVAILABLE = False
 
 try:
     from bs4 import BeautifulSoup
@@ -721,10 +728,11 @@ class WeWorkRemotelyMCP(MCPProvider):
         Returns:
             List of job dictionaries
         """
-        try:
-            import httpx
-            import re
+        if not HTTPX_AVAILABLE:
+            print("WeWorkRemotely MCP error: httpx not installed")
+            return []
             
+        try:
             try:
                 import defusedxml.ElementTree as ET
             except ImportError:

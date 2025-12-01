@@ -293,7 +293,7 @@ class TestWeWorkRemotelyMCP:
         assert provider.name == "WeWorkRemotely"
         assert provider.is_available() is True
 
-    @patch("httpx.get")
+    @patch("app.mcp_providers.httpx.get")
     def test_weworkremotely_search_jobs_success(self, mock_get):
         """Test WeWorkRemotelyMCP RSS feed parsing with mocked response."""
         # Mock RSS response
@@ -336,7 +336,7 @@ class TestWeWorkRemotelyMCP:
             assert job["source"] == "WeWorkRemotely"
             assert job["location"] == "Remote"
 
-    @patch("httpx.get")
+    @patch("app.mcp_providers.httpx.get")
     def test_weworkremotely_query_filtering(self, mock_get):
         """Test query filtering supports short tech terms like Go, R, UI."""
         mock_response = Mock()
@@ -378,7 +378,7 @@ class TestWeWorkRemotelyMCP:
         assert len(jobs) >= 1
         assert any("UI" in job["title"] or "UI" in job["summary"] for job in jobs)
 
-    @patch("httpx.get")
+    @patch("app.mcp_providers.httpx.get")
     def test_weworkremotely_error_handling(self, mock_get):
         """Test error handling when RSS feed is unavailable."""
         # Mock network error
@@ -390,7 +390,7 @@ class TestWeWorkRemotelyMCP:
         # Should return empty list on error
         assert jobs == []
 
-    @patch("httpx.get")
+    @patch("app.mcp_providers.httpx.get")
     def test_weworkremotely_malformed_xml(self, mock_get):
         """Test handling of malformed XML responses."""
         mock_response = Mock()
@@ -404,7 +404,7 @@ class TestWeWorkRemotelyMCP:
         # Should return empty list on parse error
         assert jobs == []
 
-    @patch("httpx.get")
+    @patch("app.mcp_providers.httpx.get")
     def test_weworkremotely_company_extraction(self, mock_get):
         """Test company name extraction from description."""
         mock_response = Mock()
