@@ -7,12 +7,17 @@ Handles persistent configuration for:
 """
 
 import json
+import threading
 from pathlib import Path
 from typing import Any, Dict, List
 
 CONFIG_FILE = Path("config.json")
+_LOCK = threading.Lock()
 
 DEFAULT_CONFIG = {
+    "system_instructions": "",
+    "blocked_entities": [],
+    "region": "",
     "location": {
         "default_location": "United States",
         "prefer_remote": True,
@@ -20,9 +25,10 @@ DEFAULT_CONFIG = {
         "allow_onsite": False,
     },
     "providers": {
+        "companyjobs": {"enabled": True, "name": "CompanyJobs"},
         "remoteok": {"enabled": True, "name": "RemoteOK"},
         "remotive": {"enabled": True, "name": "Remotive"},
-        "duckduckgo": {"enabled": True, "name": "DuckDuckGo"},
+        "duckduckgo": {"enabled": False, "name": "DuckDuckGo"},
         "github": {"enabled": False, "name": "GitHub Jobs"},
         "linkedin": {"enabled": False, "name": "LinkedIn"},
         "indeed": {"enabled": False, "name": "Indeed"},
@@ -41,8 +47,14 @@ def load_config() -> Dict[str, Any]:
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 config = json.load(f)
-            # Merge with defaults to handle new keys
-            return {**DEFAULT_CONFIG, **config}
+            # Deep merge with defaults to handle new keys
+            merged = DEFAULT_CONFIG.copy()
+            for key, value in config.items():
+                if isinstance(value, dict) and key in merged and isinstance(merged[key], dict):
+                    merged[key] = {**merged[key], **value}
+                else:
+                    merged[key] = value
+            return merged
         except Exception as e:
             print(f"Warning: Could not load config: {e}")
     return DEFAULT_CONFIG.copy()
@@ -51,8 +63,9 @@ def load_config() -> Dict[str, Any]:
 def save_config(config: Dict[str, Any]) -> bool:
     """Save configuration to file."""
     try:
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump(config, f, indent=2)
+        with _LOCK:
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2)
         return True
     except Exception as e:
         print(f"Error saving config: {e}")

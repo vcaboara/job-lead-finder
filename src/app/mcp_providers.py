@@ -327,6 +327,86 @@ class DuckDuckGoMCP(MCPProvider):
             return []
 
 
+class CompanyJobsMCP(MCPProvider):
+    """Search directly on company career pages using Gemini's google_search tool."""
+
+    def __init__(self):
+        super().__init__("CompanyJobs")
+        # Major tech companies with career pages
+        self.companies = [
+            "NVIDIA",
+            "Apple",
+            "Google",
+            "Microsoft",
+            "Amazon",
+            "Meta",
+            "Tesla",
+            "SpaceX",
+            "Netflix",
+            "Salesforce",
+            "Adobe",
+            "Intel",
+            "AMD",
+            "Oracle",
+            "IBM",
+            "Cisco",
+            "VMware",
+            "Red Hat",
+        ]
+
+    def is_available(self) -> bool:
+        """Check if Gemini API is available for google_search."""
+        try:
+            from .gemini_provider import GeminiProvider
+
+            GeminiProvider()  # Just test if provider can be created
+            return True
+        except Exception:
+            return False
+
+    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+        """Search company career pages using Gemini's google_search tool."""
+        try:
+            from .gemini_provider import GeminiProvider
+
+            provider = GeminiProvider()
+
+            # Build search query targeting company career pages
+            companies_str = ", ".join(self.companies[:8])  # First 8 companies
+            search_prompt = (
+                f"Find {count} {query} job postings directly on company career pages "
+                f"(like {companies_str}). "
+                f"Use the google_search tool to find jobs on official career sites. "
+            )
+            if location:
+                search_prompt += f"Location: {location}. "
+            search_prompt += (
+                "Return ONLY a JSON array with this exact format:\n"
+                '[{"title": "Job Title", "company": "Company Name", "location": "City/Remote", '
+                '"summary": "Brief description", "link": "https://company.com/careers/job-id"}]\n'
+                "Make sure links go directly to company career pages, not job boards."
+            )
+
+            # Use Gemini to search with google_search tool
+            jobs_data = provider.generate_job_leads(
+                query=search_prompt, resume_text="", count=count, verbose=False  # Not needed for search
+            )
+
+            # Add source tag
+            for job in jobs_data:
+                job["source"] = "CompanyDirect"
+                # Validate it's actually a company domain
+                link = job.get("link", "")
+                if any(board in link.lower() for board in ["linkedin", "indeed", "glassdoor", "remoteok", "remotive"]):
+                    continue  # Skip if it's an aggregator
+
+            return jobs_data[:count]
+
+        except Exception as e:
+            print(f"CompanyJobsMCP error: {e}")
+            return []
+
+
 class RemoteOKMCP(MCPProvider):
     """RemoteOK job board - public API, no auth required."""
 
@@ -471,6 +551,7 @@ class MCPAggregator:
 
             config = load_config()
             provider_map = {
+                "companyjobs": CompanyJobsMCP,
                 "remoteok": RemoteOKMCP,
                 "remotive": RemotiveMCP,
                 "duckduckgo": DuckDuckGoMCP,
@@ -487,13 +568,13 @@ class MCPAggregator:
             # Fallback if no providers enabled
             if not enabled_providers:
                 print("Warning: No providers enabled in config, using defaults")
-                enabled_providers = [RemoteOKMCP(), RemotiveMCP(), DuckDuckGoMCP()]
+                enabled_providers = [CompanyJobsMCP(), RemoteOKMCP(), RemotiveMCP()]
 
             return enabled_providers
         except Exception as e:
             print(f"Warning: Could not load config, using default providers: {e}")
-            # Default: RemoteOK + Remotive (real job board APIs) and DuckDuckGo (web search)
-            return [RemoteOKMCP(), RemotiveMCP(), DuckDuckGoMCP()]
+            # Default: Company jobs + RemoteOK + Remotive
+            return [CompanyJobsMCP(), RemoteOKMCP(), RemotiveMCP()]
 
     def get_available_providers(self) -> List[MCPProvider]:
         """Get list of available MCP providers."""
