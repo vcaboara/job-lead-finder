@@ -390,14 +390,79 @@ class RemoteOKMCP(MCPProvider):
             return []
 
 
+class RemotiveMCP(MCPProvider):
+    """Remotive job board - public API, no auth required."""
+
+    def __init__(self):
+        super().__init__("Remotive")
+
+    def is_available(self) -> bool:
+        """Remotive API is always available."""
+        return True
+
+    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
+        """Search Remotive jobs via their public API."""
+        try:
+            import httpx
+
+            # Remotive API endpoint (no auth needed!)
+            url = "https://remotive.com/api/remote-jobs"
+
+            params = {"limit": count * 5}  # Fetch more, filter down
+
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            }
+
+            resp = httpx.get(url, headers=headers, params=params, timeout=10.0, follow_redirects=True)
+            resp.raise_for_status()
+
+            data = resp.json()
+            all_jobs = data.get("jobs", [])
+
+            jobs = []
+            query_lower = query.lower()
+            for job_data in all_jobs:
+                if len(jobs) >= count:
+                    break
+
+                # Filter by query
+                title = job_data.get("title", "").lower()
+                category = job_data.get("category", "").lower()
+                description = job_data.get("description", "").lower()
+                tags = " ".join(job_data.get("tags", [])).lower()
+
+                if not any(
+                    term in title or term in category or term in description or term in tags
+                    for term in query_lower.split()
+                ):
+                    continue
+
+                jobs.append(
+                    {
+                        "title": job_data.get("title", "Unknown Position"),
+                        "company": job_data.get("company_name", "Unknown Company"),
+                        "location": job_data.get("candidate_required_location", "Remote"),
+                        "summary": job_data.get("description", "")[:500] or f"Category: {job_data.get('category', '')}",
+                        "link": job_data.get("url", ""),
+                        "source": "Remotive",
+                    }
+                )
+
+            return jobs
+        except Exception as e:
+            print(f"Remotive MCP error: {e}")
+            return []
+
+
 class MCPAggregator:
     """Aggregates results from multiple MCP providers."""
 
     def __init__(self, providers: Optional[List[MCPProvider]] = None):
-        # Default: RemoteOK (real job board API) and DuckDuckGo (web search)
-        # These provide actual diverse job postings
+        # Default: RemoteOK + Remotive (real job board APIs) and DuckDuckGo (web search)
+        # These provide actual diverse job postings from 2 major remote job boards
         # LinkedIn removed (requires cookies), GitHub removed (just finds random repos)
-        self.providers = providers or [RemoteOKMCP(), DuckDuckGoMCP()]
+        self.providers = providers or [RemoteOKMCP(), RemotiveMCP(), DuckDuckGoMCP()]
 
     def get_available_providers(self) -> List[MCPProvider]:
         """Get list of available MCP providers."""
