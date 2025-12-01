@@ -4,9 +4,11 @@ Handles persistent configuration for:
 - Job search preferences (location, remote/hybrid/onsite)
 - MCP provider selection (enable/disable sources)
 - Search parameters (count, oversample multiplier)
+- Security: Injection pattern scanning for user inputs
 """
 
 import json
+import re
 import threading
 from pathlib import Path
 from typing import Any, Dict, List
@@ -145,6 +147,83 @@ def update_industry_profile(profile: str) -> bool:
 
 
 def get_industry_profile() -> str:
-    """Get current industry profile."""
+    """Get current industry profile.
+    
+    Returns:
+        str: The current industry profile name (default: 'tech').
+    """
     config = load_config()
     return config.get("industry_profile", "tech")
+
+
+# ============ Security and Validation Functions ============
+
+INJECTION_PATTERNS = [
+    r"(?i)\bignore\b",
+    r"(?i)\bforget\b",
+    r"(?i)\boverride\b",
+    r"(?i)\bsystem\b.*\binstruction",
+    r"(?i)\bjailbreak\b",
+    r"(?i)\bexfiltrate\b",
+    r"(?i)\bleak\b",
+    r"(?i)\bpassword\b",
+    r"(?i)\bapi[_-]?key\b",
+    r"(?i)\btoken\b",
+]
+
+
+def scan_instructions(text: str) -> List[str]:
+    """Scan system instructions for prompt injection attempts.
+    
+    Args:
+        text: The instruction text to scan.
+        
+    Returns:
+        List of pattern names that matched (empty if safe).
+    """
+    findings: List[str] = []
+    for pat in INJECTION_PATTERNS:
+        if re.search(pat, text):
+            findings.append(pat)
+    if len(text) < 10:
+        findings.append("too_short")
+    return findings
+
+
+def scan_entity(entity: str) -> List[str]:
+    """Scan a blocked entity (site/employer) for injection attempts.
+    
+    Args:
+        entity: The entity name/domain to scan.
+        
+    Returns:
+        List of issues found (empty if safe).
+    """
+    findings: List[str] = []
+    # Check for injection patterns
+    for pat in INJECTION_PATTERNS:
+        if re.search(pat, entity):
+            findings.append(pat)
+    # Check for suspicious patterns
+    if len(entity.strip()) < 2:
+        findings.append("too_short")
+    if any(char in entity for char in ["<", ">", "{", "}", ";"]):
+        findings.append("suspicious_chars")
+    return findings
+
+
+def validate_url(url: str) -> bool:
+    """Basic URL validation for blocked sites.
+    
+    Args:
+        url: The URL or domain to validate.
+        
+    Returns:
+        True if the URL appears valid, False otherwise.
+    """
+    if not url or len(url) < 4:
+        return False
+    # Basic domain pattern check
+    pattern = r"^[a-zA-Z0-9][a-zA-Z0-9-_.]*\.[a-zA-Z]{2,}$"
+    return bool(re.match(pattern, url.strip()))
+

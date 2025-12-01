@@ -15,8 +15,7 @@ from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
-from .config_manager import get_search_preferences
-from .config_store import load_config, save_config, scan_entity, scan_instructions, validate_url
+from .config_manager import get_search_preferences, load_config, save_config, scan_entity, scan_instructions, validate_url
 from .job_finder import generate_job_leads, save_to_file
 from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
 from .link_validator import validate_link
@@ -607,9 +606,11 @@ def delete_resume():
 
 @app.get("/api/job-config")
 def get_job_config():
-    """Get job search configuration (location, providers, search params)."""
-    from .config_manager import load_config
-
+    """Get job search configuration (location, providers, search params).
+    
+    Returns:
+        JSONResponse: Complete configuration including providers, location, and search settings.
+    """
     config = load_config()
     return JSONResponse(config)
 
