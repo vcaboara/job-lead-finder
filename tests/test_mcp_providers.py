@@ -305,13 +305,13 @@ class TestWeWorkRemotelyMCP:
     <item>
       <title>Senior Python Developer</title>
       <link>https://weworkremotely.com/remote-jobs/test-company-python-dev</link>
-      <description><strong>TestCorp</strong> - Looking for Python expert</description>
+      <description>&lt;strong&gt;TestCorp&lt;/strong&gt; - Looking for Python expert</description>
       <pubDate>Mon, 01 Dec 2025 10:00:00 +0000</pubDate>
     </item>
     <item>
       <title>Go Backend Engineer</title>
       <link>https://weworkremotely.com/remote-jobs/go-company-backend</link>
-      <description><strong>GoTech</strong> - Backend role with Go</description>
+      <description>&lt;strong&gt;GoTech&lt;/strong&gt; - Backend role with Go</description>
       <pubDate>Mon, 01 Dec 2025 11:00:00 +0000</pubDate>
     </item>
   </channel>
@@ -346,19 +346,19 @@ class TestWeWorkRemotelyMCP:
     <item>
       <title>Go Developer</title>
       <link>https://weworkremotely.com/job1</link>
-      <description><strong>Company</strong> - Go programming</description>
+      <description>&lt;strong&gt;Company&lt;/strong&gt; - Go programming</description>
       <pubDate>Mon, 01 Dec 2025 10:00:00 +0000</pubDate>
     </item>
     <item>
       <title>UI Designer</title>
       <link>https://weworkremotely.com/job2</link>
-      <description><strong>DesignCo</strong> - UI/UX work</description>
+      <description>&lt;strong&gt;DesignCo&lt;/strong&gt; - UI/UX work</description>
       <pubDate>Mon, 01 Dec 2025 11:00:00 +0000</pubDate>
     </item>
     <item>
       <title>Java Developer</title>
       <link>https://weworkremotely.com/job3</link>
-      <description><strong>JavaCo</strong> - Java backend</description>
+      <description>&lt;strong&gt;JavaCo&lt;/strong&gt; - Java backend</description>
       <pubDate>Mon, 01 Dec 2025 12:00:00 +0000</pubDate>
     </item>
   </channel>
@@ -414,7 +414,7 @@ class TestWeWorkRemotelyMCP:
     <item>
       <title>Python Dev</title>
       <link>https://weworkremotely.com/job1</link>
-      <description><strong>AcmeCorp</strong> - Great job at Acme</description>
+      <description>&lt;strong&gt;AcmeCorp&lt;/strong&gt; - Great job at Acme</description>
       <pubDate>Mon, 01 Dec 2025 10:00:00 +0000</pubDate>
     </item>
   </channel>
