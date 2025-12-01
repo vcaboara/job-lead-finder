@@ -108,7 +108,7 @@ def generate_job_leads(
             if leads:
                 # Evaluate each lead if requested
                 if evaluate:
-                    leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
+                    leads = _evaluate_leads(leads, resume_text, provider, verbose)
                 return leads
             else:
                 print("job_finder: Gemini returned 0 leads, using local fallback")
@@ -139,7 +139,7 @@ def generate_job_leads(
     print(f"job_finder: Fallback returned {len(leads)} leads")
     # Evaluate each lead if requested (requires Gemini)
     if evaluate and provider:
-        leads = _evaluate_leads(leads, resume_text, provider, model, verbose)
+        leads = _evaluate_leads(leads, resume_text, provider, verbose)
     return leads
 
 
@@ -147,10 +147,19 @@ def _evaluate_leads(
     leads: List[Dict[str, Any]],
     resume_text: str,
     provider: GeminiProvider,
-    model: str | None = None,
     verbose: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Evaluate each lead against resume and add score/reasoning."""
+    """Evaluate each lead against resume and add score/reasoning.
+    
+    Args:
+        leads: List of job leads to evaluate.
+        resume_text: Candidate's resume text for matching.
+        provider: GeminiProvider instance for job evaluation.
+        verbose: If True, print diagnostic information.
+        
+    Returns:
+        List of evaluated leads with score and reasoning fields added.
+    """
     evaluated = []
     for lead in leads:
         try:

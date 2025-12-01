@@ -3,7 +3,6 @@
 import argparse
 import os
 import json
-from typing import Dict
 
 from dotenv import load_dotenv
 
@@ -184,8 +183,6 @@ def main(argv=None):
             verbose=getattr(args, "verbose", False),
             evaluate=evaluate,
         )
-
-        import json
 
         print(json.dumps({"query": args.query, "leads": leads}, indent=2))
 
