@@ -1,11 +1,19 @@
 """MCP (Model Context Protocol) providers for job search.
 
-This module provides a unified interface for multiple job search MCPs:
-- DuckDuckGo Search MCP (primary - no auth required)
-- GitHub Jobs (via GitHub API)
-- LinkedIn MCP (requires browser cookies - disabled by default)
+DEPRECATED: This module is being migrated to app.providers package.
+New providers should be added to app/providers/ directory.
 
-Each MCP can be queried independently and results can be aggregated.
+Legacy providers still in this file:
+- LinkedInMCP, IndeedMCP, GitHubJobsMCP (deprecated, browser-based)
+- DuckDuckGoMCP (web search fallback)
+- CompanyJobsMCP (Gemini-powered company search)
+- RemoteOKMCP (public API)
+- RemotiveMCP (REST API)
+
+Migrated to app.providers/:
+- WeWorkRemotelyMCP (see app/providers/weworkremotely.py)
+
+For the provider base class and utilities, see app/providers/base.py
 """
 
 import logging
@@ -27,6 +35,8 @@ try:
 except ImportError:
     BS4_AVAILABLE = False
 
+# Import modular providers from new structure
+from .providers.weworkremotely import WeWorkRemotelyMCP
 
 class MCPProvider(ABC):
     """Base class for MCP providers."""
@@ -704,126 +714,8 @@ class RemotiveMCP(MCPProvider):
             return []
 
 
-class WeWorkRemotelyMCP(MCPProvider):
-    """We Work Remotely job board - uses RSS feeds (no auth required)."""
-
-    def __init__(self):
-        super().__init__("WeWorkRemotely")
-
-    def is_available(self) -> bool:
-        """WeWorkRemotely RSS feeds are always available."""
-        return True
-
-    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
-        """Search We Work Remotely jobs via RSS feeds.
-        
-        Uses category RSS feeds to get job postings. Focuses on programming categories
-        for tech jobs.
-        
-        Args:
-            query: Job search query (used for filtering)
-            count: Number of jobs to return
-            location: Optional location filter (We Work Remotely is remote-focused)
-            
-        Returns:
-            List of job dictionaries
-        """
-        if not HTTPX_AVAILABLE:
-            print("WeWorkRemotely MCP error: httpx not installed")
-            return []
-            
-        try:
-            try:
-                import defusedxml.ElementTree as ET
-            except ImportError:
-                # Fallback to standard library if defusedxml not available
-                import xml.etree.ElementTree as ET
-            
-            # Tech-focused RSS feeds
-            categories = [
-                "remote-back-end-programming-jobs",
-                "remote-front-end-programming-jobs",
-                "remote-full-stack-programming-jobs",
-                "remote-devops-sysadmin-jobs",
-            ]
-            
-            headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-            }
-            
-            all_jobs = []
-            query_lower = query.lower()
-            
-            for category in categories:
-                try:
-                    url = f"https://weworkremotely.com/categories/{category}.rss"
-                    resp = httpx.get(url, headers=headers, timeout=10.0, follow_redirects=True)
-                    resp.raise_for_status()
-                    
-                    # Parse RSS XML
-                    root = ET.fromstring(resp.text)
-                    
-                    # RSS items are in channel -> item
-                    for item in root.findall(".//item"):
-                        try:
-                            title = item.find("title").text if item.find("title") is not None else ""
-                            link = item.find("link").text if item.find("link") is not None else ""
-                            description = item.find("description").text if item.find("description") is not None else ""
-                            pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
-                            
-                            # Extract company from title (format: "CompanyName: Job Title")
-                            company = "Unknown Company"
-                            if title and ":" in title:
-                                # Split on first colon to get company name
-                                company = title.split(":", 1)[0].strip()
-                            
-                            # Basic relevance filtering - check if query terms are in title or description
-                            if query_lower:
-                                text_to_search = f"{title} {description}".lower()
-                                # Check if any word in query appears (support short terms like Go, R, UI)
-                                query_words = query_lower.split()
-                                if not any(word in text_to_search for word in query_words):
-                                    continue
-                            
-                            # Clean HTML from description
-                            clean_desc = description
-                            if BS4_AVAILABLE:
-                                # BeautifulSoup already imported at module level
-                                soup = BeautifulSoup(description, "html.parser")
-                                clean_desc = soup.get_text()[:500]
-                            
-                            # Extract job title (remove company prefix)
-                            job_title = title
-                            if ":" in title:
-                                job_title = title.split(":", 1)[1].strip()
-                            
-                            all_jobs.append({
-                                "title": job_title,
-                                "company": company,
-                                "location": "Remote",  # WWR is remote-focused
-                                "summary": clean_desc or job_title,
-                                "link": link,
-                                "source": "WeWorkRemotely",
-                                "posted_date": pub_date,
-                            })
-                            
-                        except Exception as item_error:
-                            # Skip malformed items
-                            continue
-                    
-                except Exception as cat_error:
-                    # Skip failed categories
-                    print(f"WeWorkRemotely category {category} failed: {cat_error}")
-                    continue
-            
-            # Return requested count
-            return all_jobs[:count]
-            
-        except Exception as e:
-            print(f"WeWorkRemotely MCP error: {e}")
-            import traceback
-            traceback.print_exc()
-            return []
+# WeWorkRemotelyMCP has been moved to app/providers/weworkremotely.py
+# It is imported at the top of this file for backward compatibility
 
 
 class MCPAggregator:
