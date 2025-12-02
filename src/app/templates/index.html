@@ -772,7 +772,7 @@ TODO: Fix/update search progress indicator
                 const currentStatus = lead.tracking_status || 'new';
                 const notes = lead.tracking_notes || '';
 
-                return `<div class="lead-card" data-job-id="${jobId}">
+                return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
                     <h3>${escapeHtml(lead.title)}${sourceBadge}${statusBadge}</h3>
                     <div class="company">${escapeHtml(lead.company)}</div>
                     <div class="location">📍 ${escapeHtml(lead.location)}</div>
@@ -780,18 +780,18 @@ TODO: Fix/update search progress indicator
                     ${scoreSection}
                     <a href="${escapeHtml(lead.link)}" target="_blank">View on site →</a>
                     <div class="job-actions">
-                        <select class="status-select" data-job-id="${jobId}">
+                        <select class="status-select" data-job-id="${escapeHtml(jobId)}">
                             <option value="new" ${currentStatus === 'new' ? 'selected' : ''}>New</option>
                             <option value="applied" ${currentStatus === 'applied' ? 'selected' : ''}>Applied</option>
                             <option value="interviewing" ${currentStatus === 'interviewing' ? 'selected' : ''}>Interviewing</option>
                             <option value="offer" ${currentStatus === 'offer' ? 'selected' : ''}>Offer</option>
                             <option value="rejected" ${currentStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
                         </select>
-                        <button class="btn-notes" data-job-id="${jobId}">📝 Notes</button>
-                        <button class="btn-hide" data-job-id="${jobId}">🚫 Hide</button>
+                        <button class="btn-notes" data-job-id="${escapeHtml(jobId)}">📝 Notes</button>
+                        <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">🚫 Hide</button>
                     </div>
-                    <div class="job-notes" id="notes-${jobId}">
-                        <textarea placeholder="Add notes about this job..." data-job-id="${jobId}">${escapeHtml(notes)}</textarea>
+                    <div class="job-notes" id="notes-${escapeHtml(jobId)}">
+                        <textarea placeholder="Add notes about this job..." data-job-id="${escapeHtml(jobId)}">${escapeHtml(notes)}</textarea>
                     </div>
                 </div>`;
             }).join('');
@@ -827,16 +827,16 @@ TODO: Fix/update search progress indicator
         }
         function showStatus(message, type) { const status = document.getElementById('status'); status.textContent = message; status.className = `status show ${type}`; if (type !== 'loading') { setTimeout(() => status.classList.remove('show'), 5000); } }
 
-        // Job ID generation (client-side hash)
+        // Job ID generation (client-side fallback)
+        // Note: Uses simplified hash for performance. Server provides authoritative SHA-256 IDs.
         function generateJobId(job) {
             const link = job.link || '';
             if (link) {
-                // Simple hash function
                 let hash = 0;
                 for (let i = 0; i < link.length; i++) {
                     const char = link.charCodeAt(i);
                     hash = ((hash << 5) - hash) + char;
-                    hash = hash | 0; // Convert to 32-bit integer
+                    hash = hash | 0;
                 }
                 return Math.abs(hash).toString(16).substring(0, 16);
             }
@@ -845,7 +845,7 @@ TODO: Fix/update search progress indicator
             for (let i = 0; i < key.length; i++) {
                 const char = key.charCodeAt(i);
                 hash = ((hash << 5) - hash) + char;
-                hash = hash | 0; // Convert to 32-bit integer
+                hash = hash | 0;
             }
             return Math.abs(hash).toString(16).substring(0, 16);
         }
@@ -1050,7 +1050,7 @@ TODO: Fix/update search progress indicator
                 const statusBadge = status !== 'new' ? `<span class="status-badge ${status}">${escapeHtml(status)}</span>` : '';
                 const trackedDate = job.first_seen ? new Date(job.first_seen).toLocaleDateString() : '';
 
-                return `<div class="lead-card" data-job-id="${jobId}">
+                return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
                     <h3>${escapeHtml(title)}${statusBadge}</h3>
                     <div class="company">${escapeHtml(company)}</div>
                     <div class="location">📍 ${escapeHtml(location)}</div>
@@ -1058,18 +1058,18 @@ TODO: Fix/update search progress indicator
                     ${trackedDate ? `<div style="font-size:0.85em; color:#666; margin-top:8px;">Tracked: ${escapeHtml(trackedDate)}</div>` : ''}
                     <a href="${escapeHtml(link)}" target="_blank">View on site →</a>
                     <div class="job-actions">
-                        <select class="status-select" data-job-id="${jobId}">
+                        <select class="status-select" data-job-id="${escapeHtml(jobId)}">
                             <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
                             <option value="applied" ${status === 'applied' ? 'selected' : ''}>Applied</option>
                             <option value="interviewing" ${status === 'interviewing' ? 'selected' : ''}>Interviewing</option>
                             <option value="offer" ${status === 'offer' ? 'selected' : ''}>Offer</option>
                             <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>Rejected</option>
                         </select>
-                        <button class="btn-notes" data-job-id="${jobId}">📝 Notes</button>
-                        <button class="btn-hide" data-job-id="${jobId}">🗑️ Delete</button>
+                        <button class="btn-notes" data-job-id="${escapeHtml(jobId)}">📝 Notes</button>
+                        <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">🗑️ Delete</button>
                     </div>
-                    <div class="job-notes" id="notes-${jobId}">
-                        <textarea placeholder="Add notes about this job..." data-job-id="${jobId}">${escapeHtml(notes)}</textarea>
+                    <div class="job-notes" id="notes-${escapeHtml(jobId)}">
+                        <textarea placeholder="Add notes about this job..." data-job-id="${escapeHtml(jobId)}">${escapeHtml(notes)}</textarea>
                     </div>
                 </div>`;
             }).join('');
@@ -1107,26 +1107,6 @@ TODO: Fix/update search progress indicator
         async function updateJobStatusAndReload(jobId, status) {
             await updateJobStatus(jobId, status);
             await loadTrackedJobs();
-        }
-
-        function editTrackedJobNotes(jobId, btn) {
-            const card = document.querySelector(`[data-job-id="${jobId}"]`);
-            if (!card) return;
-
-            const notesDiv = card.querySelector('.job-notes textarea');
-            if (notesDiv) {
-                notesDiv.readOnly = false;
-                notesDiv.style.background = 'white';
-                notesDiv.focus();
-                btn.textContent = '💾 Save';
-                btn.onclick = async () => {
-                    await saveNotes(jobId, notesDiv.value);
-                    notesDiv.readOnly = true;
-                    notesDiv.style.background = '#f5f5f5';
-                    btn.textContent = '✏️ Edit Notes';
-                    btn.onclick = () => editTrackedJobNotes(jobId, btn);
-                };
-            }
         }
 
         async function hideTrackedJob(jobId) {
