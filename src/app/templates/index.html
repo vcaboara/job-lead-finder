@@ -742,6 +742,12 @@ TODO: Fix/update search progress indicator
             return doc.body.textContent || '';
         }
 
+        // Validate status is one of the allowed values (defense-in-depth)
+        function validateStatus(status) {
+            const validStatuses = ['new', 'applied', 'interviewing', 'offer', 'rejected'];
+            return validStatuses.includes(status) ? status : 'new';
+        }
+
         async function loadLeads() {
             try { const resp = await fetch('/api/leads'); const data = await resp.json(); displayLeads(data.leads); } catch (e) { console.error('Error loading leads:', e); }
         }
@@ -766,7 +772,7 @@ TODO: Fix/update search progress indicator
                     (lead.source ? `<span class="source-badge aggregator" title="Job board aggregator">${escapeHtml(lead.source)}</span>` : '');
 
                 const statusBadge = lead.tracking_status && lead.tracking_status !== 'new' ?
-                    `<span class="status-badge ${lead.tracking_status}">${escapeHtml(lead.tracking_status)}</span>` : '';
+                    `<span class="status-badge ${validateStatus(lead.tracking_status)}">${escapeHtml(lead.tracking_status)}</span>` : '';
 
                 const jobId = lead.job_id || generateJobId(lead);
                 const currentStatus = lead.tracking_status || 'new';
@@ -1047,7 +1053,7 @@ TODO: Fix/update search progress indicator
                 const location = job.location || 'Location not specified';
                 const summary = job.summary || '';
 
-                const statusBadge = status !== 'new' ? `<span class="status-badge ${status}">${escapeHtml(status)}</span>` : '';
+                const statusBadge = status !== 'new' ? `<span class="status-badge ${validateStatus(status)}">${escapeHtml(status)}</span>` : '';
                 const trackedDate = job.first_seen ? new Date(job.first_seen).toLocaleDateString() : '';
 
                 return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
