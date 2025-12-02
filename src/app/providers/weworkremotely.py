@@ -52,12 +52,7 @@ class WeWorkRemotelyMCP(MCPProvider):
         try:
             import httpx
             import re
-            
-            try:
-                import defusedxml.ElementTree as ET
-            except ImportError:
-                # Fallback to standard library if defusedxml not available
-                import xml.etree.ElementTree as ET
+            import defusedxml.ElementTree as ET
             
             # Tech-focused RSS feeds
             categories = [
@@ -81,7 +76,11 @@ class WeWorkRemotelyMCP(MCPProvider):
                     resp.raise_for_status()
                     
                     # Parse RSS XML
-                    root = ET.fromstring(resp.text)
+                    try:
+                        root = ET.fromstring(resp.text)
+                    except ET.ParseError as e:
+                        logger.warning("Failed to parse RSS XML from %s: %s", url, e)
+                        continue
                     
                     # RSS items are in channel -> item
                     for item in root.findall(".//item"):

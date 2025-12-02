@@ -18,7 +18,6 @@ For the provider base class and utilities, see app/providers/base.py
 
 import logging
 import os
-from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 try:
@@ -31,32 +30,9 @@ except ImportError:
 # Import modular providers from new structure
 from .providers.weworkremotely import WeWorkRemotelyMCP
 
-class MCPProvider(ABC):
-    """Base class for MCP providers."""
-
-    def __init__(self, name: str, enabled: bool = True):
-        self.name = name
-        self.enabled = enabled
-
-    @abstractmethod
-    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
-        """Search for jobs using this MCP.
-
-        Args:
-            query: Job search query (e.g., "python developer")
-            count: Number of jobs to return
-            location: Optional location filter
-            **kwargs: Additional provider-specific parameters
-
-        Returns:
-            List of job dictionaries with keys: title, company, location, summary, link
-        """
-        pass
-
-    @abstractmethod
-    def is_available(self) -> bool:
-        """Check if this MCP is available and configured."""
-        pass
+# Import base class from new modular structure
+# This ensures all providers use the same base class
+from .providers.base import MCPProvider
 
 
 class LinkedInMCP(MCPProvider):
