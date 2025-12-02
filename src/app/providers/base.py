@@ -7,14 +7,16 @@ must implement. Each provider should be a separate module in this package.
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
+# Optional dependency checks - imports are used to set availability flags
+# exported by __init__.py and used by provider implementations
 try:
-    import httpx  # noqa: F401 - Used for availability check
+    import httpx  # noqa: F401
     HTTPX_AVAILABLE = True
 except ImportError:
     HTTPX_AVAILABLE = False
 
 try:
-    from bs4 import BeautifulSoup  # noqa: F401 - Used for availability check
+    from bs4 import BeautifulSoup  # noqa: F401
     BS4_AVAILABLE = True
 except ImportError:
     BS4_AVAILABLE = False
