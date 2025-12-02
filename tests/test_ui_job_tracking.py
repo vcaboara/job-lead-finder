@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -32,18 +33,47 @@ def client(clean_tracker):
     return TestClient(app)
 
 
-def test_update_job_status(client):
+@pytest.fixture
+def mock_search_response():
+    """Mock search response to avoid real API calls."""
+
+    def _mock_search(query="python developer", job_id="test123"):
+        return {
+            "leads": [
+                {
+                    "job_id": job_id,
+                    "title": f"Senior {query}",
+                    "company": "Tech Corp",
+                    "location": "Remote",
+                    "summary": f"Great opportunity for {query}",
+                    "link": f"https://github.com/jobs/{job_id}",  # Use real domain to pass validation
+                    "source": "TestSource",
+                    "status": "new",
+                    "notes": "",
+                    "first_seen": "2025-12-01T00:00:00+00:00",
+                    "last_updated": "2025-12-01T00:00:00+00:00",
+                }
+            ],
+            "count": 1,
+        }
+
+    return _mock_search
+
+
+def test_update_job_status(client, mock_search_response):
     """Test updating job status via API."""
     # First, create a job by searching
-    response = client.post(
-        "/api/search",
-        json={
-            "query": "python developer",
-            "count": 1,
-            "evaluate": False,
-            "min_score": 0,
-        },
-    )
+    with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+        mock_filter.return_value = mock_search_response()["leads"]
+        response = client.post(
+            "/api/search",
+            json={
+                "query": "python developer",
+                "count": 1,
+                "evaluate": False,
+                "min_score": 0,
+            },
+        )
     assert response.status_code == 200
     data = response.json()
     assert len(data["leads"]) > 0
@@ -64,18 +94,20 @@ def test_update_job_status(client):
     assert job_data["status"] == STATUS_APPLIED
 
 
-def test_hide_job(client):
+def test_hide_job(client, mock_search_response):
     """Test hiding a job via API."""
     # Create a job
-    response = client.post(
-        "/api/search",
-        json={
-            "query": "python developer",
-            "count": 1,
-            "evaluate": False,
-            "min_score": 0,
-        },
-    )
+    with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+        mock_filter.return_value = mock_search_response(job_id="hide123")["leads"]
+        response = client.post(
+            "/api/search",
+            json={
+                "query": "python developer",
+                "count": 1,
+                "evaluate": False,
+                "min_score": 0,
+            },
+        )
     assert response.status_code == 200
     data = response.json()
     job = data["leads"][0]
@@ -93,18 +125,20 @@ def test_hide_job(client):
     assert job_data["status"] == STATUS_HIDDEN
 
 
-def test_save_job_notes(client):
+def test_save_job_notes(client, mock_search_response):
     """Test saving notes for a job."""
     # Create a job
-    response = client.post(
-        "/api/search",
-        json={
-            "query": "python developer",
-            "count": 1,
-            "evaluate": False,
-            "min_score": 0,
-        },
-    )
+    with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+        mock_filter.return_value = mock_search_response(job_id="notes123")["leads"]
+        response = client.post(
+            "/api/search",
+            json={
+                "query": "python developer",
+                "count": 1,
+                "evaluate": False,
+                "min_score": 0,
+            },
+        )
     assert response.status_code == 200
     data = response.json()
     job = data["leads"][0]
@@ -162,18 +196,20 @@ def test_job_tracking_persists_across_searches(client):
         assert matching_job.get("tracking_status") == STATUS_APPLIED
 
 
-def test_invalid_status_rejected(client):
+def test_invalid_status_rejected(client, mock_search_response):
     """Test that invalid status values are rejected."""
     # Create a job
-    response = client.post(
-        "/api/search",
-        json={
-            "query": "python developer",
-            "count": 1,
-            "evaluate": False,
-            "min_score": 0,
-        },
-    )
+    with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+        mock_filter.return_value = mock_search_response(job_id="invalid123")["leads"]
+        response = client.post(
+            "/api/search",
+            json={
+                "query": "software engineer",
+                "count": 1,
+                "evaluate": False,
+                "min_score": 0,
+            },
+        )
     assert response.status_code == 200
     data = response.json()
     job = data["leads"][0]
@@ -185,19 +221,21 @@ def test_invalid_status_rejected(client):
     assert "invalid" in response.json()["detail"].lower()
 
 
-def test_get_tracked_jobs(client):
+def test_get_tracked_jobs(client, mock_search_response):
     """Test retrieving all tracked jobs."""
     # Track multiple jobs
     for i in range(3):
-        response = client.post(
-            "/api/search",
-            json={
-                "query": f"python developer {i}",
-                "count": 1,
-                "evaluate": False,
-                "min_score": 0,
-            },
-        )
+        with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+            mock_filter.return_value = mock_search_response(query=f"developer {i}", job_id=f"track{i}")["leads"]
+            response = client.post(
+                "/api/search",
+                json={
+                    "query": f"python developer {i}",
+                    "count": 1,
+                    "evaluate": False,
+                    "min_score": 0,
+                },
+            )
         assert response.status_code == 200
         data = response.json()
         if data["leads"]:

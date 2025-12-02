@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -32,20 +33,49 @@ def client(clean_tracker):
     return TestClient(app)
 
 
-def test_tracked_jobs_endpoint_returns_all_jobs(client):
+@pytest.fixture
+def mock_search_response():
+    """Mock search response to avoid real API calls."""
+
+    def _mock_search(query="python developer", job_id="test123"):
+        return {
+            "leads": [
+                {
+                    "job_id": job_id,
+                    "title": f"Senior {query}",
+                    "company": "Tech Corp",
+                    "location": "Remote",
+                    "summary": f"Great opportunity for {query}",
+                    "link": f"https://github.com/jobs/{job_id}",  # Use real domain to pass validation
+                    "source": "TestSource",
+                    "status": "new",
+                    "notes": "",
+                    "first_seen": "2025-12-01T00:00:00+00:00",
+                    "last_updated": "2025-12-01T00:00:00+00:00",
+                }
+            ],
+            "count": 1,
+        }
+
+    return _mock_search
+
+
+def test_tracked_jobs_endpoint_returns_all_jobs(client, mock_search_response):
     """Test that tracked jobs endpoint returns all tracked jobs."""
     # Track multiple jobs
     job_ids = []
     for i in range(3):
-        response = client.post(
-            "/api/search",
-            json={
-                "query": f"python developer {i}",
-                "count": 1,
-                "evaluate": False,
-                "min_score": 0,
-            },
-        )
+        with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+            mock_filter.return_value = mock_search_response(query=f"developer {i}", job_id=f"track{i}")["leads"]
+            response = client.post(
+                "/api/search",
+                json={
+                    "query": f"python developer {i}",
+                    "count": 1,
+                    "evaluate": False,
+                    "min_score": 0,
+                },
+            )
         assert response.status_code == 200
         data = response.json()
         if data["leads"]:
@@ -64,18 +94,20 @@ def test_tracked_jobs_endpoint_returns_all_jobs(client):
     assert len(tracked["jobs"]) >= len(job_ids)
 
 
-def test_tracked_jobs_includes_metadata(client):
+def test_tracked_jobs_includes_metadata(client, mock_search_response):
     """Test that tracked jobs include all necessary metadata."""
     # Create and track a job
-    response = client.post(
-        "/api/search",
-        json={
-            "query": "python developer",
-            "count": 1,
-            "evaluate": False,
-            "min_score": 0,
-        },
-    )
+    with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+        mock_filter.return_value = mock_search_response(query="python developer", job_id="meta123")["leads"]
+        response = client.post(
+            "/api/search",
+            json={
+                "query": "python developer",
+                "count": 1,
+                "evaluate": False,
+                "min_score": 0,
+            },
+        )
     assert response.status_code == 200
     data = response.json()
     job = data["leads"][0]
@@ -101,70 +133,52 @@ def test_tracked_jobs_includes_metadata(client):
     assert "last_updated" in tracked_job
 
 
-def test_filter_tracked_jobs_by_status(client):
+def test_filter_tracked_jobs_by_status(client, mock_search_response):
     """Test that tracked jobs can be filtered by status (client-side filtering test via API)."""
-    # Track multiple jobs with different statuses
-    tracked_job_ids = []
+    # Track two jobs with different statuses using mocked responses
 
     # First job - set to APPLIED
-    response = client.post(
-        "/api/search",
-        json={"query": "python developer remote", "count": 1, "evaluate": False, "min_score": 0},
-    )
+    with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+        mock_filter.return_value = mock_search_response(query="python developer", job_id="job1_applied")["leads"]
+        response = client.post(
+            "/api/search",
+            json={"query": "python developer remote", "count": 1, "evaluate": False, "min_score": 0},
+        )
     assert response.status_code == 200
     job1 = response.json()["leads"][0]
     job1_id = job1["job_id"]
     status_resp = client.post(f"/api/jobs/{job1_id}/status", json={"status": STATUS_APPLIED})
-    assert status_resp.status_code == 200, f"Failed to update status for job1: {status_resp.json()}"
-    tracked_job_ids.append((job1_id, STATUS_APPLIED))
+    assert status_resp.status_code == 200
 
     # Second job - set to INTERVIEWING
-    response = client.post(
-        "/api/search",
-        json={"query": "senior data engineer", "count": 1, "evaluate": False, "min_score": 0},
-    )
+    with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+        mock_filter.return_value = mock_search_response(query="data engineer", job_id="job2_interviewing")["leads"]
+        response = client.post(
+            "/api/search",
+            json={"query": "senior data engineer", "count": 1, "evaluate": False, "min_score": 0},
+        )
     assert response.status_code == 200
     job2 = response.json()["leads"][0]
     job2_id = job2["job_id"]
+    status_resp = client.post(f"/api/jobs/{job2_id}/status", json={"status": STATUS_INTERVIEWING})
+    assert status_resp.status_code == 200
 
-    # If we got the same job, update status to interviewing (will override previous status)
-    if job2_id == job1_id:
-        # Same job, just verify we have one job with interviewing status
-        status_resp = client.post(f"/api/jobs/{job2_id}/status", json={"status": STATUS_INTERVIEWING})
-        assert status_resp.status_code == 200
+    # Get all tracked jobs
+    response = client.get("/api/jobs/tracked")
+    assert response.status_code == 200
+    tracked = response.json()
 
-        # Get all tracked jobs
-        response = client.get("/api/jobs/tracked")
-        assert response.status_code == 200
-        tracked = response.json()
+    # Verify we can filter by status (simulating client-side filtering)
+    applied_jobs = [j for j in tracked["jobs"] if j.get("status") == STATUS_APPLIED]
+    interviewing_jobs = [j for j in tracked["jobs"] if j.get("status") == STATUS_INTERVIEWING]
 
-        # Should have exactly one job with interviewing status
-        assert len(tracked["jobs"]) == 1
-        assert tracked["jobs"][0]["status"] == STATUS_INTERVIEWING
-    else:
-        # Different jobs, proceed with normal test
-        status_resp = client.post(f"/api/jobs/{job2_id}/status", json={"status": STATUS_INTERVIEWING})
-        assert status_resp.status_code == 200, f"Failed to update status for job2: {status_resp.json()}"
-        tracked_job_ids.append((job2_id, STATUS_INTERVIEWING))
+    # Should have exactly one job in each category
+    assert len(applied_jobs) == 1, f"Expected 1 applied job, got {len(applied_jobs)}"
+    assert len(interviewing_jobs) == 1, f"Expected 1 interviewing job, got {len(interviewing_jobs)}"
 
-        # Get all tracked jobs
-        response = client.get("/api/jobs/tracked")
-        assert response.status_code == 200
-        tracked = response.json()
-
-        # Verify we can filter by status (simulating client-side filtering)
-        applied_jobs = [j for j in tracked["jobs"] if j.get("status") == STATUS_APPLIED]
-        interviewing_jobs = [j for j in tracked["jobs"] if j.get("status") == STATUS_INTERVIEWING]
-
-        # Should have at least one job in each category
-        assert len(applied_jobs) >= 1, f"Expected at least 1 applied job, got {len(applied_jobs)}"
-        assert len(interviewing_jobs) >= 1, f"Expected at least 1 interviewing job, got {len(interviewing_jobs)}"
-
-        # Verify the specific jobs we tracked
-        applied_ids = {j["job_id"] for j in applied_jobs}
-        interviewing_ids = {j["job_id"] for j in interviewing_jobs}
-        assert job1_id in applied_ids, f"Job {job1_id} should be in applied status"
-        assert job2_id in interviewing_ids, f"Job {job2_id} should be in interviewing status"
+    # Verify the specific jobs we tracked
+    assert applied_jobs[0]["job_id"] == job1_id
+    assert interviewing_jobs[0]["job_id"] == job2_id
 
 
 def test_tracked_jobs_empty_when_none_tracked(client):
