@@ -22,6 +22,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Individual provider modules for better maintainability
   - Comprehensive developer documentation in `providers/README.md`
   - Backward compatibility maintained via `providers/__init__.py`
+- **Changelog API Endpoint** - `/api/changelog` endpoint for programmatic access to CHANGELOG.md
+  - Returns changelog content as plain text
+  - Useful for version tracking and automated documentation
 
 ### Security
 

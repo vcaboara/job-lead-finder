@@ -18,7 +18,6 @@ For the provider base class and utilities, see app/providers/base.py
 
 import logging
 import os
-import re
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
