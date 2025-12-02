@@ -734,6 +734,14 @@ TODO: Fix/update search progress indicator
                 .replace(/'/g, "&#039;");
         }
 
+        // Strip HTML tags but keep text content
+        function stripHtml(html) {
+            if (html == null) return '';
+            const tmp = document.createElement('div');
+            tmp.innerHTML = html;
+            return tmp.textContent || tmp.innerText || '';
+        }
+
         async function loadLeads() {
             try { const resp = await fetch('/api/leads'); const data = await resp.json(); displayLeads(data.leads); } catch (e) { console.error('Error loading leads:', e); }
         }
@@ -764,26 +772,26 @@ TODO: Fix/update search progress indicator
                 const currentStatus = lead.tracking_status || 'new';
                 const notes = lead.tracking_notes || '';
 
-                return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
+                return `<div class="lead-card" data-job-id="${jobId}">
                     <h3>${escapeHtml(lead.title)}${sourceBadge}${statusBadge}</h3>
                     <div class="company">${escapeHtml(lead.company)}</div>
                     <div class="location">📍 ${escapeHtml(lead.location)}</div>
-                    <div class="summary">${escapeHtml(lead.summary)}</div>
+                    <div class="summary">${stripHtml(lead.summary)}</div>
                     ${scoreSection}
                     <a href="${escapeHtml(lead.link)}" target="_blank">View on site →</a>
                     <div class="job-actions">
-                        <select class="status-select" data-job-id="${escapeHtml(jobId)}">
+                        <select class="status-select" data-job-id="${jobId}">
                             <option value="new" ${currentStatus === 'new' ? 'selected' : ''}>New</option>
                             <option value="applied" ${currentStatus === 'applied' ? 'selected' : ''}>Applied</option>
                             <option value="interviewing" ${currentStatus === 'interviewing' ? 'selected' : ''}>Interviewing</option>
                             <option value="offer" ${currentStatus === 'offer' ? 'selected' : ''}>Offer</option>
                             <option value="rejected" ${currentStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
                         </select>
-                        <button class="btn-notes" data-job-id="${escapeHtml(jobId)}">📝 Notes</button>
-                        <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">🚫 Hide</button>
+                        <button class="btn-notes" data-job-id="${jobId}">📝 Notes</button>
+                        <button class="btn-hide" data-job-id="${jobId}">🚫 Hide</button>
                     </div>
-                    <div class="job-notes" id="notes-${escapeHtml(jobId)}">
-                        <textarea placeholder="Add notes about this job..." data-job-id="${escapeHtml(jobId)}">${escapeHtml(notes)}</textarea>
+                    <div class="job-notes" id="notes-${jobId}">
+                        <textarea placeholder="Add notes about this job..." data-job-id="${jobId}">${escapeHtml(notes)}</textarea>
                     </div>
                 </div>`;
             }).join('');
@@ -1039,26 +1047,26 @@ TODO: Fix/update search progress indicator
                 const statusBadge = status !== 'new' ? `<span class="status-badge ${escapeHtml(status)}">${escapeHtml(status)}</span>` : '';
                 const trackedDate = job.first_seen ? new Date(job.first_seen).toLocaleDateString() : '';
 
-                return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
+                return `<div class="lead-card" data-job-id="${jobId}">
                     <h3>${escapeHtml(title)}${statusBadge}</h3>
                     <div class="company">${escapeHtml(company)}</div>
                     <div class="location">📍 ${escapeHtml(location)}</div>
-                    ${summary ? `<div class="summary">${escapeHtml(summary)}</div>` : ''}
+                    ${summary ? `<div class="summary">${stripHtml(summary)}</div>` : ''}
                     ${trackedDate ? `<div style="font-size:0.85em; color:#666; margin-top:8px;">Tracked: ${escapeHtml(trackedDate)}</div>` : ''}
                     <a href="${escapeHtml(link)}" target="_blank">View on site →</a>
                     <div class="job-actions">
-                        <select class="status-select" data-job-id="${escapeHtml(jobId)}">
+                        <select class="status-select" data-job-id="${jobId}">
                             <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
                             <option value="applied" ${status === 'applied' ? 'selected' : ''}>Applied</option>
                             <option value="interviewing" ${status === 'interviewing' ? 'selected' : ''}>Interviewing</option>
                             <option value="offer" ${status === 'offer' ? 'selected' : ''}>Offer</option>
                             <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>Rejected</option>
                         </select>
-                        <button class="btn-notes" data-job-id="${escapeHtml(jobId)}">📝 Notes</button>
-                        <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">🗑️ Delete</button>
+                        <button class="btn-notes" data-job-id="${jobId}">📝 Notes</button>
+                        <button class="btn-hide" data-job-id="${jobId}">🗑️ Delete</button>
                     </div>
-                    <div class="job-notes" id="notes-${escapeHtml(jobId)}">
-                        <textarea placeholder="Add notes about this job..." data-job-id="${escapeHtml(jobId)}">${escapeHtml(notes)}</textarea>
+                    <div class="job-notes" id="notes-${jobId}">
+                        <textarea placeholder="Add notes about this job..." data-job-id="${jobId}">${escapeHtml(notes)}</textarea>
                     </div>
                 </div>`;
             }).join('');
