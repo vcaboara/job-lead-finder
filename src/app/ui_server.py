@@ -873,7 +873,7 @@ def update_job_notes(job_id: str, req: JobNotesRequest):
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
     # Re-fetch job to return updated data after the status update
-    job = tracker.get_job(job_id)
+    # No need to re-fetch; job is updated in place
     return JSONResponse({"message": "Notes updated", "job": job})
 
 
