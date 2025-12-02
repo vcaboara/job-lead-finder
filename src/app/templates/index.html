@@ -744,7 +744,7 @@ TODO: Fix/update search progress indicator
 
         // Validate status is one of the allowed values (defense-in-depth)
         function validateStatus(status) {
-            const validStatuses = ['new', 'applied', 'interviewing', 'offer', 'rejected'];
+            const validStatuses = ['new', 'applied', 'interviewing', 'offer', 'rejected', 'hidden'];
             return validStatuses.includes(status) ? status : 'new';
         }
 
