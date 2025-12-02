@@ -5,8 +5,12 @@ from pathlib import Path
 
 def check_structure(file_path):
     """Analyze JSON structure to find nesting issues."""
-    with open(file_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with open(file_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except (json.JSONDecodeError, IOError) as e:
+        print(f"Error reading {file_path}: {e}")
+        return
 
     print(f"File: {file_path}")
     print(f"Type: {type(data)}")
