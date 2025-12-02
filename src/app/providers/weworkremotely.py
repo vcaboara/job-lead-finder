@@ -107,6 +107,7 @@ class WeWorkRemotelyMCP(MCPProvider):
                             # Clean HTML from description
                             clean_desc = description
                             if BS4_AVAILABLE:
+                                # BeautifulSoup is already imported at module level
                                 soup = BeautifulSoup(description, "html.parser")
                                 clean_desc = soup.get_text()[:500]
                             
