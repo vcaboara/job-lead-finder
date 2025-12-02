@@ -22,12 +22,6 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 try:
-    import httpx
-    HTTPX_AVAILABLE = True
-except ImportError:
-    HTTPX_AVAILABLE = False
-
-try:
     from bs4 import BeautifulSoup
 
     BS4_AVAILABLE = True

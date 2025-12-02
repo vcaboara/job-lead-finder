@@ -34,8 +34,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Query filtering now supports short tech terms (Go, R, UI, UX, C#, etc.)
-- Improved code efficiency: moved `re` module import out of nested loop
-- Removed redundant `BeautifulSoup` import in RSS parsing
 - MCPAggregator deduplication strategy changed from simple concatenation to round-robin
 - Refactored MCP providers from monolithic file to modular package structure
 - Reduced `mcp_providers.py` from 864 to 720 lines

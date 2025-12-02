@@ -48,6 +48,7 @@ class WeWorkRemotelyMCP(MCPProvider):
             
         try:
             import httpx
+            import re
             
             try:
                 import defusedxml.ElementTree as ET
@@ -94,7 +95,6 @@ class WeWorkRemotelyMCP(MCPProvider):
                             
                             # Basic relevance filtering with word boundary matching
                             if query_lower:
-                                import re
                                 text_to_search = f"{title} {description}".lower()
                                 query_words = query_lower.split()
                                 # Use word boundaries for short terms to avoid false positives (e.g., 'Go', 'R', 'UI')

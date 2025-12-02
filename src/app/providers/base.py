@@ -8,13 +8,13 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 try:
-    import httpx
+    import httpx  # noqa: F401 - Used for availability check
     HTTPX_AVAILABLE = True
 except ImportError:
     HTTPX_AVAILABLE = False
 
 try:
-    from bs4 import BeautifulSoup
+    from bs4 import BeautifulSoup  # noqa: F401 - Used for availability check
     BS4_AVAILABLE = True
 except ImportError:
     BS4_AVAILABLE = False
