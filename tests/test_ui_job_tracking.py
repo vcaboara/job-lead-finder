@@ -3,25 +3,34 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from app.job_tracker import STATUS_APPLIED, STATUS_HIDDEN, get_tracker
+from app.job_tracker import STATUS_APPLIED, STATUS_HIDDEN
 from app.ui_server import app
-
-
-@pytest.fixture
-def client():
-    """Create test client."""
-    return TestClient(app)
 
 
 @pytest.fixture(autouse=True)
 def clean_tracker():
-    """Clean tracker before each test."""
-    tracker = get_tracker()
-    tracker.jobs = {}
-    tracker.save()
+    """Clean tracker state before and after each test."""
+    import os
+    from pathlib import Path
+
+    import app.job_tracker as jt
+
+    tracking_file = Path("job_tracking.json")
+    if tracking_file.exists():
+        os.remove(tracking_file)
+    jt._tracker = None
+
     yield
-    tracker.jobs = {}
-    tracker.save()
+
+    if tracking_file.exists():
+        os.remove(tracking_file)
+    jt._tracker = None
+
+
+@pytest.fixture
+def client(clean_tracker):
+    """Create test client after tracker cleanup."""
+    return TestClient(app)
 
 
 def test_update_job_status(client):

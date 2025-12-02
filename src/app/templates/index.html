@@ -664,11 +664,42 @@
                 </div>
             </div>
             <div class="leads-panel">
-                <h2>Results <span id="resultsCount" style="color:#666; font-size:0.9em;"></span></h2>
-                <div class="status" id="status"></div>
-                <div class="leads-list" id="leadsList">
-                    <div class="empty-state">
-                        <p>No leads yet. Search to get started!</p>
+                <h2>Jobs</h2>
+                <div class="config-tabs" style="margin-bottom:20px;">
+                    <button class="config-tab active" data-tab="search-results">Search Results</button>
+                    <button class="config-tab" data-tab="tracked-jobs">Tracked Jobs</button>
+                </div>
+
+                <!-- Search Results Tab -->
+                <div class="config-panel active" id="panel-search-results">
+                    <div class="status" id="status"></div>
+                    <div style="margin-bottom:10px;">
+                        <span id="resultsCount" style="color:#666; font-size:0.9em;"></span>
+                    </div>
+                    <div class="leads-list" id="leadsList">
+                        <div class="empty-state">
+                            <p>No leads yet. Search to get started!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tracked Jobs Tab -->
+                <div class="config-panel" id="panel-tracked-jobs">
+                    <div style="margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap;">
+                        <button onclick="loadTrackedJobs()" style="padding:8px 16px;">🔄 Refresh</button>
+                        <select id="statusFilter" onchange="filterTrackedJobs()" style="padding:8px; border:1px solid #ddd; border-radius:4px;">
+                            <option value="all">All Statuses</option>
+                            <option value="new">New</option>
+                            <option value="applied">Applied</option>
+                            <option value="interviewing">Interviewing</option>
+                            <option value="offer">Offer</option>
+                            <option value="rejected">Rejected</option>
+                        </select>
+                    </div>
+                    <div class="leads-list" id="trackedJobsList">
+                        <div class="empty-state">
+                            <p>No tracked jobs yet. Status changes and notes will appear here!</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -905,6 +936,104 @@
             await performSearch();
         });
 
+        // Tracked jobs functionality
+        let allTrackedJobs = [];
+
+        async function loadTrackedJobs() {
+            try {
+                const resp = await fetch('/api/jobs/tracked');
+                if (!resp.ok) throw new Error('Failed to load tracked jobs');
+                const data = await resp.json();
+                allTrackedJobs = data.jobs || [];
+                filterTrackedJobs();
+            } catch (e) {
+                console.error('Error loading tracked jobs:', e);
+                showStatus(`Error loading tracked jobs: ${e.message}`, 'error');
+            }
+        }
+
+        function filterTrackedJobs() {
+            const filter = document.getElementById('statusFilter').value;
+            const filtered = filter === 'all'
+                ? allTrackedJobs
+                : allTrackedJobs.filter(job => job.status === filter);
+
+            displayTrackedJobs(filtered);
+        }
+
+        function displayTrackedJobs(jobs) {
+            const container = document.getElementById('trackedJobsList');
+
+            if (!jobs || jobs.length === 0) {
+                container.innerHTML = '<div class="empty-state"><p>No tracked jobs with this status.</p></div>';
+                return;
+            }
+
+            container.innerHTML = jobs.map(job => {
+                const jobId = job.job_id || generateJobId(job);
+                const status = job.status || 'new';
+                const notes = job.notes || '';
+                const link = job.link || '#';
+                const title = job.title || 'Untitled';
+                const company = job.company || 'Unknown Company';
+                const location = job.location || 'Location not specified';
+
+                const statusBadge = `<span class="status-badge ${status}">${status}</span>`;
+                const trackedDate = job.tracked_at ? new Date(job.tracked_at).toLocaleDateString() : '';
+
+                return `<div class="lead-card" data-job-id="${jobId}">
+                    <h3>${title}${statusBadge}</h3>
+                    <div class="company">${company}</div>
+                    <div class="location">📍 ${location}</div>
+                    ${trackedDate ? `<div style="font-size:0.85em; color:#666; margin-top:5px;">Tracked: ${trackedDate}</div>` : ''}
+                    ${notes ? `<div class="job-notes show" style="margin-top:10px;"><textarea readonly style="background:#f5f5f5;">${notes}</textarea></div>` : ''}
+                    <a href="${link}" target="_blank" style="margin-top:10px;">View Job →</a>
+                    <div class="job-actions">
+                        <select class="status-select" onchange="updateJobStatusAndReload('${jobId}', this.value)">
+                            <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
+                            <option value="applied" ${status === 'applied' ? 'selected' : ''}>Applied</option>
+                            <option value="interviewing" ${status === 'interviewing' ? 'selected' : ''}>Interviewing</option>
+                            <option value="offer" ${status === 'offer' ? 'selected' : ''}>Offer</option>
+                            <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                        </select>
+                        <button class="btn-notes" onclick="editTrackedJobNotes('${jobId}', this)">✏️ Edit Notes</button>
+                        <button class="btn-hide" onclick="hideTrackedJob('${jobId}')">🗑️ Delete</button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        async function updateJobStatusAndReload(jobId, status) {
+            await updateJobStatus(jobId, status);
+            await loadTrackedJobs();
+        }
+
+        function editTrackedJobNotes(jobId, btn) {
+            const card = document.querySelector(`[data-job-id="${jobId}"]`);
+            if (!card) return;
+
+            const notesDiv = card.querySelector('.job-notes textarea');
+            if (notesDiv) {
+                notesDiv.readOnly = false;
+                notesDiv.style.background = 'white';
+                notesDiv.focus();
+                btn.textContent = '💾 Save';
+                btn.onclick = async () => {
+                    await saveNotes(jobId, notesDiv.value);
+                    notesDiv.readOnly = true;
+                    notesDiv.style.background = '#f5f5f5';
+                    btn.textContent = '✏️ Edit Notes';
+                    btn.onclick = () => editTrackedJobNotes(jobId, btn);
+                };
+            }
+        }
+
+        async function hideTrackedJob(jobId) {
+            if (!confirm('Delete this tracked job? This will also hide it from future searches.')) return;
+            await hideJob(jobId);
+            await loadTrackedJobs();
+        }
+
         // --- Configuration UI ---
         async function loadConfig() {
             try {
@@ -1022,6 +1151,11 @@
                 document.querySelectorAll('.config-panel').forEach(p => p.classList.remove('active'));
                 tab.classList.add('active');
                 document.getElementById(`panel-${targetTab}`).classList.add('active');
+
+                // Load tracked jobs when switching to that tab
+                if (targetTab === 'tracked-jobs') {
+                    loadTrackedJobs();
+                }
             });
         });
 
