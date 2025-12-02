@@ -54,13 +54,15 @@ __all__ = [
 ]
 ```
 
-4. **Register in config_manager.py**:
-```python
-provider_map = {
-    # ... existing providers ...
-    "newsite": NewSiteMCP,
-}
-```
+4. **Register in mcp_providers.py**:
+
+   ```python
+   # In MCPAggregator._load_providers_from_config() method (line 729)
+   provider_map = {
+       # ... existing providers ...
+       "newsite": NewSiteMCP,
+   }
+   ```
 
 5. **Add tests** in `tests/test_mcp_providers.py`
 
@@ -68,7 +70,6 @@ provider_map = {
 
 ### Provider Requirements
 
-Each provider must:
 - Inherit from `MCPProvider`
 - Implement `search_jobs()` method
 - Implement `is_available()` method
