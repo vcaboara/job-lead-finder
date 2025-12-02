@@ -734,12 +734,12 @@ TODO: Fix/update search progress indicator
                 .replace(/'/g, "&#039;");
         }
 
-        // Strip HTML tags but keep text content
+        // Strip HTML tags but keep text content (safe against XSS)
         function stripHtml(html) {
             if (html == null) return '';
-            const tmp = document.createElement('div');
-            tmp.innerHTML = html;
-            return tmp.textContent || tmp.innerText || '';
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            return doc.body.textContent || '';
         }
 
         async function loadLeads() {

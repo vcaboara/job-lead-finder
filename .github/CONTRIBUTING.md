@@ -147,7 +147,7 @@ docker run --rm -v ${PWD}:/workspace -w /workspace job-starter-ci python -m py_c
 ```
 
 #### CI Pipeline Checks:
-- [ ] All tests pass (149+ tests)
+- [ ] All tests pass (172+ tests)
 - [ ] No syntax errors
 - [ ] Code coverage maintained (if coverage enabled)
 - [ ] Docker build succeeds
