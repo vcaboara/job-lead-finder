@@ -2,8 +2,6 @@
 
 from unittest.mock import patch
 
-import pytest
-
 from app.job_tracker import STATUS_APPLIED, STATUS_INTERVIEWING
 
 

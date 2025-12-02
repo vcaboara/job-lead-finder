@@ -11,8 +11,8 @@ from fastapi.testclient import TestClient
 src_path = Path(__file__).parent.parent / "src"
 sys.path.insert(0, str(src_path))
 
-import app.job_tracker as job_tracker_module
-from app.ui_server import app
+import app.job_tracker as job_tracker_module  # noqa: E402
+from app.ui_server import app  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
