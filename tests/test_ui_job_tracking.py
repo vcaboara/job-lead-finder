@@ -1,8 +1,12 @@
 """Tests for job tracking UI interactions."""
 
+import os
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
+import app.job_tracker as jt
 from app.job_tracker import STATUS_APPLIED, STATUS_HIDDEN
 from app.ui_server import app
 
@@ -10,11 +14,6 @@ from app.ui_server import app
 @pytest.fixture(autouse=True)
 def clean_tracker():
     """Clean tracker state before and after each test."""
-    import os
-    from pathlib import Path
-
-    import app.job_tracker as jt
-
     tracking_file = Path("job_tracking.json")
     if tracking_file.exists():
         os.remove(tracking_file)
@@ -120,7 +119,6 @@ def test_save_job_notes(client):
     assert response.status_code == 200
     result = response.json()
     job_data = result.get("job", result)
-    assert job_data["notes"] == test_notes
     assert job_data["notes"] == test_notes
 
 
