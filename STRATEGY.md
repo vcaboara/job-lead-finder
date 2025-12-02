@@ -109,7 +109,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as execut
 
 | Source                    | API           | Auth    | Coverage      | Difficulty |
 | ------------------------- | ------------- | ------- | ------------- | ---------- |
-| **We Work Remotely**      | HTML scraping | None    | ~100 jobs     | Easy       |
+| **We Work Remotely**      | RSS feeds     | None    | ~100 jobs     | Easy       |
 | **Remote.co**             | HTML scraping | None    | ~50 jobs      | Easy       |
 | **FlexJobs**              | Paid API      | API key | 1000+ jobs    | Medium     |
 | **AngelList (Wellfound)** | GraphQL API   | API key | 500+ startups | Medium     |
