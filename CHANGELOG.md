@@ -17,18 +17,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Ensures diversity by cycling through all available providers
   - Prevents single provider from dominating results
   - Test coverage: `test_provider_diversity_round_robin`
-  
+- **Modular Provider Architecture** - New `app/providers/` package structure
+  - `MCPProvider` abstract base class for standardized provider interface
+  - Individual provider modules for better maintainability
+  - Comprehensive developer documentation in `providers/README.md`
+  - Backward compatibility maintained via `providers/__init__.py`
+
 ### Security
+
 - Upgraded XML parsing to use `defusedxml` library to prevent XXE attacks
 - Added `defusedxml>=0.7.0` dependency
 
 ### Changed
+
 - Query filtering now supports short tech terms (Go, R, UI, UX, C#, etc.)
 - Improved code efficiency: moved `re` module import out of nested loop
 - Removed redundant `BeautifulSoup` import in RSS parsing
 - MCPAggregator deduplication strategy changed from simple concatenation to round-robin
+- Refactored MCP providers from monolithic file to modular package structure
+- Reduced `mcp_providers.py` from 864 to 720 lines
 
 ### Fixed
+
+- Company name extraction in WeWorkRemotely RSS feed (was extracting "Headquarters:" instead of company name)
+  - Now correctly parses company from title format: "CompanyName: Job Title"
+  - Job title properly cleaned to remove company prefix
+
+### Test Improvements
+
 - Test isolation: Added mock for `WeWorkRemotelyMCP.is_available()` in `test_no_providers_available`
 - XML test mocks: Escaped HTML entities (`&lt;`, `&gt;`) to allow proper XML parsing
 
