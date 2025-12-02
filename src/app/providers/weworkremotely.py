@@ -4,7 +4,10 @@ RSS-based job board focused on remote positions in tech.
 No authentication required.
 """
 
+import logging
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from .base import MCPProvider, HTTPX_AVAILABLE, BS4_AVAILABLE
 
@@ -43,7 +46,7 @@ class WeWorkRemotelyMCP(MCPProvider):
             List of job dictionaries
         """
         if not HTTPX_AVAILABLE:
-            print("WeWorkRemotely MCP error: httpx not installed")
+            logger.error("httpx not installed")
             return []
             
         try:
@@ -132,14 +135,12 @@ class WeWorkRemotelyMCP(MCPProvider):
                     
                 except Exception as cat_error:
                     # Skip failed categories
-                    print(f"WeWorkRemotely category {category} failed: {cat_error}")
+                    logger.warning("Category %s failed: %s", category, cat_error)
                     continue
             
             # Return requested count
             return all_jobs[:count]
             
         except Exception as e:
-            print(f"WeWorkRemotely MCP error: {e}")
-            import traceback
-            traceback.print_exc()
+            logger.error("WeWorkRemotely MCP error: %s", e, exc_info=True)
             return []
