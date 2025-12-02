@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
 from .config_manager import get_search_preferences, load_config, save_config, scan_entity, scan_instructions, validate_url
@@ -108,7 +108,6 @@ def get_changelog():
     """
     changelog_path = Path(__file__).parent.parent.parent / "CHANGELOG.md"
     try:
-        from fastapi.responses import PlainTextResponse
         return PlainTextResponse(changelog_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="Changelog not found") from exc

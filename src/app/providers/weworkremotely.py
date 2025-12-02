@@ -92,11 +92,16 @@ class WeWorkRemotelyMCP(MCPProvider):
                             if title and ":" in title:
                                 company = title.split(":", 1)[0].strip()
                             
-                            # Basic relevance filtering
+                            # Basic relevance filtering with word boundary matching
                             if query_lower:
+                                import re
                                 text_to_search = f"{title} {description}".lower()
                                 query_words = query_lower.split()
-                                if not any(word in text_to_search for word in query_words):
+                                # Use word boundaries for short terms to avoid false positives (e.g., 'Go', 'R', 'UI')
+                                if not any(
+                                    re.search(rf"\b{re.escape(word)}\b", text_to_search)
+                                    for word in query_words
+                                ):
                                     continue
                             
                             # Clean HTML from description

@@ -330,14 +330,11 @@ class TestMCPAggregator:
             "WeWorkRemotely": sources.count("WeWorkRemotely"),
         }
         
-        # Each provider should contribute jobs (round-robin distribution)
-        assert source_counts["RemoteOK"] >= 1
-        assert source_counts["Remotive"] >= 1
-        assert source_counts["WeWorkRemotely"] >= 1
-        
-        # Should not be all from one provider
-        assert source_counts["RemoteOK"] < 6
-        assert source_counts["Remotive"] < 6
+        # Each provider should contribute exactly 2 jobs (round-robin distribution)
+        # With 6 total jobs and 3 providers, round-robin should distribute evenly
+        assert source_counts["RemoteOK"] == 2
+        assert source_counts["Remotive"] == 2
+        assert source_counts["WeWorkRemotely"] == 2
 
 
 class TestWeWorkRemotelyMCP:
