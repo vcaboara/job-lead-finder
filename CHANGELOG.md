@@ -36,7 +36,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Query filtering now supports short tech terms (Go, R, UI, UX, C#, etc.)
 - MCPAggregator deduplication strategy changed from simple concatenation to round-robin
 - Refactored MCP providers from monolithic file to modular package structure
-- Reduced `mcp_providers.py` from 864 to 720 lines
 
 ### Fixed
 
