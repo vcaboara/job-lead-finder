@@ -352,22 +352,22 @@ class TestWeWorkRemotelyMCP:
     @patch("app.mcp_providers.httpx.get")
     def test_weworkremotely_search_jobs_success(self, mock_get):
         """Test WeWorkRemotelyMCP RSS feed parsing with mocked response."""
-        # Mock RSS response
+        # Mock RSS response (matches actual WWR format: "Company: Job Title")
         mock_response = Mock()
         mock_response.text = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <title>Remote Programming Jobs</title>
     <item>
-      <title>Senior Python Developer</title>
+      <title>TestCorp: Senior Python Developer</title>
       <link>https://weworkremotely.com/remote-jobs/test-company-python-dev</link>
-      <description>&lt;strong&gt;TestCorp&lt;/strong&gt; - Looking for Python expert</description>
+      <description>Looking for Python expert</description>
       <pubDate>Mon, 01 Dec 2025 10:00:00 +0000</pubDate>
     </item>
     <item>
-      <title>Go Backend Engineer</title>
+      <title>GoTech: Go Backend Engineer</title>
       <link>https://weworkremotely.com/remote-jobs/go-company-backend</link>
-      <description>&lt;strong&gt;GoTech&lt;/strong&gt; - Backend role with Go</description>
+      <description>Backend role with Go</description>
       <pubDate>Mon, 01 Dec 2025 11:00:00 +0000</pubDate>
     </item>
   </channel>
@@ -391,6 +391,11 @@ class TestWeWorkRemotelyMCP:
             assert "source" in job
             assert job["source"] == "WeWorkRemotely"
             assert job["location"] == "Remote"
+        
+        # Verify company extraction works
+        python_job = [j for j in jobs if "Python" in j["title"]][0]
+        assert python_job["company"] == "TestCorp"
+        assert python_job["title"] == "Senior Python Developer"  # Company prefix removed
 
     @patch("app.mcp_providers.httpx.get")
     def test_weworkremotely_query_filtering(self, mock_get):
@@ -400,21 +405,21 @@ class TestWeWorkRemotelyMCP:
 <rss version="2.0">
   <channel>
     <item>
-      <title>Go Developer</title>
+      <title>Company: Go Developer</title>
       <link>https://weworkremotely.com/job1</link>
-      <description>&lt;strong&gt;Company&lt;/strong&gt; - Go programming</description>
+      <description>Go programming</description>
       <pubDate>Mon, 01 Dec 2025 10:00:00 +0000</pubDate>
     </item>
     <item>
-      <title>UI Designer</title>
+      <title>DesignCo: UI Designer</title>
       <link>https://weworkremotely.com/job2</link>
-      <description>&lt;strong&gt;DesignCo&lt;/strong&gt; - UI/UX work</description>
+      <description>UI/UX work</description>
       <pubDate>Mon, 01 Dec 2025 11:00:00 +0000</pubDate>
     </item>
     <item>
-      <title>Java Developer</title>
+      <title>JavaCo: Java Developer</title>
       <link>https://weworkremotely.com/job3</link>
-      <description>&lt;strong&gt;JavaCo&lt;/strong&gt; - Java backend</description>
+      <description>Java backend</description>
       <pubDate>Mon, 01 Dec 2025 12:00:00 +0000</pubDate>
     </item>
   </channel>
@@ -462,15 +467,15 @@ class TestWeWorkRemotelyMCP:
 
     @patch("app.mcp_providers.httpx.get")
     def test_weworkremotely_company_extraction(self, mock_get):
-        """Test company name extraction from description."""
+        """Test company name extraction from title."""
         mock_response = Mock()
         mock_response.text = """<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
   <channel>
     <item>
-      <title>Python Dev</title>
+      <title>AcmeCorp: Python Dev</title>
       <link>https://weworkremotely.com/job1</link>
-      <description>&lt;strong&gt;AcmeCorp&lt;/strong&gt; - Great job at Acme</description>
+      <description>Great job at Acme</description>
       <pubDate>Mon, 01 Dec 2025 10:00:00 +0000</pubDate>
     </item>
   </channel>

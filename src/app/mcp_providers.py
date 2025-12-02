@@ -771,13 +771,11 @@ class WeWorkRemotelyMCP(MCPProvider):
                             description = item.find("description").text if item.find("description") is not None else ""
                             pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
                             
-                            # Extract company from description (format: "Company: XYZ")
+                            # Extract company from title (format: "CompanyName: Job Title")
                             company = "Unknown Company"
-                            if description:
-                                # Try to extract company from description
-                                company_match = re.search(r'<strong>([^<]+)</strong>', description)
-                                if company_match:
-                                    company = company_match.group(1)
+                            if title and ":" in title:
+                                # Split on first colon to get company name
+                                company = title.split(":", 1)[0].strip()
                             
                             # Basic relevance filtering - check if query terms are in title or description
                             if query_lower:
@@ -794,11 +792,16 @@ class WeWorkRemotelyMCP(MCPProvider):
                                 soup = BeautifulSoup(description, "html.parser")
                                 clean_desc = soup.get_text()[:500]
                             
+                            # Extract job title (remove company prefix)
+                            job_title = title
+                            if ":" in title:
+                                job_title = title.split(":", 1)[1].strip()
+                            
                             all_jobs.append({
-                                "title": title,
+                                "title": job_title,
                                 "company": company,
                                 "location": "Remote",  # WWR is remote-focused
-                                "summary": clean_desc or title,
+                                "summary": clean_desc or job_title,
                                 "link": link,
                                 "source": "WeWorkRemotely",
                                 "posted_date": pub_date,
