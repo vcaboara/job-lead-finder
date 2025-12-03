@@ -807,11 +807,11 @@ TODO: Fix/update search progress indicator
                 <a href="${sanitizeUrl(link)}" target="_blank">View on site →</a>
                 <div class="job-actions">
                     <select class="status-select" data-job-id="${escapeHtml(jobId)}">
-                        <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
-                        <option value="applied" ${status === 'applied' ? 'selected' : ''}>Applied</option>
-                        <option value="interviewing" ${status === 'interviewing' ? 'selected' : ''}>Interviewing</option>
-                        <option value="offer" ${status === 'offer' ? 'selected' : ''}>Offer</option>
-                        <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                        <option value="new" ${validateStatus(status) === 'new' ? 'selected' : ''}>New</option>
+                        <option value="applied" ${validateStatus(status) === 'applied' ? 'selected' : ''}>Applied</option>
+                        <option value="interviewing" ${validateStatus(status) === 'interviewing' ? 'selected' : ''}>Interviewing</option>
+                        <option value="offer" ${validateStatus(status) === 'offer' ? 'selected' : ''}>Offer</option>
+                        <option value="rejected" ${validateStatus(status) === 'rejected' ? 'selected' : ''}>Rejected</option>
                     </select>
                     <button class="btn-notes" data-job-id="${escapeHtml(jobId)}">📝 Notes</button>
                     <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">${escapeHtml(hideButtonLabel)}</button>
