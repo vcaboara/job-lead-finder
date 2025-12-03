@@ -1,16 +1,23 @@
 """MCP (Model Context Protocol) providers for job search.
 
-This module provides a unified interface for multiple job search MCPs:
-- DuckDuckGo Search MCP (primary - no auth required)
-- GitHub Jobs (via GitHub API)
-- LinkedIn MCP (requires browser cookies - disabled by default)
+DEPRECATED: This module is being migrated to app.providers package.
+New providers should be added to app/providers/ directory.
 
-Each MCP can be queried independently and results can be aggregated.
+Legacy providers still in this file:
+- LinkedInMCP, IndeedMCP, GitHubJobsMCP (deprecated, browser-based)
+- DuckDuckGoMCP (web search fallback)
+- CompanyJobsMCP (Gemini-powered company search)
+- RemoteOKMCP (public API)
+- RemotiveMCP (REST API)
+
+Migrated to app.providers/:
+- WeWorkRemotelyMCP (see app/providers/weworkremotely.py)
+
+For the provider base class and utilities, see app/providers/base.py
 """
 
 import logging
 import os
-from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
 try:
@@ -20,33 +27,12 @@ try:
 except ImportError:
     BS4_AVAILABLE = False
 
+# Import modular providers from new structure
+from .providers.weworkremotely import WeWorkRemotelyMCP
 
-class MCPProvider(ABC):
-    """Base class for MCP providers."""
-
-    def __init__(self, name: str, enabled: bool = True):
-        self.name = name
-        self.enabled = enabled
-
-    @abstractmethod
-    def search_jobs(self, query: str, count: int = 5, location: str | None = None, **kwargs) -> List[Dict[str, Any]]:
-        """Search for jobs using this MCP.
-
-        Args:
-            query: Job search query (e.g., "python developer")
-            count: Number of jobs to return
-            location: Optional location filter
-            **kwargs: Additional provider-specific parameters
-
-        Returns:
-            List of job dictionaries with keys: title, company, location, summary, link
-        """
-        pass
-
-    @abstractmethod
-    def is_available(self) -> bool:
-        """Check if this MCP is available and configured."""
-        pass
+# Import base class from new modular structure
+# This ensures all providers use the same base class
+from .providers.base import MCPProvider
 
 
 class LinkedInMCP(MCPProvider):
@@ -697,6 +683,10 @@ class RemotiveMCP(MCPProvider):
             return []
 
 
+# WeWorkRemotelyMCP has been moved to app/providers/weworkremotely.py
+# It is imported at the top of this file for backward compatibility
+
+
 class MCPAggregator:
     """Aggregates results from multiple MCP providers."""
 
@@ -716,6 +706,7 @@ class MCPAggregator:
                 "companyjobs": CompanyJobsMCP,
                 "remoteok": RemoteOKMCP,
                 "remotive": RemotiveMCP,
+                "weworkremotely": WeWorkRemotelyMCP,
                 "duckduckgo": DuckDuckGoMCP,
                 "github": GitHubJobsMCP,
                 "linkedin": LinkedInMCP,
@@ -806,14 +797,51 @@ class MCPAggregator:
         search_elapsed = time.time() - search_start
         logger.info("All providers completed in %.2fs, total jobs: %d", search_elapsed, len(all_jobs))
 
-        # Deduplicate by link
+        # Deduplicate by link while preserving provider diversity
+        # Strategy: Round-robin through providers to ensure mix of sources
         seen_links = set()
         unique_jobs = []
+        
+        # Group jobs by provider
+        jobs_by_provider = {}
         for job in all_jobs:
-            link = job.get("link", "")
-            if link and link not in seen_links:
-                seen_links.add(link)
-                unique_jobs.append(job)
+            source = job.get("source", "Unknown")
+            if source not in jobs_by_provider:
+                jobs_by_provider[source] = []
+            jobs_by_provider[source].append(job)
+        
+        # Round-robin through providers to get diverse results
+        provider_names = list(jobs_by_provider.keys())
+        provider_indices = {name: 0 for name in provider_names}
+        
+        while len(unique_jobs) < (total_count or len(all_jobs)):
+            added_this_round = False
+            
+            for provider_name in provider_names:
+                idx = provider_indices[provider_name]
+                provider_jobs = jobs_by_provider[provider_name]
+                
+                # Find next unique job from this provider
+                while idx < len(provider_jobs):
+                    job = provider_jobs[idx]
+                    idx += 1
+                    link = job.get("link", "")
+                    
+                    if link and link not in seen_links:
+                        seen_links.add(link)
+                        unique_jobs.append(job)
+                        added_this_round = True
+                        break
+                
+                provider_indices[provider_name] = idx
+                
+                # Stop if we've hit the limit
+                if total_count and len(unique_jobs) >= total_count:
+                    break
+            
+            # Exit if no providers added jobs this round
+            if not added_this_round:
+                break
 
         # Return requested count
         if total_count:

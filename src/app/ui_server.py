@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
 from .config_manager import get_search_preferences, load_config, save_config, scan_entity, scan_instructions, validate_url
@@ -93,6 +93,24 @@ def index():
 def health():
     api_key = os.getenv("GEMINI_API_KEY", "")
     return HealthResponse(status="healthy", api_key_configured=bool(api_key))
+
+
+@app.get("/api/changelog")
+def get_changelog():
+    """Get the project changelog documenting all version changes.
+    
+    Returns:
+        Plain text changelog following Keep a Changelog format.
+        Includes version history, API changes, and feature documentation.
+        
+    Raises:
+        HTTPException: 404 if CHANGELOG.md not found.
+    """
+    changelog_path = Path(__file__).parent.parent.parent / "CHANGELOG.md"
+    try:
+        return PlainTextResponse(changelog_path.read_text(encoding="utf-8"))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Changelog not found") from exc
 
 
 @app.get("/api/config", response_model=ConfigResponse)

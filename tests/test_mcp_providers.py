@@ -2,7 +2,15 @@
 
 from unittest.mock import Mock, patch
 
-from app.mcp_providers import GitHubJobsMCP, IndeedMCP, LinkedInMCP, MCPAggregator, generate_job_leads_via_mcp
+from app.mcp_providers import (
+    GitHubJobsMCP,
+    IndeedMCP,
+    LinkedInMCP,
+    MCPAggregator,
+    MCPProvider,
+    WeWorkRemotelyMCP,
+    generate_job_leads_via_mcp,
+)
 
 
 class TestMCPProviders:
@@ -258,21 +266,225 @@ class TestMCPAggregator:
         assert len(jobs) == 1
         assert jobs[0]["link"] == "https://example.com/1"
 
+    @patch("app.mcp_providers.WeWorkRemotelyMCP.is_available")
     @patch("app.mcp_providers.CompanyJobsMCP.is_available")
     @patch("app.mcp_providers.LinkedInMCP.is_available")
     @patch("app.mcp_providers.RemotiveMCP.is_available")
     @patch("app.mcp_providers.RemoteOKMCP.is_available")
-    def test_no_providers_available(self, mock_remoteok, mock_remotive, mock_linkedin, mock_companyjobs):
+    def test_no_providers_available(self, mock_remoteok, mock_remotive, mock_linkedin, mock_companyjobs, mock_wwr):
         """Test search_jobs returns empty list when no providers available."""
         mock_companyjobs.return_value = False
         mock_linkedin.return_value = False
         mock_remotive.return_value = False
         mock_remoteok.return_value = False
+        mock_wwr.return_value = False
 
         agg = MCPAggregator()
         jobs = agg.search_jobs("python developer", count_per_provider=5)
 
         assert jobs == []
+
+    def test_provider_diversity_round_robin(self):
+        """Test that results include jobs from multiple providers (round-robin)."""
+        # Create mock providers with different jobs
+        provider1 = Mock(spec=MCPProvider)
+        provider1.name = "RemoteOK"
+        provider1.enabled = True
+        provider1.is_available.return_value = True
+        provider1.search_jobs.return_value = [
+            {"title": "Job 1", "link": "https://remoteok.com/1", "source": "RemoteOK"},
+            {"title": "Job 2", "link": "https://remoteok.com/2", "source": "RemoteOK"},
+            {"title": "Job 3", "link": "https://remoteok.com/3", "source": "RemoteOK"},
+        ]
+        
+        provider2 = Mock(spec=MCPProvider)
+        provider2.name = "Remotive"
+        provider2.enabled = True
+        provider2.is_available.return_value = True
+        provider2.search_jobs.return_value = [
+            {"title": "Job A", "link": "https://remotive.io/a", "source": "Remotive"},
+            {"title": "Job B", "link": "https://remotive.io/b", "source": "Remotive"},
+            {"title": "Job C", "link": "https://remotive.io/c", "source": "Remotive"},
+        ]
+        
+        provider3 = Mock(spec=MCPProvider)
+        provider3.name = "WeWorkRemotely"
+        provider3.enabled = True
+        provider3.is_available.return_value = True
+        provider3.search_jobs.return_value = [
+            {"title": "Job X", "link": "https://wwr.com/x", "source": "WeWorkRemotely"},
+            {"title": "Job Y", "link": "https://wwr.com/y", "source": "WeWorkRemotely"},
+        ]
+        
+        agg = MCPAggregator(providers=[provider1, provider2, provider3])
+        jobs = agg.search_jobs("python", count_per_provider=5, total_count=6)
+        
+        # Should get 6 jobs total, distributed across providers (round-robin)
+        assert len(jobs) == 6
+        
+        # Count jobs per source
+        sources = [job["source"] for job in jobs]
+        source_counts = {
+            "RemoteOK": sources.count("RemoteOK"),
+            "Remotive": sources.count("Remotive"),
+            "WeWorkRemotely": sources.count("WeWorkRemotely"),
+        }
+        
+        # Each provider should contribute exactly 2 jobs (round-robin distribution)
+        # With 6 total jobs and 3 providers, round-robin should distribute evenly
+        assert source_counts["RemoteOK"] == 2
+        assert source_counts["Remotive"] == 2
+        assert source_counts["WeWorkRemotely"] == 2
+
+
+class TestWeWorkRemotelyMCP:
+    """Test We Work Remotely MCP provider."""
+
+    def test_weworkremotely_initialization(self):
+        """Test WeWorkRemotelyMCP initializes correctly."""
+        provider = WeWorkRemotelyMCP()
+        assert provider.name == "WeWorkRemotely"
+        assert provider.is_available() is True
+
+    @patch("httpx.get")
+    def test_weworkremotely_search_jobs_success(self, mock_get):
+        """Test WeWorkRemotelyMCP RSS feed parsing with mocked response."""
+        # Mock RSS response (matches actual WWR format: "Company: Job Title")
+        mock_response = Mock()
+        mock_response.text = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Remote Programming Jobs</title>
+    <item>
+      <title>TestCorp: Senior Python Developer</title>
+      <link>https://weworkremotely.com/remote-jobs/test-company-python-dev</link>
+      <description>Looking for Python expert</description>
+      <pubDate>Mon, 01 Dec 2025 10:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>GoTech: Go Backend Engineer</title>
+      <link>https://weworkremotely.com/remote-jobs/go-company-backend</link>
+      <description>Backend role with Go</description>
+      <pubDate>Mon, 01 Dec 2025 11:00:00 +0000</pubDate>
+    </item>
+  </channel>
+</rss>"""
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        provider = WeWorkRemotelyMCP()
+        jobs = provider.search_jobs("python", count=10)
+
+        # Should find Python job (query filtering)
+        assert len(jobs) >= 1
+        assert any("Python" in job["title"] for job in jobs)
+        
+        # Check job structure
+        for job in jobs:
+            assert "title" in job
+            assert "company" in job
+            assert "link" in job
+            assert "summary" in job
+            assert "source" in job
+            assert job["source"] == "WeWorkRemotely"
+            assert job["location"] == "Remote"
+        
+        # Verify company extraction works
+        python_job = [j for j in jobs if "Python" in j["title"]][0]
+        assert python_job["company"] == "TestCorp"
+        assert python_job["title"] == "Senior Python Developer"  # Company prefix removed
+
+    @patch("httpx.get")
+    def test_weworkremotely_query_filtering(self, mock_get):
+        """Test query filtering supports short tech terms like Go, R, UI."""
+        mock_response = Mock()
+        mock_response.text = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>Company: Go Developer</title>
+      <link>https://weworkremotely.com/job1</link>
+      <description>Go programming</description>
+      <pubDate>Mon, 01 Dec 2025 10:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>DesignCo: UI Designer</title>
+      <link>https://weworkremotely.com/job2</link>
+      <description>UI/UX work</description>
+      <pubDate>Mon, 01 Dec 2025 11:00:00 +0000</pubDate>
+    </item>
+    <item>
+      <title>JavaCo: Java Developer</title>
+      <link>https://weworkremotely.com/job3</link>
+      <description>Java backend</description>
+      <pubDate>Mon, 01 Dec 2025 12:00:00 +0000</pubDate>
+    </item>
+  </channel>
+</rss>"""
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        provider = WeWorkRemotelyMCP()
+        
+        # Test short term "Go"
+        jobs = provider.search_jobs("Go", count=10)
+        assert len(jobs) >= 1
+        assert any("Go" in job["title"] or "Go" in job["summary"] for job in jobs)
+        
+        # Test short term "UI"
+        jobs = provider.search_jobs("UI", count=10)
+        assert len(jobs) >= 1
+        assert any("UI" in job["title"] or "UI" in job["summary"] for job in jobs)
+
+    @patch("httpx.get")
+    def test_weworkremotely_error_handling(self, mock_get):
+        """Test error handling when RSS feed is unavailable."""
+        # Mock network error
+        mock_get.side_effect = Exception("Network error")
+
+        provider = WeWorkRemotelyMCP()
+        jobs = provider.search_jobs("python", count=5)
+
+        # Should return empty list on error
+        assert jobs == []
+
+    @patch("httpx.get")
+    def test_weworkremotely_malformed_xml(self, mock_get):
+        """Test handling of malformed XML responses."""
+        mock_response = Mock()
+        mock_response.text = "Not valid XML at all!"
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        provider = WeWorkRemotelyMCP()
+        jobs = provider.search_jobs("python", count=5)
+
+        # Should return empty list on parse error
+        assert jobs == []
+
+    @patch("httpx.get")
+    def test_weworkremotely_company_extraction(self, mock_get):
+        """Test company name extraction from title."""
+        mock_response = Mock()
+        mock_response.text = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>AcmeCorp: Python Dev</title>
+      <link>https://weworkremotely.com/job1</link>
+      <description>Great job at Acme</description>
+      <pubDate>Mon, 01 Dec 2025 10:00:00 +0000</pubDate>
+    </item>
+  </channel>
+</rss>"""
+        mock_response.raise_for_status = Mock()
+        mock_get.return_value = mock_response
+
+        provider = WeWorkRemotelyMCP()
+        jobs = provider.search_jobs("python", count=1)
+
+        assert len(jobs) == 1
+        assert jobs[0]["company"] == "AcmeCorp"
 
 
 class TestGenerateJobLeadsViaMCP:
