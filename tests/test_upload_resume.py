@@ -112,6 +112,28 @@ def test_upload_docx_resume(create_test_docx):
     assert "Jane Smith" in data["resume"]
 
 
+def test_upload_docx_with_macros():
+    """Test that DOCX files with macros are rejected."""
+    from zipfile import ZipFile
+    
+    client = TestClient(app)
+    
+    # Create a malicious DOCX with vbaProject.bin (macro indicator)
+    docx_bytes = BytesIO()
+    with ZipFile(docx_bytes, 'w') as docx_zip:
+        # Add minimal DOCX structure
+        docx_zip.writestr('[Content_Types].xml', '<?xml version="1.0"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"></Types>')
+        docx_zip.writestr('word/document.xml', '<?xml version="1.0"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:p><w:r><w:t>Resume</w:t></w:r></w:p></w:body></w:document>')
+        # Add the macro file - this is what triggers the security check
+        docx_zip.writestr('word/vbaProject.bin', b'malicious macro code')
+    
+    files = {"file": ("resume_with_macro.docx", BytesIO(docx_bytes.getvalue()), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+    resp = client.post("/api/upload/resume", files=files)
+    
+    assert resp.status_code == 400
+    assert "macros" in resp.json()["detail"].lower()
+
+
 def test_upload_with_script_patterns():
     """Test that files with script patterns are rejected."""
     client = TestClient(app)
