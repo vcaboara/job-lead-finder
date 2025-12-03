@@ -769,13 +769,19 @@ def _extract_pdf_text(content: bytes) -> str:
         # Clean up the extracted text
         # Fix multiple spaces between words
         cleaned_text = re.sub(r'  +', ' ', raw_text)
-        # Fix common mojibake (UTF-8 mis-decoded as Windows-1252)
-        cleaned_text = cleaned_text.replace('â€"', '—')    # em dash
-        cleaned_text = cleaned_text.replace('â€“', '–')    # en dash
-        cleaned_text = cleaned_text.replace('â€™', "'")    # apostrophe
-        cleaned_text = cleaned_text.replace('â€œ', '"')    # left double quote
-        cleaned_text = cleaned_text.replace('â€', '"')    # right double quote
-        cleaned_text = cleaned_text.replace('â€¢', '•')    # bullet
+        # Fix common mojibake (UTF-8 mis-decoded as Windows-1252) in one pass
+        mojibake_replacements = {
+            'â€"': '—',    # em dash
+            'â€“': '–',    # en dash
+            'â€™': "'",    # apostrophe
+            'â€œ': '"',    # left double quote
+            'â€\x9d': '"', # right double quote (sometimes appears as 'â€\x9d')
+            'â€': '"',     # right double quote (fallback)
+            'â€¢': '•',    # bullet
+        }
+        # Build regex to match any of the keys
+        pattern = re.compile('|'.join(re.escape(k) for k in mojibake_replacements))
+        cleaned_text = pattern.sub(lambda m: mojibake_replacements[m.group(0)], cleaned_text)
         # Normalize line breaks
         cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_text)
         
