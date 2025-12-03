@@ -516,8 +516,9 @@ TODO: Fix/update search progress indicator
                             value="python remote automation" required>
                     </div>
                     <div class="form-group">
-                        <label>Resume (optional)</label>
-                        <input type="file" id="resumeFile" accept=".txt,.md" style="width:100%; margin-bottom:8px;">
+                        <label>Resume (optional - supports .txt, .md, .pdf, .docx)</label>
+                        <input type="file" id="resumeFile" accept=".txt,.md,.pdf,.docx"
+                            style="width:100%; margin-bottom:8px;">
                         <div style="display:flex; gap:8px; margin-bottom:8px;">
                             <button type="button" id="uploadResumeBtn"
                                 style="flex:1; padding:6px 12px; font-size:0.9em;">Upload</button>
