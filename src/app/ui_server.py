@@ -770,7 +770,7 @@ def _extract_pdf_text(content: bytes) -> str:
         cleaned_text = re.sub(r'  +', ' ', raw_text)
         # Fix common mojibake (UTF-8 mis-decoded as Windows-1252)
         cleaned_text = cleaned_text.replace('â€"', '—')    # em dash
-        cleaned_text = cleaned_text.replace('â€"', '–')    # en dash
+        cleaned_text = cleaned_text.replace('â€“', '–')    # en dash
         cleaned_text = cleaned_text.replace('â€™', "'")    # apostrophe
         cleaned_text = cleaned_text.replace('â€œ', '"')    # left double quote
         cleaned_text = cleaned_text.replace('â€', '"')    # right double quote
