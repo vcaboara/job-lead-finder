@@ -879,26 +879,32 @@ TODO: Fix/update search progress indicator
         function showStatus(message, type) { const status = document.getElementById('status'); status.textContent = message; status.className = `status show ${type}`; if (type !== 'loading') { setTimeout(() => status.classList.remove('show'), 5000); } }
 
         // Job ID generation (client-side fallback)
-        // Note: Uses simplified hash for performance. Server provides authoritative SHA-256 IDs.
-        function generateJobId(job) {
+        // Now uses SHA-256 to match server implementation. Returns a Promise<string>.
+        async function generateJobId(job) {
+            const encoder = new TextEncoder();
             const link = job.link || '';
+            let input;
             if (link) {
-                let hash = 0;
-                for (let i = 0; i < link.length; i++) {
-                    const char = link.charCodeAt(i);
-                    hash = ((hash << 5) - hash) + char;
-                    hash = hash | 0;
-                }
-                return Math.abs(hash).toString(16).substring(0, 16);
+                input = link;
+            } else {
+                input = `${job.company || ''}::${job.title || ''}`.toLowerCase();
             }
-            const key = `${job.company || ''}::${job.title || ''}`.toLowerCase();
-            let hash = 0;
-            for (let i = 0; i < key.length; i++) {
-                const char = key.charCodeAt(i);
-                hash = ((hash << 5) - hash) + char;
-                hash = hash | 0;
+            const data = encoder.encode(input);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            return bufferToHex(hashBuffer).substring(0, 64); // 64 hex chars = 256 bits
+        }
+
+        // Helper to convert ArrayBuffer to hex string
+        function bufferToHex(buffer) {
+            const hexCodes = [];
+            const view = new DataView(buffer);
+            for (let i = 0; i < view.byteLength; i++) {
+                const value = view.getUint8(i);
+                const stringValue = value.toString(16);
+                const paddedValue = stringValue.padStart(2, '0');
+                hexCodes.push(paddedValue);
             }
-            return Math.abs(hash).toString(16).substring(0, 16);
+            return hexCodes.join('');
         }
 
         // Job tracking functions
