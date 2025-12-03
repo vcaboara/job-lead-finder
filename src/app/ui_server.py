@@ -691,9 +691,10 @@ async def upload_resume(file: UploadFile = File(...)):
         elif file.filename.lower().endswith(".docx"):
             text = _extract_docx_text(content)
         else:  # .txt or .md
-            text = content.decode("utf-8")
-    except UnicodeDecodeError as exc:
-        raise HTTPException(status_code=400, detail="File must be valid UTF-8 text") from exc
+            try:
+                text = content.decode("utf-8")
+            except UnicodeDecodeError as exc:
+                raise HTTPException(status_code=400, detail="File must be valid UTF-8 text") from exc
     except Exception as exc:
         file_ext = Path(file.filename).suffix[1:].upper() if Path(file.filename).suffix else 'UNKNOWN'
         raise HTTPException(
