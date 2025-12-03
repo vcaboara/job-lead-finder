@@ -40,7 +40,7 @@ class SearchRequest(BaseModel):
     count: int = 5
     model: str | None = None
     evaluate: bool = False
-    min_score: int = 60  # Minimum score threshold for filtering results
+    min_score: int = 40  # Minimum score threshold for filtering results (0-100)
 
 
 class HealthResponse(BaseModel):
@@ -343,6 +343,11 @@ def search(req: SearchRequest):
             filtered_count = before_filter - len(final_leads)
             if filtered_count > 0:
                 logger.info("[%s] Filtered out %d jobs below score threshold %d", search_id, filtered_count, req.min_score)
+                if len(final_leads) == 0:
+                    logger.warning(
+                        "[%s] All %d jobs filtered out by min_score=%d. Consider lowering the score threshold.",
+                        search_id, before_filter, req.min_score
+                    )
         elif should_evaluate and req.min_score > 0 and len(jobs_with_scores) == 0:
             logger.warning(
                 "[%s] Score filter requested but no jobs have scores - showing all %d jobs",

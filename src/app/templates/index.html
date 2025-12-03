@@ -420,8 +420,8 @@
                         <input type="number" id="count" name="count" value="10" min="1" max="50">
                     </div>
                     <div class="form-group">
-                        <label for="minScore">Min Score (0-100, default 60)</label>
-                        <input type="number" id="minScore" name="minScore" value="60" min="0" max="100"
+                        <label for="minScore">Min Score (0-100, default 40)</label>
+                        <input type="number" id="minScore" name="minScore" value="40" min="0" max="100"
                             title="Only show jobs with scores at or above this threshold">
                     </div>
                     <button type="submit">Search</button>
@@ -632,7 +632,7 @@
             const query = document.getElementById('query').value;
             const resume = document.getElementById('resume').value;
             const count = parseInt(document.getElementById('count').value);
-            const minScore = parseInt(document.getElementById('minScore')?.value || 60);
+            const minScore = parseInt(document.getElementById('minScore')?.value || 40);
             const evalEl = document.getElementById('evaluate');
             const evaluate = (!!resume && resume.trim().length > 0) || (evalEl ? !!evalEl.checked : false);
             showStatus('Starting search...', 'loading');
