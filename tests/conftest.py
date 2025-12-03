@@ -2,6 +2,7 @@
 
 import os
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -41,6 +42,7 @@ def mock_search_response():
     """Mock search response to avoid real API calls."""
 
     def _mock_search(query="python developer", job_id="test123"):
+        now = datetime.now(timezone.utc).isoformat()
         return {
             "leads": [
                 {
@@ -53,8 +55,8 @@ def mock_search_response():
                     "source": "TestSource",
                     "status": "new",
                     "notes": "",
-                    "first_seen": "2025-12-01T00:00:00+00:00",
-                    "last_updated": "2025-12-01T00:00:00+00:00",
+                    "first_seen": now,
+                    "last_updated": now,
                 }
             ],
             "count": 1,

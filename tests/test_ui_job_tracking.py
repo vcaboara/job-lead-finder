@@ -138,43 +138,49 @@ def test_save_job_notes_nonexistent_job(client):
     assert "not found" in response.json()["detail"].lower()
 
 
-def test_job_tracking_persists_across_searches(client):
+def test_job_tracking_persists_across_searches(client, mock_search_response):
     """Test that job tracking status persists when same job appears in multiple searches."""
     # First search
-    response = client.post(
-        "/api/search",
-        json={
-            "query": "python developer",
-            "count": 1,
-            "evaluate": False,
-            "min_score": 0,
-        },
-    )
-    assert response.status_code == 200
-    data = response.json()
-    job = data["leads"][0]
-    job_id = job.get("job_id")
+    with patch("app.ui_server.generate_job_leads") as mock_gen, patch(
+        "app.ui_server._process_and_filter_leads"
+    ) as mock_filter:
+        mock_filter.return_value = mock_search_response(job_id="persist_test")["leads"]
+        mock_gen.return_value = mock_filter.return_value
 
-    # Mark as applied
-    response = client.post(f"/api/jobs/{job_id}/status", json={"status": STATUS_APPLIED})
-    assert response.status_code == 200
+        response = client.post(
+            "/api/search",
+            json={
+                "query": "python developer",
+                "count": 1,
+                "evaluate": False,
+                "min_score": 0,
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        job = data["leads"][0]
+        job_id = job.get("job_id")
 
-    # Second search (same query should return same job)
-    response = client.post(
-        "/api/search",
-        json={
-            "query": "python developer",
-            "count": 1,
-            "evaluate": False,
-            "min_score": 0,
-        },
-    )
-    assert response.status_code == 200
-    data = response.json()
+        # Mark as applied
+        response = client.post(f"/api/jobs/{job_id}/status", json={"status": STATUS_APPLIED})
+        assert response.status_code == 200
 
-    # Find the same job (should have tracking_status)
-    matching_job = next((j for j in data["leads"] if j.get("job_id") == job_id), None)
-    if matching_job:  # Job might not appear if different results
+        # Second search (same query should return same job)
+        response = client.post(
+            "/api/search",
+            json={
+                "query": "python developer",
+                "count": 1,
+                "evaluate": False,
+                "min_score": 0,
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+
+        # Find the same job (should have tracking_status)
+        matching_job = next((j for j in data["leads"] if j.get("job_id") == job_id), None)
+        assert matching_job is not None
         assert matching_job.get("tracking_status") == STATUS_APPLIED
 
 
