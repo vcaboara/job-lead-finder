@@ -130,6 +130,14 @@ def test_save_job_notes_exceeds_max_length(client, mock_search_response):
     assert response.status_code == 422  # Validation error
 
 
+def test_save_job_notes_nonexistent_job(client):
+    """Test that updating notes for a non-existent job returns 404."""
+    nonexistent_job_id = "nonexistent_job_12345"
+    response = client.post(f"/api/jobs/{nonexistent_job_id}/notes", json={"notes": "Some notes"})
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+
 def test_job_tracking_persists_across_searches(client):
     """Test that job tracking status persists when same job appears in multiple searches."""
     # First search
