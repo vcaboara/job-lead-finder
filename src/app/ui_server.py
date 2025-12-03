@@ -12,13 +12,20 @@ import time
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict
-from zipfile import ZipFile, BadZipFile
+from zipfile import BadZipFile, ZipFile
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from .config_manager import get_search_preferences, load_config, save_config, scan_entity, scan_instructions, validate_url
+from .config_manager import (
+    get_search_preferences,
+    load_config,
+    save_config,
+    scan_entity,
+    scan_instructions,
+    validate_url,
+)
 from .job_finder import generate_job_leads, save_to_file
 from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
 from .link_validator import validate_link
@@ -26,12 +33,14 @@ from .link_validator import validate_link
 # Optional imports for PDF/DOCX support
 try:
     from pypdf import PdfReader
+
     PYPDF_AVAILABLE = True
 except ImportError:
     PYPDF_AVAILABLE = False
 
 try:
     from docx import Document
+
     PYTHON_DOCX_AVAILABLE = True
 except ImportError:
     PYTHON_DOCX_AVAILABLE = False
@@ -91,10 +100,10 @@ class ValidateLinkRequest(BaseModel):
 @app.get("/", response_class=HTMLResponse)
 def index():
     """Serve the main web UI interface.
-    
+
     Returns:
         HTMLResponse: The main application HTML page.
-        
+
     Raises:
         HTTPException: 500 if template file cannot be read.
     """
@@ -114,11 +123,11 @@ def health():
 @app.get("/api/changelog")
 def get_changelog():
     """Get the project changelog documenting all version changes.
-    
+
     Returns:
         Plain text changelog following Keep a Changelog format.
         Includes version history, API changes, and feature documentation.
-        
+
     Raises:
         HTTPException: 404 if CHANGELOG.md not found.
     """
@@ -157,7 +166,7 @@ def update_system_instructions(req: SystemInstructionsRequest):
 @app.post("/api/search")
 def search(req: SearchRequest):
     """Search for job leads with timeout protection.
-    
+
     Implements a maximum search timeout of 5 minutes to prevent indefinite hangs.
     Progress can be monitored via /api/search/progress/{search_id} endpoint.
     """
@@ -204,7 +213,7 @@ def search(req: SearchRequest):
             search_id,
             oversample_multiplier,
             initial_request_count,
-            max_retries
+            max_retries,
         )
 
         for attempt in range(max_retries + 1):
@@ -255,7 +264,7 @@ def search(req: SearchRequest):
                 max_retries + 1,
                 request_count,
                 needed,
-                elapsed
+                elapsed,
             )
 
             raw_leads = generate_job_leads(
@@ -289,7 +298,7 @@ def search(req: SearchRequest):
                 "[%s] Filtered to %d valid jobs (removed %d invalid)",
                 search_id,
                 len(valid_leads),
-                len(raw_leads) - len(valid_leads)
+                len(raw_leads) - len(valid_leads),
             )
 
             # Deduplicate by link and filter out hidden jobs
@@ -317,7 +326,7 @@ def search(req: SearchRequest):
                 len(all_valid_leads),
                 hidden_count,
                 duplicate_count,
-                filter_elapsed
+                filter_elapsed,
             )
 
             total_elapsed = time.time() - start_time
@@ -341,9 +350,9 @@ def search(req: SearchRequest):
             from .job_tracker import generate_job_id
 
             job_id = generate_job_id(lead)
+            lead["job_id"] = job_id  # Always include job_id
             tracked_job = tracker.get_job(job_id)
             if tracked_job:
-                lead["job_id"] = job_id
                 lead["tracking_status"] = tracked_job.get("status", STATUS_NEW)
                 lead["tracking_notes"] = tracked_job.get("notes", "")
                 lead["company_link"] = tracked_job.get("company_link")
@@ -358,17 +367,19 @@ def search(req: SearchRequest):
             ]
             filtered_count = before_filter - len(final_leads)
             if filtered_count > 0:
-                logger.info("[%s] Filtered out %d jobs below score threshold %d", search_id, filtered_count, req.min_score)
+                logger.info(
+                    "[%s] Filtered out %d jobs below score threshold %d", search_id, filtered_count, req.min_score
+                )
                 if len(final_leads) == 0:
                     logger.warning(
                         "[%s] All %d jobs filtered out by min_score=%d. Consider lowering the score threshold.",
-                        search_id, before_filter, req.min_score
+                        search_id,
+                        before_filter,
+                        req.min_score,
                     )
         elif should_evaluate and req.min_score > 0 and len(jobs_with_scores) == 0:
             logger.warning(
-                "[%s] Score filter requested but no jobs have scores - showing all %d jobs",
-                search_id,
-                len(final_leads)
+                "[%s] Score filter requested but no jobs have scores - showing all %d jobs", search_id, len(final_leads)
             )
 
         total_elapsed = time.time() - start_time
@@ -403,24 +414,24 @@ def search(req: SearchRequest):
 @app.get("/api/search/progress/{search_id}")
 def get_search_progress(search_id: str):
     """Get real-time progress updates for an active search.
-    
+
     Returns current status, message, elapsed time, and job count for a search.
     Useful for polling during long-running searches.
-    
+
     Args:
         search_id: Unique search identifier from /api/search response
-        
+
     Returns:
         Progress object with status, message, elapsed time, and valid_count
     """
     if search_id not in search_progress:
         raise HTTPException(status_code=404, detail=f"Search {search_id} not found")
-    
+
     progress = search_progress[search_id].copy()
     # Calculate elapsed time if search is still running
     if "start_time" in progress and progress.get("status") not in ["complete", "error", "timeout"]:
         progress["elapsed"] = time.time() - progress["start_time"]
-    
+
     return JSONResponse(progress)
 
 
@@ -648,40 +659,37 @@ def check_link(req: ValidateLinkRequest):
 @app.post("/api/upload/resume")
 async def upload_resume(file: UploadFile = File(...)):
     """Upload resume file for job matching.
-    
+
     Supports: .txt, .md, .pdf, .docx
     Max size: 5MB
     Security: Scans for injection patterns, macros, and malicious content
     """
     MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
     ALLOWED_EXTENSIONS = (".txt", ".md", ".pdf", ".docx")
-    
+
     # Validate file size
     content = await file.read()
     if len(content) > MAX_FILE_SIZE:
         raise HTTPException(
-            status_code=400, 
-            detail=f"File too large (max {MAX_FILE_SIZE // (1024*1024)}MB, got {len(content) // (1024*1024)}MB)"
+            status_code=400,
+            detail=f"File too large (max {MAX_FILE_SIZE // (1024*1024)}MB, got {len(content) // (1024*1024)}MB)",
         )
-    
+
     # Basic file validation before parsing (security)
     if len(content) == 0:
         raise HTTPException(status_code=400, detail="File is empty")
 
     # Validate file type
     if not file.filename or not file.filename.lower().endswith(ALLOWED_EXTENSIONS):
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Unsupported file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
-        )
-    
+        raise HTTPException(status_code=400, detail=f"Unsupported file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
+
     # For binary formats, validate magic numbers before attempting to parse
     if file.filename.lower().endswith(".pdf"):
-        if not content.startswith(b'%PDF'):
+        if not content.startswith(b"%PDF"):
             raise HTTPException(status_code=400, detail="Invalid PDF file (missing PDF header)")
     elif file.filename.lower().endswith(".docx"):
         # DOCX is a ZIP file (PK header)
-        if not content.startswith(b'PK'):
+        if not content.startswith(b"PK"):
             raise HTTPException(status_code=400, detail="Invalid DOCX file (missing ZIP header)")
 
     # Extract text based on file type
@@ -696,95 +704,87 @@ async def upload_resume(file: UploadFile = File(...)):
             except UnicodeDecodeError as exc:
                 raise HTTPException(status_code=400, detail="File must be valid UTF-8 text") from exc
     except Exception as exc:
-        file_ext = Path(file.filename).suffix[1:].upper() if Path(file.filename).suffix else 'UNKNOWN'
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Failed to extract text from {file_ext} file: {str(exc)}"
-        ) from exc
+        file_ext = Path(file.filename).suffix[1:].upper() if Path(file.filename).suffix else "UNKNOWN"
+        raise HTTPException(status_code=400, detail=f"Failed to extract text from {file_ext} file: {str(exc)}") from exc
 
     # Enhanced security checks
     if not text or not text.strip():
         raise HTTPException(status_code=400, detail="File appears to be empty or contains no extractable text")
-    
+
     if len(text) > 500_000:  # 500KB text limit
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Extracted text too large ({len(text)} chars, max 500,000 chars)"
-        )
+        raise HTTPException(status_code=400, detail=f"Extracted text too large ({len(text)} chars, max 500,000 chars)")
 
     # Check for malicious content
     malicious_findings = _check_malicious_content(text)
     if malicious_findings:
         raise HTTPException(
-            status_code=400, 
-            detail={"error": "File rejected due to security concerns", "findings": malicious_findings}
+            status_code=400, detail={"error": "File rejected due to security concerns", "findings": malicious_findings}
         )
 
     # Scan for injection patterns (first 5000 chars)
     findings = scan_instructions(text[:5000])
     if findings:
-        raise HTTPException(
-            status_code=400, 
-            detail={"error": "Rejected by scanner", "findings": findings}
-        )
+        raise HTTPException(status_code=400, detail={"error": "Rejected by scanner", "findings": findings})
 
     # Save to resume.txt
     RESUME_FILE.write_text(text, encoding="utf-8")
 
-    return JSONResponse({
-        "message": "Resume uploaded successfully", 
-        "resume": text, 
-        "filename": file.filename,
-        "size_bytes": len(content),
-        "text_length": len(text)
-    })
+    return JSONResponse(
+        {
+            "message": "Resume uploaded successfully",
+            "resume": text,
+            "filename": file.filename,
+            "size_bytes": len(content),
+            "text_length": len(text),
+        }
+    )
 
 
 def _extract_pdf_text(content: bytes) -> str:
     """Extract text from PDF file.
-    
+
     Args:
         content: PDF file bytes
-        
+
     Returns:
         Extracted text from PDF
-        
+
     Raises:
         Exception: If PDF extraction fails
     """
     if not PYPDF_AVAILABLE:
         raise Exception("pypdf not installed. Install with: pip install pypdf")
-    
+
     try:
         pdf = PdfReader(BytesIO(content))
         text_parts = []
-        
+
         for page in pdf.pages:
             page_text = page.extract_text()
             if page_text:
                 text_parts.append(page_text)
-        
+
         raw_text = "\n".join(text_parts)
-        
+
         # Clean up the extracted text
         # Fix multiple spaces between words
-        cleaned_text = re.sub(r'  +', ' ', raw_text)
+        cleaned_text = re.sub(r"  +", " ", raw_text)
         # Fix common mojibake (UTF-8 mis-decoded as Windows-1252) in one pass
         mojibake_replacements = {
-            'â€"': '—',    # em dash
-            'â€“': '–',    # en dash
-            'â€™': "'",    # apostrophe
-            'â€œ': '"',    # left double quote
-            'â€\x9d': '"', # right double quote (sometimes appears as 'â€\x9d')
-            'â€': '"',     # right double quote (fallback)
-            'â€¢': '•',    # bullet
+            'â€"': "—",  # em dash
+            "â€“": "–",  # en dash
+            "â€™": "'",  # apostrophe
+            "â€œ": '"',  # left double quote
+            "â€\x9d": '"',  # right double quote (sometimes appears as 'â€\x9d')
+            "â€": '"',  # right double quote (fallback)
+            "â€¢": "•",  # bullet
         }
         # Build regex to match any of the keys
-        pattern = re.compile('|'.join(re.escape(k) for k in mojibake_replacements))
+        pattern = re.compile("|".join(re.escape(k) for k in mojibake_replacements))
         cleaned_text = pattern.sub(lambda m: mojibake_replacements[m.group(0)], cleaned_text)
         # Normalize line breaks
-        cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_text)
-        
+        cleaned_text = re.sub(r"\n\s*\n\s*\n+", "\n\n", cleaned_text)
+
         return cleaned_text.strip()
     except Exception as exc:
         raise Exception(f"Failed to extract PDF text: {exc}") from exc
@@ -792,23 +792,23 @@ def _extract_pdf_text(content: bytes) -> str:
 
 def _extract_docx_text(content: bytes) -> str:
     """Extract text from DOCX file.
-    
+
     Args:
         content: DOCX file bytes
-        
+
     Returns:
         Extracted text from DOCX
-        
+
     Raises:
         Exception: If DOCX extraction fails or contains macros
     """
     if not PYTHON_DOCX_AVAILABLE:
         raise Exception("python-docx not installed. Install with: pip install python-docx")
-    
+
     try:
         # Use a single BytesIO object for both macro checking and text extraction
         docx_stream = BytesIO(content)
-        
+
         # Check for macros (DOCM files have vbaProject.bin)
         try:
             with ZipFile(docx_stream) as docx_zip:
@@ -816,18 +816,18 @@ def _extract_docx_text(content: bytes) -> str:
                     raise Exception("DOCX file contains macros and is not allowed for security reasons")
         except BadZipFile:
             raise Exception("Invalid DOCX file format")
-        
+
         # Seek back to the start for Document()
         docx_stream.seek(0)
         doc = Document(docx_stream)
         text_parts = [para.text for para in doc.paragraphs]
-        
+
         # Also extract text from tables
         for table in doc.tables:
             for row in table.rows:
                 for cell in row.cells:
                     text_parts.append(cell.text)
-        
+
         return "\n".join(text_parts)
     except Exception as exc:
         if "macros" in str(exc):
@@ -837,46 +837,56 @@ def _extract_docx_text(content: bytes) -> str:
 
 def _check_malicious_content(text: str) -> list[str]:
     """Check for malicious content in uploaded file.
-    
+
     Args:
         text: Extracted text content
-        
+
     Returns:
         List of security findings (empty if safe)
     """
     findings = []
-    
+
     # Check for embedded scripts
     script_patterns = [
-        "<script", "</script>",
-        "javascript:", "vbscript:",
-        "onclick=", "onerror=", "onload=", "onmouseover=", "onfocus=",
-        "<iframe", "<embed", "<object",
-        "eval(", "exec(",
+        "<script",
+        "</script>",
+        "javascript:",
+        "vbscript:",
+        "onclick=",
+        "onerror=",
+        "onload=",
+        "onmouseover=",
+        "onfocus=",
+        "<iframe",
+        "<embed",
+        "<object",
+        "eval(",
+        "exec(",
     ]
-    
+
     text_lower = text.lower()
     for pattern in script_patterns:
         if pattern.lower() in text_lower:
             findings.append(f"Suspicious pattern detected: '{pattern}'")
-    
+
     # Check for excessive special characters (possible obfuscation)
     # Exclude common resume punctuation from special character count
     common_punct = set(".,:;()-[]{}•*'\"/\\&+|_@#")
     special_char_count = sum(1 for c in text if not c.isalnum() and not c.isspace() and c not in common_punct)
     if len(text) > 100 and special_char_count / len(text) > 0.45:
-        findings.append(f"Excessive special characters detected ({special_char_count}/{len(text)} = {special_char_count/len(text):.1%})")
-    
+        ratio = special_char_count / len(text)
+        findings.append(f"Excessive special characters detected " f"({special_char_count}/{len(text)} = {ratio:.1%})")
+
     # Check for null bytes (binary content)
     if "\x00" in text:
         findings.append("Binary content detected (null bytes found)")
-    
+
     # Check for very long lines (possible attack vector)
     lines = text.split("\n")
     max_line_length = max(len(line) for line in lines) if lines else 0
     if max_line_length > 10000:
         findings.append(f"Extremely long line detected ({max_line_length} chars)")
-    
+
     return findings
 
 
@@ -909,7 +919,7 @@ def delete_resume():
 @app.get("/api/job-config")
 def get_job_config():
     """Get job search configuration (location, providers, search params).
-    
+
     Returns:
         JSONResponse: Complete configuration including providers, location, and search settings.
     """
@@ -1009,8 +1019,19 @@ class CompanyLinkRequest(BaseModel):
 
 class CoverLetterRequest(BaseModel):
     """Request model for cover letter generation."""
+
     job_description: str
     resume_text: str | None = None
+
+
+class JobNotesRequest(BaseModel):
+    """Request model for updating job notes."""
+
+    notes: str = Field(
+        ...,
+        max_length=10000,
+        description="Job notes (max 10000 characters)",
+    )
 
 
 @app.get("/api/jobs/tracked")
@@ -1086,6 +1107,21 @@ def set_company_link(job_id: str, req: CompanyLinkRequest):
 
     job = tracker.get_job(job_id)
     return JSONResponse({"message": "Company link updated", "job": job})
+
+
+@app.post("/api/jobs/{job_id}/notes")
+def update_job_notes(job_id: str, req: JobNotesRequest):
+    """Update notes for a job."""
+    tracker = get_tracker()
+
+    success = tracker.update_notes(job_id, req.notes)
+
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    # Re-fetch job to get the updated last_updated timestamp
+    job = tracker.get_job(job_id)
+    return JSONResponse({"message": "Notes updated", "job": job})
 
 
 @app.post("/api/jobs/{job_id}/cover-letter")
