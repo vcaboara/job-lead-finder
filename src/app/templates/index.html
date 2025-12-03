@@ -759,6 +759,99 @@ TODO: Fix/update search progress indicator
             return urlStr;
         }
 
+        // Shared function to render a job card
+        function renderJobCard(job, options = {}) {
+            const {
+                showScore = false,
+                showSource = false,
+                showTrackedDate = false,
+                hideButtonLabel = '🚫 Hide'
+            } = options;
+
+            const jobId = job.job_id || generateJobId(job);
+            const status = job.status || job.tracking_status || 'new';
+            const notes = job.notes || job.tracking_notes || '';
+            const link = job.link || '#';
+            const title = job.title || 'Untitled';
+            const company = job.company || 'Unknown Company';
+            const location = job.location || 'Location not specified';
+            const summary = job.summary || '';
+
+            // Score section (only for search results)
+            const scoreSection = showScore && job.score !== undefined ?
+                `<div class="score-section"><div class="score-badge ${job.score >= 80 ? 'high' : job.score >= 60 ? 'medium' : 'low'}">Score: ${job.score}</div>${job.reasoning ? `<div class="reasoning"><strong>Why this score:</strong> ${escapeHtml(job.reasoning)}</div>` : ''}</div>` : '';
+
+            // Source badge (only for search results)
+            const sourceBadge = showSource && job.source ?
+                (job.source === 'CompanyDirect' ?
+                    '<span class="source-badge" title="Direct link to company career page">🎯 Direct Company Link</span>' :
+                    `<span class="source-badge aggregator" title="Job board aggregator">${escapeHtml(job.source)}</span>`) : '';
+
+            // Status badge
+            const statusBadge = status !== 'new' ?
+                `<span class="status-badge ${validateStatus(status)}">${escapeHtml(status)}</span>` : '';
+
+            // Tracked date (only for tracked jobs)
+            const trackedDate = showTrackedDate && job.first_seen ?
+                `<div style="font-size:0.85em; color:#666; margin-top:8px;">Tracked: ${escapeHtml(new Date(job.first_seen).toLocaleDateString())}</div>` : '';
+
+            return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
+                <h3>${escapeHtml(title)}${sourceBadge}${statusBadge}</h3>
+                <div class="company">${escapeHtml(company)}</div>
+                <div class="location">📍 ${escapeHtml(location)}</div>
+                ${summary ? `<div class="summary">${stripHtml(summary)}</div>` : ''}
+                ${scoreSection}
+                ${trackedDate}
+                <a href="${sanitizeUrl(link)}" target="_blank">View on site →</a>
+                <div class="job-actions">
+                    <select class="status-select" data-job-id="${escapeHtml(jobId)}">
+                        <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
+                        <option value="applied" ${status === 'applied' ? 'selected' : ''}>Applied</option>
+                        <option value="interviewing" ${status === 'interviewing' ? 'selected' : ''}>Interviewing</option>
+                        <option value="offer" ${status === 'offer' ? 'selected' : ''}>Offer</option>
+                        <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>Rejected</option>
+                    </select>
+                    <button class="btn-notes" data-job-id="${escapeHtml(jobId)}">📝 Notes</button>
+                    <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">${hideButtonLabel}</button>
+                </div>
+                <div class="job-notes" id="notes-${escapeHtml(jobId)}">
+                    <textarea placeholder="Add notes about this job..." data-job-id="${escapeHtml(jobId)}">${escapeHtml(notes)}</textarea>
+                </div>
+            </div>`;
+        }
+
+        // Shared function to attach event listeners to job cards
+        function attachJobCardListeners(container, onStatusChange, onHide) {
+            container.querySelectorAll('.status-select').forEach(select => {
+                select.addEventListener('change', function () {
+                    const jobId = this.getAttribute('data-job-id');
+                    onStatusChange(jobId, this.value);
+                });
+            });
+
+            container.querySelectorAll('.btn-notes').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const jobId = this.getAttribute('data-job-id');
+                    toggleNotes(jobId);
+                });
+            });
+
+            container.querySelectorAll('.btn-hide').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const jobId = this.getAttribute('data-job-id');
+                    onHide(jobId);
+                });
+            });
+
+            // Auto-save notes on blur
+            container.querySelectorAll('.job-notes textarea').forEach(textarea => {
+                textarea.addEventListener('blur', function () {
+                    const jobId = this.getAttribute('data-job-id');
+                    saveNotes(jobId, this.value);
+                });
+            });
+        }
+
         async function loadLeads() {
             try { const resp = await fetch('/api/leads'); const data = await resp.json(); displayLeads(data.leads); } catch (e) { console.error('Error loading leads:', e); }
         }
@@ -774,73 +867,12 @@ TODO: Fix/update search progress indicator
 
             countEl.textContent = `(${leads.length})`;
 
-            container.innerHTML = leads.map(lead => {
-                const scoreSection = lead.score !== undefined ?
-                    `<div class="score-section"><div class="score-badge ${lead.score >= 80 ? 'high' : lead.score >= 60 ? 'medium' : 'low'}">Score: ${lead.score}</div>${lead.reasoning ? `<div class="reasoning"><strong>Why this score:</strong> ${escapeHtml(lead.reasoning)}</div>` : ''}</div>` : '';
+            container.innerHTML = leads.map(lead =>
+                renderJobCard(lead, { showScore: true, showSource: true, hideButtonLabel: '🚫 Hide' })
+            ).join('');
 
-                const sourceBadge = lead.source === 'CompanyDirect' ?
-                    '<span class="source-badge" title="Direct link to company career page">🎯 Direct Company Link</span>' :
-                    (lead.source ? `<span class="source-badge aggregator" title="Job board aggregator">${escapeHtml(lead.source)}</span>` : '');
-
-                const statusBadge = lead.tracking_status && lead.tracking_status !== 'new' ?
-                    `<span class="status-badge ${validateStatus(lead.tracking_status)}">${escapeHtml(lead.tracking_status)}</span>` : '';
-
-                const jobId = lead.job_id || generateJobId(lead);
-                const currentStatus = lead.tracking_status || 'new';
-                const notes = lead.tracking_notes || '';
-
-                return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
-                    <h3>${escapeHtml(lead.title)}${sourceBadge}${statusBadge}</h3>
-                    <div class="company">${escapeHtml(lead.company)}</div>
-                    <div class="location">📍 ${escapeHtml(lead.location)}</div>
-                    <div class="summary">${stripHtml(lead.summary)}</div>
-                    ${scoreSection}
-                    <a href="${sanitizeUrl(lead.link)}" target="_blank">View on site →</a>
-                    <div class="job-actions">
-                        <select class="status-select" data-job-id="${escapeHtml(jobId)}">
-                            <option value="new" ${currentStatus === 'new' ? 'selected' : ''}>New</option>
-                            <option value="applied" ${currentStatus === 'applied' ? 'selected' : ''}>Applied</option>
-                            <option value="interviewing" ${currentStatus === 'interviewing' ? 'selected' : ''}>Interviewing</option>
-                            <option value="offer" ${currentStatus === 'offer' ? 'selected' : ''}>Offer</option>
-                            <option value="rejected" ${currentStatus === 'rejected' ? 'selected' : ''}>Rejected</option>
-                        </select>
-                        <button class="btn-notes" data-job-id="${escapeHtml(jobId)}">📝 Notes</button>
-                        <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">🚫 Hide</button>
-                    </div>
-                    <div class="job-notes" id="notes-${escapeHtml(jobId)}">
-                        <textarea placeholder="Add notes about this job..." data-job-id="${escapeHtml(jobId)}">${escapeHtml(notes)}</textarea>
-                    </div>
-                </div>`;
-            }).join('');
-
-            // Attach event listeners after rendering
-            container.querySelectorAll('.status-select').forEach(select => {
-                select.addEventListener('change', function () {
-                    const jobId = this.getAttribute('data-job-id');
-                    updateJobStatus(jobId, this.value);
-                });
-            });
-
-            container.querySelectorAll('.btn-notes').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const jobId = this.getAttribute('data-job-id');
-                    toggleNotes(jobId);
-                });
-            });
-
-            container.querySelectorAll('.btn-hide').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const jobId = this.getAttribute('data-job-id');
-                    hideJob(jobId);
-                });
-            });
-
-            container.querySelectorAll('.job-notes textarea').forEach(textarea => {
-                textarea.addEventListener('blur', function () {
-                    const jobId = this.getAttribute('data-job-id');
-                    saveNotes(jobId, this.value);
-                });
-            });
+            // Attach event listeners
+            attachJobCardListeners(container, updateJobStatus, hideJob);
         }
         function showStatus(message, type) { const status = document.getElementById('status'); status.textContent = message; status.className = `status show ${type}`; if (type !== 'loading') { setTimeout(() => status.classList.remove('show'), 5000); } }
 
@@ -1054,71 +1086,12 @@ TODO: Fix/update search progress indicator
                 return;
             }
 
-            container.innerHTML = jobs.map(job => {
-                const jobId = job.job_id || generateJobId(job);
-                const status = job.status || 'new';
-                const notes = job.notes || '';
-                const link = job.link || '#';
-                const title = job.title || 'Untitled';
-                const company = job.company || 'Unknown Company';
-                const location = job.location || 'Location not specified';
-                const summary = job.summary || '';
+            container.innerHTML = jobs.map(job =>
+                renderJobCard(job, { showTrackedDate: true, hideButtonLabel: '🗑️ Delete' })
+            ).join('');
 
-                const statusBadge = status !== 'new' ? `<span class="status-badge ${validateStatus(status)}">${escapeHtml(status)}</span>` : '';
-                const trackedDate = job.first_seen ? new Date(job.first_seen).toLocaleDateString() : '';
-
-                return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
-                    <h3>${escapeHtml(title)}${statusBadge}</h3>
-                    <div class="company">${escapeHtml(company)}</div>
-                    <div class="location">📍 ${escapeHtml(location)}</div>
-                    ${summary ? `<div class="summary">${stripHtml(summary)}</div>` : ''}
-                    ${trackedDate ? `<div style="font-size:0.85em; color:#666; margin-top:8px;">Tracked: ${escapeHtml(trackedDate)}</div>` : ''}
-                    <a href="${sanitizeUrl(link)}" target="_blank">View on site →</a>
-                    <div class="job-actions">
-                        <select class="status-select" data-job-id="${escapeHtml(jobId)}">
-                            <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
-                            <option value="applied" ${status === 'applied' ? 'selected' : ''}>Applied</option>
-                            <option value="interviewing" ${status === 'interviewing' ? 'selected' : ''}>Interviewing</option>
-                            <option value="offer" ${status === 'offer' ? 'selected' : ''}>Offer</option>
-                            <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>Rejected</option>
-                        </select>
-                        <button class="btn-notes" data-job-id="${escapeHtml(jobId)}">📝 Notes</button>
-                        <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">🗑️ Delete</button>
-                    </div>
-                    <div class="job-notes" id="notes-${escapeHtml(jobId)}">
-                        <textarea placeholder="Add notes about this job..." data-job-id="${escapeHtml(jobId)}">${escapeHtml(notes)}</textarea>
-                    </div>
-                </div>`;
-            }).join('');
-
-            // Attach event listeners after rendering
-            container.querySelectorAll('.status-select').forEach(select => {
-                select.addEventListener('change', function () {
-                    const jobId = this.getAttribute('data-job-id');
-                    updateJobStatusAndReload(jobId, this.value);
-                });
-            });
-
-            container.querySelectorAll('.btn-notes').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const jobId = this.getAttribute('data-job-id');
-                    toggleNotes(jobId);
-                });
-            });
-
-            container.querySelectorAll('.btn-hide').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const jobId = this.getAttribute('data-job-id');
-                    hideTrackedJob(jobId);
-                });
-            });
-
-            container.querySelectorAll('.job-notes textarea').forEach(textarea => {
-                textarea.addEventListener('blur', function () {
-                    const jobId = this.getAttribute('data-job-id');
-                    saveNotes(jobId, this.value);
-                });
-            });
+            // Attach event listeners
+            attachJobCardListeners(container, updateJobStatusAndReload, hideTrackedJob);
         }
 
         async function updateJobStatusAndReload(jobId, status) {
