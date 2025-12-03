@@ -40,7 +40,7 @@ class SearchRequest(BaseModel):
     count: int = 5
     model: str | None = None
     evaluate: bool = False
-    min_score: int = 40  # Minimum score threshold for filtering results (0-100)
+    min_score: int = 60  # Minimum score threshold for filtering results (0-100)
 
 
 class HealthResponse(BaseModel):
