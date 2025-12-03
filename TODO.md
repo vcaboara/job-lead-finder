@@ -11,9 +11,13 @@
 
 ```python
 # Current: Multiple replace calls
-cleaned_text = cleaned_text.replace('├óΓé¼"', '—')    # em dash
-cleaned_text = cleaned_text.replace('├óΓé¼"', '–')    # en dash
-# ... 5 more replacements
+cleaned_text = cleaned_text.replace('â€”', '—')    # em dash
+cleaned_text = cleaned_text.replace('â€“', '–')    # en dash
+cleaned_text = cleaned_text.replace('â€˜', '‘')    # left single quote
+cleaned_text = cleaned_text.replace('â€™', '’')    # right single quote
+cleaned_text = cleaned_text.replace('â€œ', '“')    # left double quote
+cleaned_text = cleaned_text.replace('â€�', '”')    # right double quote
+cleaned_text = cleaned_text.replace('â€¢', '•')    # bullet
 
 # Proposed: Single-pass regex
 mojibake_map = {...}
