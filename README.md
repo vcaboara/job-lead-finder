@@ -37,33 +37,41 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 ### CLI Usage
 
 ```powershell
-# Install
+# With uv (recommended - faster, better dependency management)
+uv run python -m app.main find -q "remote python developer" --resume "Your resume" -n 10
+uv run python -m app.main health
+
+# Traditional installation
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -e .[web,gemini]
-
-# Search
 python -m app.main find -q "remote python developer" --resume "Your resume" -n 10
-
-# Health check
-python -m app.main health
 ```
-
-## Job Tracking API
-
-See [AGGREGATOR_TO_COMPANY_GUIDE.md](AGGREGATOR_TO_COMPANY_GUIDE.md) for workflow details.
-
-**Key endpoints**:
-- `GET /api/jobs/tracked?status=applied` - List tracked jobs
-- `POST /api/jobs/{id}/status` - Update job status
-- `POST /api/jobs/{id}/hide` - Hide unwanted jobs
-- `POST /api/jobs/find-company-link/{id}` - Find direct career page
-- `POST /api/jobs/{id}/cover-letter` - Generate custom cover letter
 
 ## Development
 
-**Run tests**:
+**Setup with uv** (recommended):
 ```powershell
+# Install uv: https://github.com/astral-sh/uv
+winget install --id=astral-sh.uv -e
+
+# Sync all dependencies (creates .venv automatically)
+uv sync --all-extras
+
+# Run tests (no venv activation needed)
+uv run pytest -v -m "not slow"  # Fast tests (~8s)
+uv run pytest -v               # All tests
+
+# Add new dependencies
+uv add package-name
+uv add --dev package-name  # dev dependencies
+```
+
+**Traditional setup**:
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+pip install -e .[web,gemini,dev,test]
 pytest -v -m "not slow"  # Fast tests (~8s)
 pytest -v               # All tests including slow ones
 ```
