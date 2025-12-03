@@ -94,7 +94,8 @@ def test_upload_pdf_resume(create_test_pdf):
     assert resp.status_code == 200
     data = resp.json()
     assert data["resume"], "Extracted resume text should not be empty"
-    assert "John Doe" in data["resume"] and "Python" in data["resume"], "Both key terms should be present in extracted resume text"
+    assert "John Doe" in data["resume"], "Missing 'John Doe' in extracted resume text"
+    assert "Python" in data["resume"], "Missing 'Python' in extracted resume text"
 
 
 def test_upload_docx_resume(create_test_docx):
