@@ -8,9 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Format-Specific File Size Limits** - Improved resume upload validation
+  - Text files (.txt, .md): 1MB limit
+  - PDF files: 2MB limit (larger due to formatting overhead)
+  - DOCX files: 1MB limit
+  - Better error messages showing file type and size (e.g., "PDF file too large (max 2MB, got 2.3MB)")
+  - Validation happens before parsing for better security
+  - 5 new test cases for size limit validation
 - **Enhanced Resume Upload** - Support for multiple file formats with improved security
   - Supported formats: `.txt`, `.md`, `.pdf`, `.docx`
-  - Increased size limit: 5MB (previously 1MB)
   - Comprehensive malicious content detection:
     - Script pattern detection (JavaScript, VBScript, eval, exec)
     - Macro detection in DOCX files
@@ -19,8 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Extremely long line detection (>10,000 chars)
   - PDF text extraction using `pypdf`
   - DOCX text extraction using `python-docx` with table support
-  - Enhanced error messages with specific file size information
-  - 22 comprehensive test cases covering all security scenarios and API endpoints
+  - Magic number validation (PDF header, DOCX ZIP header)
+  - 23 comprehensive test cases covering all security scenarios and API endpoints
 - **WeWorkRemotely Provider** - RSS-based job provider for remote positions
   - Searches 4 tech-focused RSS categories (back-end, front-end, full-stack, devops)
   - Expected performance: ~0.5s

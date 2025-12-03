@@ -35,15 +35,86 @@ def test_upload_markdown_resume():
 
 
 def test_upload_file_too_large():
-    """Test uploading a file larger than 5MB."""
+    """Test uploading a text file larger than 1MB limit."""
     client = TestClient(app)
-    large_content = "x" * (5 * 1024 * 1024 + 1)  # Just over 5MB
+    large_content = "x" * (1 * 1024 * 1024 + 1)  # Just over 1MB
 
     files = {"file": ("large.txt", BytesIO(large_content.encode()), "text/plain")}
     resp = client.post("/api/upload/resume", files=files)
 
     assert resp.status_code == 400
-    assert "too large" in resp.json()["detail"].lower()
+    detail = resp.json()["detail"]
+    assert "too large" in detail.lower()
+    assert "TXT" in detail
+    assert "1MB" in detail
+
+
+def test_upload_pdf_too_large():
+    """Test uploading a PDF file larger than 2MB limit."""
+    client = TestClient(app)
+    # Create a fake large PDF by creating a minimal PDF structure
+    # and padding it to exceed 2MB
+    fake_pdf_header = b'%PDF-1.4\n'
+    padding = b'0' * (2 * 1024 * 1024 + 1000)  # Over 2MB of padding
+    fake_pdf = fake_pdf_header + padding
+    
+    files = {"file": ("large.pdf", BytesIO(fake_pdf), "application/pdf")}
+    resp = client.post("/api/upload/resume", files=files)
+    
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert "too large" in detail.lower()
+    assert "PDF" in detail
+    assert "2MB" in detail
+
+
+def test_upload_docx_too_large():
+    """Test uploading a DOCX file larger than 1MB limit."""
+    client = TestClient(app)
+    # Create a fake large DOCX by creating a minimal ZIP structure (DOCX is a ZIP)
+    # and padding it to exceed 1MB
+    fake_docx_header = b'PK\x03\x04'  # ZIP header
+    padding = b'0' * (1 * 1024 * 1024 + 1000)  # Over 1MB of padding
+    fake_docx = fake_docx_header + padding
+    
+    files = {"file": ("large.docx", BytesIO(fake_docx), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+    resp = client.post("/api/upload/resume", files=files)
+    
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert "too large" in detail.lower()
+    assert "DOCX" in detail
+    assert "1MB" in detail
+
+
+def test_upload_txt_at_size_limit():
+    """Test uploading a text file well under 1MB limit."""
+    client = TestClient(app)
+    # Create realistic resume content (most resumes are 10-50KB)
+    resume_content = "John Doe\nSenior Software Engineer\n\n"
+    resume_content += "EXPERIENCE\n" + ("- Developed features for web applications\n" * 100)
+    resume_content += "\nSKILLS\nPython, JavaScript, Docker, Kubernetes\n"
+    
+    # Should be well under 1MB (around 5-10KB)
+    files = {"file": ("resume.txt", BytesIO(resume_content.encode()), "text/plain")}
+    resp = client.post("/api/upload/resume", files=files)
+
+    # Should succeed since it's under the limit
+    assert resp.status_code == 200
+
+
+def test_upload_pdf_at_size_limit(create_test_pdf):
+    """Test uploading a small PDF file under 2MB limit."""
+    client = TestClient(app)
+    # Create a small PDF with reasonable content
+    text_content = "John Doe\nSoftware Engineer\nExperience with Python and Docker"
+    pdf_content = create_test_pdf(text_content)
+    
+    files = {"file": ("resume.pdf", BytesIO(pdf_content), "application/pdf")}
+    resp = client.post("/api/upload/resume", files=files)
+    
+    # Should succeed since well under 2MB
+    assert resp.status_code == 200
 
 
 def test_upload_invalid_file_type():

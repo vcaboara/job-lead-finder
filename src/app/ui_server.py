@@ -650,29 +650,48 @@ async def upload_resume(file: UploadFile = File(...)):
     """Upload resume file for job matching.
     
     Supports: .txt, .md, .pdf, .docx
-    Max size: 5MB
+    Max size: 1MB (text), 2MB (PDF), 1MB (DOCX)
     Security: Scans for injection patterns, macros, and malicious content
     """
-    MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+    # Format-specific size limits for better security and performance
+    MAX_TXT_SIZE = 1 * 1024 * 1024    # 1MB - plain text files (.txt, .md)
+    MAX_PDF_SIZE = 2 * 1024 * 1024    # 2MB - PDF files (can be larger due to formatting)
+    MAX_DOCX_SIZE = 1 * 1024 * 1024   # 1MB - DOCX files
     ALLOWED_EXTENSIONS = (".txt", ".md", ".pdf", ".docx")
     
-    # Validate file size
-    content = await file.read()
-    if len(content) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=400, 
-            detail=f"File too large (max {MAX_FILE_SIZE // (1024*1024)}MB, got {len(content) // (1024*1024)}MB)"
-        )
-    
-    # Basic file validation before parsing (security)
-    if len(content) == 0:
-        raise HTTPException(status_code=400, detail="File is empty")
-
-    # Validate file type
+    # Validate file type first
     if not file.filename or not file.filename.lower().endswith(ALLOWED_EXTENSIONS):
         raise HTTPException(
             status_code=400, 
             detail=f"Unsupported file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    
+    # Read file content
+    content = await file.read()
+    
+    # Basic file validation before parsing (security)
+    if len(content) == 0:
+        raise HTTPException(status_code=400, detail="File is empty")
+    
+    # Determine max size based on file extension
+    file_ext = file.filename.lower()
+    if file_ext.endswith(".pdf"):
+        max_size = MAX_PDF_SIZE
+        size_label = "2MB"
+    elif file_ext.endswith(".docx"):
+        max_size = MAX_DOCX_SIZE
+        size_label = "1MB"
+    else:  # .txt or .md
+        max_size = MAX_TXT_SIZE
+        size_label = "1MB"
+    
+    # Validate file size with format-specific limit
+    if len(content) > max_size:
+        actual_size_mb = len(content) / (1024 * 1024)
+        file_type = Path(file.filename).suffix[1:].upper()
+        raise HTTPException(
+            status_code=400,
+            detail=f"{file_type} file too large (max {size_label}, got {actual_size_mb:.1f}MB)"
         )
     
     # For binary formats, validate magic numbers before attempting to parse
