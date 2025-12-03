@@ -85,10 +85,14 @@ class WeWorkRemotelyMCP(MCPProvider):
                     # RSS items are in channel -> item
                     for item in root.findall(".//item"):
                         try:
-                            title = item.find("title").text if item.find("title") is not None else ""
-                            link = item.find("link").text if item.find("link") is not None else ""
-                            description = item.find("description").text if item.find("description") is not None else ""
-                            pub_date = item.find("pubDate").text if item.find("pubDate") is not None else ""
+                            title_elem = item.find("title")
+                            title = title_elem.text if title_elem is not None and title_elem.text else ""
+                            link_elem = item.find("link")
+                            link = link_elem.text if link_elem is not None and link_elem.text else ""
+                            description_elem = item.find("description")
+                            description = description_elem.text if description_elem is not None and description_elem.text else ""
+                            pub_date_elem = item.find("pubDate")
+                            pub_date = pub_date_elem.text if pub_date_elem is not None and pub_date_elem.text else ""
                             
                             # Extract company from title (format: "CompanyName: Job Title")
                             company = "Unknown Company"
