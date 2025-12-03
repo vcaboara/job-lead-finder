@@ -727,14 +727,31 @@ def _extract_pdf_text(content: bytes) -> str:
     try:
         from io import BytesIO
         from pypdf import PdfReader
+        import re
         
         pdf = PdfReader(BytesIO(content))
         text_parts = []
         
         for page in pdf.pages:
-            text_parts.append(page.extract_text())
+            page_text = page.extract_text()
+            if page_text:
+                text_parts.append(page_text)
         
-        return "\n".join(text_parts)
+        raw_text = "\n".join(text_parts)
+        
+        # Clean up the extracted text
+        # Fix multiple spaces between words
+        cleaned_text = re.sub(r'  +', ' ', raw_text)
+        # Fix common encoding issues
+        cleaned_text = cleaned_text.replace('â€"', '—')  # em dash
+        cleaned_text = cleaned_text.replace('â€™', "'")  # apostrophe
+        cleaned_text = cleaned_text.replace('â€œ', '"')  # left quote
+        cleaned_text = cleaned_text.replace('â€', '"')   # right quote
+        cleaned_text = cleaned_text.replace('â€¢', '•')  # bullet
+        # Normalize line breaks
+        cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_text)
+        
+        return cleaned_text.strip()
     except ImportError as exc:
         raise Exception("pypdf not installed. Install with: pip install pypdf") from exc
 
