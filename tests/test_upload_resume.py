@@ -191,3 +191,102 @@ def test_upload_very_long_line():
     assert resp.status_code == 400
     data = resp.json()
     assert "security concerns" in data["detail"]["error"].lower()
+
+
+def test_get_resume_exists():
+    """Test getting existing resume."""
+    from pathlib import Path
+    
+    client = TestClient(app)
+    resume_path = Path("resume.txt")
+    
+    # Create a resume file
+    resume_text = "My resume content"
+    resume_path.write_text(resume_text, encoding="utf-8")
+    
+    try:
+        resp = client.get("/api/resume")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["resume"] == resume_text
+    finally:
+        if resume_path.exists():
+            resume_path.unlink()
+
+
+def test_get_resume_not_exists():
+    """Test getting resume when file doesn't exist."""
+    from pathlib import Path
+    
+    client = TestClient(app)
+    resume_path = Path("resume.txt")
+    
+    # Ensure resume doesn't exist
+    if resume_path.exists():
+        resume_path.unlink()
+    
+    resp = client.get("/api/resume")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["resume"] is None
+
+
+def test_delete_resume():
+    """Test deleting existing resume."""
+    from pathlib import Path
+    
+    client = TestClient(app)
+    resume_path = Path("resume.txt")
+    
+    # Create a resume file
+    resume_path.write_text("My resume", encoding="utf-8")
+    assert resume_path.exists()
+    
+    resp = client.delete("/api/resume")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["message"] == "Resume deleted"
+    assert not resume_path.exists()
+
+
+def test_delete_resume_not_exists():
+    """Test deleting resume when file doesn't exist."""
+    from pathlib import Path
+    
+    client = TestClient(app)
+    resume_path = Path("resume.txt")
+    
+    # Ensure resume doesn't exist
+    if resume_path.exists():
+        resume_path.unlink()
+    
+    resp = client.delete("/api/resume")
+    assert resp.status_code == 404
+    assert "not found" in resp.json()["detail"].lower()
+
+
+def test_upload_overwrites_existing():
+    """Test that uploading overwrites existing resume."""
+    from pathlib import Path
+    
+    client = TestClient(app)
+    resume_path = Path("resume.txt")
+    
+    # Create initial resume
+    resume_path.write_text("Old resume", encoding="utf-8")
+    
+    try:
+        # Upload new resume
+        new_resume = "New resume content"
+        files = {"file": ("resume.txt", BytesIO(new_resume.encode()), "text/plain")}
+        resp = client.post("/api/upload/resume", files=files)
+        
+        assert resp.status_code == 200
+        
+        # Verify it was overwritten
+        resp = client.get("/api/resume")
+        assert resp.status_code == 200
+        assert resp.json()["resume"] == new_resume
+    finally:
+        if resume_path.exists():
+            resume_path.unlink()

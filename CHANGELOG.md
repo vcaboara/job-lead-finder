@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - PDF text extraction using `pypdf`
   - DOCX text extraction using `python-docx` with table support
   - Enhanced error messages with specific file size information
-  - 17 comprehensive test cases covering all security scenarios (including macro detection)
+  - 22 comprehensive test cases covering all security scenarios and API endpoints
 
 ### Added
 - **WeWorkRemotely Provider** - RSS-based job provider for remote positions
