@@ -56,7 +56,7 @@ All key skills, experience, and qualifications are properly extracted and search
 
 ## Test Coverage
 
-New test file: `tests/test_pdf_vs_text_search.py`
+New test file: `tests/test_pdf_extraction.py`
 - `test_pdf_vs_text_resume_extraction()` - Validates PDF extraction quality
 - `test_pdf_extraction_quality()` - Checks for encoding and spacing issues
 - `test_cli_search_with_resume()` - Tests CLI interface integration

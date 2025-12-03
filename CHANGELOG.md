@@ -15,12 +15,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Script pattern detection (JavaScript, VBScript, eval, exec)
     - Macro detection in DOCX files
     - Binary content detection (null bytes)
-    - Excessive special character detection (>30% threshold)
+    - Excessive special character detection (>45% threshold)
     - Extremely long line detection (>10,000 chars)
   - PDF text extraction using `pypdf`
   - DOCX text extraction using `python-docx` with table support
   - Enhanced error messages with specific file size information
-  - 18 comprehensive test cases covering all security scenarios
+  - 16 comprehensive test cases covering all security scenarios
 
 ### Added
 - **WeWorkRemotely Provider** - RSS-based job provider for remote positions

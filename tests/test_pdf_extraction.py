@@ -3,7 +3,6 @@
 This test validates that PDF extraction produces clean, searchable text.
 """
 from io import BytesIO
-from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -109,22 +108,16 @@ SKILLS
     assert bad_chars_found == 0, "PDF has encoding issues"
 
 
-@patch('app.job_finder.generate_job_leads')
-def test_cli_search_with_resume(mock_generate_leads):
-    """Test CLI search with resume parameter (mocked API)."""
+def test_cli_search_with_resume():
+    """Test CLI search with resume parameter.
+    
+    NOTE: This test runs the CLI in a subprocess, so mocking with @patch will not work.
+    The CLI may make real API calls. To avoid rate limiting in CI, consider refactoring
+    the CLI to support dependency injection or test mode via environment variable.
+    """
     import subprocess
     import sys
     from pathlib import Path
-    
-    # Mock API response to avoid rate limiting
-    mock_generate_leads.return_value = [
-        {
-            "title": "Python Developer",
-            "company": "Tech Corp",
-            "link": "https://example.com/job1",
-            "location": "Remote"
-        }
-    ]
     
     # Create a test resume file
     resume_text = "Senior Python Developer with 5 years experience"
@@ -141,7 +134,8 @@ def test_cli_search_with_resume(mock_generate_leads):
             ],
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=30,
+            check=False
         )
         
         # Should complete successfully

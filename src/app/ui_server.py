@@ -682,9 +682,10 @@ async def upload_resume(file: UploadFile = File(...)):
     except UnicodeDecodeError as exc:
         raise HTTPException(status_code=400, detail="File must be valid UTF-8 text") from exc
     except Exception as exc:
+        file_ext = Path(file.filename).suffix[1:].upper() if Path(file.filename).suffix else 'UNKNOWN'
         raise HTTPException(
             status_code=400, 
-            detail=f"Failed to extract text from {file.filename.split('.')[-1].upper()} file: {str(exc)}"
+            detail=f"Failed to extract text from {file_ext} file: {str(exc)}"
         ) from exc
 
     # Enhanced security checks
@@ -754,9 +755,8 @@ def _extract_pdf_text(content: bytes) -> str:
         # Clean up the extracted text
         # Fix multiple spaces between words
         cleaned_text = re.sub(r'  +', ' ', raw_text)
-        # Fix common encoding issues
-        cleaned_text = cleaned_text.replace('â€\"', '—')   # em dash (malformed)
-        cleaned_text = cleaned_text.replace('â€"', '—')    # em dash (single char)
+        # Fix common mojibake (UTF-8 mis-decoded as Windows-1252)
+        cleaned_text = cleaned_text.replace('â€"', '—')    # em dash
         cleaned_text = cleaned_text.replace('â€"', '–')    # en dash
         cleaned_text = cleaned_text.replace('â€™', "'")    # apostrophe
         cleaned_text = cleaned_text.replace('â€œ', '"')    # left double quote
@@ -804,9 +804,9 @@ def _extract_docx_text(content: bytes) -> str:
                     text_parts.append(cell.text)
         
         return "\n".join(text_parts)
-    except BadZipFile:
-        raise Exception("Invalid DOCX file format")
     except Exception as exc:
+        if "macros" in str(exc):
+            raise  # Re-raise macro security exceptions
         raise Exception(f"Failed to extract DOCX text: {exc}") from exc
 
 
