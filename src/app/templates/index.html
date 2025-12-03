@@ -734,7 +734,8 @@ TODO: Fix/update search progress indicator
                 .replace(/'/g, "&#039;");
         }
 
-        // Strip HTML tags but keep text content (safe against XSS)
+        // Strip HTML tags but keep text content
+        // Uses DOMParser for XSS safety instead of innerHTML
         function stripHtml(html) {
             if (html == null) return '';
             const parser = new DOMParser();
