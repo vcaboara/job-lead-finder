@@ -859,7 +859,7 @@ TODO: Fix/update search progress indicator
         // Job tracking functions
         async function updateJobStatus(jobId, status) {
             try {
-                const resp = await fetch(`/api/jobs/${jobId}/status`, {
+                const resp = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/status`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ status })
@@ -895,7 +895,7 @@ TODO: Fix/update search progress indicator
             if (!confirm('Hide this job? It will not appear in future searches.')) return;
 
             try {
-                const resp = await fetch(`/api/jobs/${jobId}/hide`, { method: 'POST' });
+                const resp = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/hide`, { method: 'POST' });
                 if (!resp.ok) throw new Error('Failed to hide job');
 
                 // Remove card from UI
@@ -921,7 +921,7 @@ TODO: Fix/update search progress indicator
 
         async function saveNotes(jobId, notes) {
             try {
-                const resp = await fetch(`/api/jobs/${jobId}/notes`, {
+                const resp = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/notes`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ notes })
