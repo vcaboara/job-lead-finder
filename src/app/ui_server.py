@@ -855,7 +855,7 @@ def _check_malicious_content(text: str) -> list[str]:
     
     # Check for excessive special characters (possible obfuscation)
     # Exclude common resume punctuation from special character count
-    common_punct = set(".,:;()-[]{}•*'\"/\\&+|_")
+    common_punct = set(".,:;()-[]{}•*'\"/\\&+|_@#")
     special_char_count = sum(1 for c in text if not c.isalnum() and not c.isspace() and c not in common_punct)
     if len(text) > 100 and special_char_count / len(text) > 0.45:
         findings.append(f"Excessive special characters detected ({special_char_count}/{len(text)} = {special_char_count/len(text):.1%})")
