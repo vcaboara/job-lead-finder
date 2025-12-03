@@ -108,16 +108,23 @@ SKILLS
     assert bad_chars_found == 0, "PDF has encoding issues"
 
 
+@pytest.mark.integration
 def test_cli_search_with_resume():
     """Test CLI search with resume parameter.
     
-    NOTE: This test runs the CLI in a subprocess, so mocking with @patch will not work.
-    The CLI may make real API calls. To avoid rate limiting in CI, consider refactoring
-    the CLI to support dependency injection or test mode via environment variable.
+    NOTE: This test runs the CLI in a subprocess and may make real API calls.
+    Marked as 'integration' to allow skipping in CI to avoid rate limiting.
+    Run with: pytest -v -m integration
+    Skip with: pytest -v -m "not integration"
     """
+    import os
     import subprocess
     import sys
     from pathlib import Path
+    
+    # Skip in CI to avoid rate limiting
+    if os.getenv("CI"):
+        pytest.skip("Skip in CI to avoid rate limiting")
     
     # Create a test resume file
     resume_text = "Senior Python Developer with 5 years experience"

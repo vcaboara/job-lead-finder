@@ -786,15 +786,20 @@ def _extract_docx_text(content: bytes) -> str:
         raise Exception("python-docx not installed. Install with: pip install python-docx")
     
     try:
+        # Use a single BytesIO object for both macro checking and text extraction
+        docx_stream = BytesIO(content)
+        
         # Check for macros (DOCM files have vbaProject.bin)
         try:
-            with ZipFile(BytesIO(content)) as docx_zip:
+            with ZipFile(docx_stream) as docx_zip:
                 if "word/vbaProject.bin" in docx_zip.namelist():
                     raise Exception("DOCX file contains macros and is not allowed for security reasons")
         except BadZipFile:
             raise Exception("Invalid DOCX file format")
         
-        doc = Document(BytesIO(content))
+        # Seek back to the start for Document()
+        docx_stream.seek(0)
+        doc = Document(docx_stream)
         text_parts = [para.text for para in doc.paragraphs]
         
         # Also extract text from tables
@@ -825,7 +830,8 @@ def _check_malicious_content(text: str) -> list[str]:
     script_patterns = [
         "<script", "</script>",
         "javascript:", "vbscript:",
-        "onclick=", "onerror=",
+        "onclick=", "onerror=", "onload=", "onmouseover=", "onfocus=",
+        "<iframe", "<embed", "<object",
         "eval(", "exec(",
     ]
     
