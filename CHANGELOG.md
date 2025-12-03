@@ -21,8 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - DOCX text extraction using `python-docx` with table support
   - Enhanced error messages with specific file size information
   - 22 comprehensive test cases covering all security scenarios and API endpoints
-
-### Added
 - **WeWorkRemotely Provider** - RSS-based job provider for remote positions
   - Searches 4 tech-focused RSS categories (back-end, front-end, full-stack, devops)
   - Expected performance: ~0.5s

@@ -663,6 +663,10 @@ async def upload_resume(file: UploadFile = File(...)):
             status_code=400, 
             detail=f"File too large (max {MAX_FILE_SIZE // (1024*1024)}MB, got {len(content) // (1024*1024)}MB)"
         )
+    
+    # Basic file validation before parsing (security)
+    if len(content) == 0:
+        raise HTTPException(status_code=400, detail="File is empty")
 
     # Validate file type
     if not file.filename or not file.filename.lower().endswith(ALLOWED_EXTENSIONS):
@@ -670,6 +674,15 @@ async def upload_resume(file: UploadFile = File(...)):
             status_code=400, 
             detail=f"Unsupported file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
         )
+    
+    # For binary formats, validate magic numbers before attempting to parse
+    if file.filename.lower().endswith(".pdf"):
+        if not content.startswith(b'%PDF'):
+            raise HTTPException(status_code=400, detail="Invalid PDF file (missing PDF header)")
+    elif file.filename.lower().endswith(".docx"):
+        # DOCX is a ZIP file (PK header)
+        if not content.startswith(b'PK'):
+            raise HTTPException(status_code=400, detail="Invalid DOCX file (missing ZIP header)")
 
     # Extract text based on file type
     try:

@@ -2,6 +2,7 @@
 
 This test validates that PDF extraction produces clean, searchable text.
 """
+import re
 from io import BytesIO
 
 import pytest
@@ -48,7 +49,6 @@ Python, FastAPI, Django, Docker, Jenkins, PostgreSQL, Redis, Git
     assert success_rate >= 80, f"Only {success_rate:.1f}% of key terms extracted"
     
     # Should not have excessive spaces (3+ consecutive)
-    import re
     excessive_spaces = len(re.findall(r'   +', extracted))
     assert excessive_spaces < 10, "Too many excessive space sequences"
 
