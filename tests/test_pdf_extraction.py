@@ -3,7 +3,7 @@
 This test validates that PDF extraction produces clean, searchable text.
 """
 from io import BytesIO
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -136,7 +136,7 @@ def test_cli_search_with_resume(mock_generate_leads):
             [
                 sys.executable, "-m", "app.main", "find",
                 "-q", "python developer",
-                "--resume", resume_text,
+                "--resume", "test_resume.txt",
                 "-n", "3"
             ],
             capture_output=True,

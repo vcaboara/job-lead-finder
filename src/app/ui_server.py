@@ -40,7 +40,7 @@ class SearchRequest(BaseModel):
     count: int = 5
     model: str | None = None
     evaluate: bool = False
-    min_score: int = 60  # Minimum score threshold for filtering results (0-100)
+    min_score: int = 60  # Minimum score threshold (0-100 scale) for filtering results
 
 
 class HealthResponse(BaseModel):
@@ -740,11 +740,13 @@ def _extract_pdf_text(content: bytes) -> str:
         # Fix multiple spaces between words
         cleaned_text = re.sub(r'  +', ' ', raw_text)
         # Fix common encoding issues
-        cleaned_text = cleaned_text.replace('â€"', '—')  # em dash
-        cleaned_text = cleaned_text.replace('â€™', "'")  # apostrophe
-        cleaned_text = cleaned_text.replace('â€œ', '"')  # left quote
-        cleaned_text = cleaned_text.replace('â€', '"')   # right quote
-        cleaned_text = cleaned_text.replace('â€¢', '•')  # bullet
+        cleaned_text = cleaned_text.replace('â€\"', '—')   # em dash (malformed)
+        cleaned_text = cleaned_text.replace('â€"', '—')    # em dash (single char)
+        cleaned_text = cleaned_text.replace('â€"', '–')    # en dash
+        cleaned_text = cleaned_text.replace('â€™', "'")    # apostrophe
+        cleaned_text = cleaned_text.replace('â€œ', '"')    # left double quote
+        cleaned_text = cleaned_text.replace('â€', '"')    # right double quote
+        cleaned_text = cleaned_text.replace('â€¢', '•')    # bullet
         # Normalize line breaks
         cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_text)
         
@@ -809,7 +811,6 @@ def _check_malicious_content(text: str) -> list[str]:
         "javascript:", "vbscript:",
         "onclick=", "onerror=",
         "eval(", "exec(",
-        "__import__", "subprocess",
     ]
     
     text_lower = text.lower()
@@ -818,8 +819,10 @@ def _check_malicious_content(text: str) -> list[str]:
             findings.append(f"Suspicious pattern detected: '{pattern}'")
     
     # Check for excessive special characters (possible obfuscation)
-    special_char_count = sum(1 for c in text if not c.isalnum() and not c.isspace())
-    if len(text) > 100 and special_char_count / len(text) > 0.3:
+    # Exclude common resume punctuation from special character count
+    common_punct = set(".,:;()-[]{}•*'\"/\\&+|_")
+    special_char_count = sum(1 for c in text if not c.isalnum() and not c.isspace() and c not in common_punct)
+    if len(text) > 100 and special_char_count / len(text) > 0.45:
         findings.append(f"Excessive special characters detected ({special_char_count}/{len(text)} = {special_char_count/len(text):.1%})")
     
     # Check for null bytes (binary content)
