@@ -748,6 +748,17 @@ TODO: Fix/update search progress indicator
             return validStatuses.includes(status) ? status : 'new';
         }
 
+        // Sanitize URL to prevent XSS through javascript: or data: schemes
+        function sanitizeUrl(url) {
+            if (!url) return '#';
+            const urlStr = String(url).trim();
+            // Block javascript:, data:, and other dangerous schemes
+            if (/^(javascript|data|vbscript):/i.test(urlStr)) {
+                return '#';
+            }
+            return urlStr;
+        }
+
         async function loadLeads() {
             try { const resp = await fetch('/api/leads'); const data = await resp.json(); displayLeads(data.leads); } catch (e) { console.error('Error loading leads:', e); }
         }
@@ -784,7 +795,7 @@ TODO: Fix/update search progress indicator
                     <div class="location">📍 ${escapeHtml(lead.location)}</div>
                     <div class="summary">${stripHtml(lead.summary)}</div>
                     ${scoreSection}
-                    <a href="${escapeHtml(lead.link)}" target="_blank">View on site →</a>
+                    <a href="${sanitizeUrl(lead.link)}" target="_blank">View on site →</a>
                     <div class="job-actions">
                         <select class="status-select" data-job-id="${escapeHtml(jobId)}">
                             <option value="new" ${currentStatus === 'new' ? 'selected' : ''}>New</option>
@@ -1062,7 +1073,7 @@ TODO: Fix/update search progress indicator
                     <div class="location">📍 ${escapeHtml(location)}</div>
                     ${summary ? `<div class="summary">${stripHtml(summary)}</div>` : ''}
                     ${trackedDate ? `<div style="font-size:0.85em; color:#666; margin-top:8px;">Tracked: ${escapeHtml(trackedDate)}</div>` : ''}
-                    <a href="${escapeHtml(link)}" target="_blank">View on site →</a>
+                    <a href="${sanitizeUrl(link)}" target="_blank">View on site →</a>
                     <div class="job-actions">
                         <select class="status-select" data-job-id="${escapeHtml(jobId)}">
                             <option value="new" ${status === 'new' ? 'selected' : ''}>New</option>
