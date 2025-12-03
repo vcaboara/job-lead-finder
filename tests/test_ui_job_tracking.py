@@ -103,13 +103,17 @@ def test_save_job_notes(client, mock_search_response):
 
 def test_save_job_notes_exceeds_max_length(client, mock_search_response):
     """Test that notes exceeding max length are rejected."""
-    # Create a job
-    with patch("app.ui_server._process_and_filter_leads") as mock_filter:
-        mock_filter.return_value = mock_search_response(job_id="notes_limit")["leads"]
+    # Create a job - mock both job fetching and filtering to avoid slow API calls
+    with patch("app.ui_server.generate_job_leads") as mock_gen, patch(
+        "app.ui_server._process_and_filter_leads"
+    ) as mock_filter:
+        mock_data = mock_search_response(job_id="notes_limit")
+        mock_gen.return_value = mock_data["leads"]
+        mock_filter.return_value = mock_data["leads"]  # Return leads as-is
         response = client.post(
             "/api/search",
             json={
-                "query": "python developer",
+                "query": "test",
                 "count": 1,
                 "evaluate": False,
                 "min_score": 0,

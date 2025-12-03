@@ -1007,7 +1007,12 @@ TODO: Fix/update search progress indicator
             const minScore = parseInt(document.getElementById('minScore')?.value || 60);
             const evalEl = document.getElementById('evaluate');
             const evaluate = (!!resume && resume.trim().length > 0) || (evalEl ? !!evalEl.checked : false);
+
+            // Show loading state and clear previous results
             showStatus('Starting search...', 'loading');
+            const container = document.getElementById('leadsList');
+            container.innerHTML = '<div class="empty-state"><p>Searching...</p></div>';
+            document.getElementById('resultsCount').textContent = '';
 
             // Clear any existing progress polling
             if (progressInterval) {
