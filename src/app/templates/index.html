@@ -703,7 +703,7 @@ TODO: Fix/update search progress indicator
                 <!-- Tracked Jobs Tab -->
                 <div class="config-panel" id="panel-tracked-jobs">
                     <div style="margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap;">
-                        <button onclick="loadTrackedJobs()" style="padding:8px 16px;">🔄 Refresh</button>
+                        <button onclick="loadTrackedJobs()" aria-label="Refresh tracked jobs" style="padding:8px 16px;">🔄 Refresh</button>
                         <select id="statusFilter" onchange="filterTrackedJobs()"
                             style="padding:8px; border:1px solid #ddd; border-radius:4px;">
                             <option value="all">All Statuses</option>
