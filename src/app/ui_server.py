@@ -546,14 +546,6 @@ def _process_and_filter_leads(raw_leads: list) -> list:
     return processed_leads
 
 
-@app.get("/api/search/progress/{search_id}")
-def get_search_progress(search_id: str):
-    """Get the current progress of a search operation."""
-    if search_id not in search_progress:
-        raise HTTPException(status_code=404, detail="Search ID not found")
-    return JSONResponse(search_progress[search_id])
-
-
 @app.get("/api/leads")
 def get_leads():
     if not LEADS_FILE.exists():
@@ -690,7 +682,7 @@ async def upload_resume(file: UploadFile = File(...)):
         )
 
     # Check for malicious content
-    malicious_findings = _check_malicious_content(text, file.filename)
+    malicious_findings = _check_malicious_content(text)
     if malicious_findings:
         raise HTTPException(
             status_code=400, 
@@ -800,12 +792,11 @@ def _extract_docx_text(content: bytes) -> str:
         raise Exception("python-docx not installed. Install with: pip install python-docx") from exc
 
 
-def _check_malicious_content(text: str, filename: str) -> list[str]:
+def _check_malicious_content(text: str) -> list[str]:
     """Check for malicious content in uploaded file.
     
     Args:
         text: Extracted text content
-        filename: Original filename
         
     Returns:
         List of security findings (empty if safe)
