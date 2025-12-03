@@ -7,9 +7,12 @@ configuration endpoints, and leads retrieval.
 import json
 import logging
 import os
+import re
 import time
+from io import BytesIO
 from pathlib import Path
 from typing import Any, Dict
+from zipfile import ZipFile, BadZipFile
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
@@ -19,6 +22,19 @@ from .config_manager import get_search_preferences, load_config, save_config, sc
 from .job_finder import generate_job_leads, save_to_file
 from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
 from .link_validator import validate_link
+
+# Optional imports for PDF/DOCX support
+try:
+    from pypdf import PdfReader
+    PYPDF_AVAILABLE = True
+except ImportError:
+    PYPDF_AVAILABLE = False
+
+try:
+    from docx import Document
+    PYTHON_DOCX_AVAILABLE = True
+except ImportError:
+    PYTHON_DOCX_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -721,11 +737,10 @@ def _extract_pdf_text(content: bytes) -> str:
     Raises:
         Exception: If PDF extraction fails
     """
+    if not PYPDF_AVAILABLE:
+        raise Exception("pypdf not installed. Install with: pip install pypdf")
+    
     try:
-        from io import BytesIO
-        from pypdf import PdfReader
-        import re
-        
         pdf = PdfReader(BytesIO(content))
         text_parts = []
         
@@ -751,8 +766,8 @@ def _extract_pdf_text(content: bytes) -> str:
         cleaned_text = re.sub(r'\n\s*\n\s*\n+', '\n\n', cleaned_text)
         
         return cleaned_text.strip()
-    except ImportError as exc:
-        raise Exception("pypdf not installed. Install with: pip install pypdf") from exc
+    except Exception as exc:
+        raise Exception(f"Failed to extract PDF text: {exc}") from exc
 
 
 def _extract_docx_text(content: bytes) -> str:
@@ -767,11 +782,10 @@ def _extract_docx_text(content: bytes) -> str:
     Raises:
         Exception: If DOCX extraction fails or contains macros
     """
+    if not PYTHON_DOCX_AVAILABLE:
+        raise Exception("python-docx not installed. Install with: pip install python-docx")
+    
     try:
-        from io import BytesIO
-        from docx import Document
-        from zipfile import ZipFile, BadZipFile
-        
         # Check for macros (DOCM files have vbaProject.bin)
         try:
             with ZipFile(BytesIO(content)) as docx_zip:
@@ -790,8 +804,10 @@ def _extract_docx_text(content: bytes) -> str:
                     text_parts.append(cell.text)
         
         return "\n".join(text_parts)
-    except ImportError as exc:
-        raise Exception("python-docx not installed. Install with: pip install python-docx") from exc
+    except BadZipFile:
+        raise Exception("Invalid DOCX file format")
+    except Exception as exc:
+        raise Exception(f"Failed to extract DOCX text: {exc}") from exc
 
 
 def _check_malicious_content(text: str) -> list[str]:
