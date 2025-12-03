@@ -57,7 +57,7 @@ __all__ = [
 4. **Register in mcp_providers.py**:
 
    ```python
-   # In MCPAggregator._load_providers_from_config() method (line 729)
+   # In MCPAggregator._load_providers_from_config() method (line 705)
    provider_map = {
        # ... existing providers ...
        "newsite": NewSiteMCP,

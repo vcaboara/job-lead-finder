@@ -5,13 +5,17 @@ No authentication required.
 """
 
 import logging
+import re
 from typing import Any, Dict, List, Optional
-from .base import MCPProvider, HTTPX_AVAILABLE, BS4_AVAILABLE
 
-logger = logging.getLogger(__name__)
+import defusedxml.ElementTree as ET
+
+from .base import MCPProvider, HTTPX_AVAILABLE, BS4_AVAILABLE
 
 if BS4_AVAILABLE:
     from bs4 import BeautifulSoup
+
+logger = logging.getLogger(__name__)
 
 
 class WeWorkRemotelyMCP(MCPProvider):
@@ -21,8 +25,8 @@ class WeWorkRemotelyMCP(MCPProvider):
         super().__init__("WeWorkRemotely")
 
     def is_available(self) -> bool:
-        """WeWorkRemotely RSS feeds are always available."""
-        return True
+        """WeWorkRemotely RSS feeds require httpx."""
+        return HTTPX_AVAILABLE
 
     def search_jobs(
         self, 
@@ -50,8 +54,6 @@ class WeWorkRemotelyMCP(MCPProvider):
             
         try:
             import httpx
-            import re
-            import defusedxml.ElementTree as ET
             
             # Tech-focused RSS feeds
             categories = [
