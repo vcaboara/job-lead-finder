@@ -132,8 +132,13 @@ class WeWorkRemotelyMCP(MCPProvider):
                                 "posted_date": pub_date,
                             })
                             
-                        except Exception:
-                            # Skip malformed items
+                        except Exception as item_error:
+                            # Skip malformed items, but log for debugging
+                            logger.warning(
+                                "Failed to parse job item: %s (error: %s)",
+                                item.findtext("title", default="(no title)"),
+                                item_error
+                            )
                             continue
                     
                 except Exception as cat_error:
