@@ -780,7 +780,7 @@ TODO: Fix/update search progress indicator
 
             // Score section (only for search results)
             const scoreSection = showScore && job.score !== undefined ?
-                `<div class="score-section"><div class="score-badge ${job.score >= 80 ? 'high' : job.score >= 60 ? 'medium' : 'low'}">Score: ${job.score}</div>${job.reasoning ? `<div class="reasoning"><strong>Why this score:</strong> ${escapeHtml(job.reasoning)}</div>` : ''}</div>` : '';
+                `<div class="score-section"><div class="score-badge ${job.score >= 80 ? 'high' : job.score >= 60 ? 'medium' : 'low'}">Score: ${escapeHtml(String(job.score))}</div>${job.reasoning ? `<div class="reasoning"><strong>Why this score:</strong> ${escapeHtml(job.reasoning)}</div>` : ''}</div>` : '';
 
             // Source badge (only for search results)
             const sourceBadge = showSource && job.source ?
