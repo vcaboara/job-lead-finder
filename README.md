@@ -8,6 +8,11 @@ AI-powered job search tool aggregating jobs from multiple providers including We
   - Round-robin distribution ensures diversity across all providers
 - **Job Tracking**: Track application status (new, applied, interviewing, rejected, offer, hidden)
 - **Web UI**: FastAPI dashboard at http://localhost:8000 with search, upload, configuration
+- **Enhanced Resume Upload**: Upload resumes in multiple formats (.txt, .md, .pdf, .docx)
+  - 5MB file size limit with clear error messages
+  - Comprehensive security scanning (script detection, macro detection, malicious content filtering)
+  - PDF text extraction with pypdf
+  - DOCX text extraction with python-docx (includes table content)
 - **AI Features**: Job evaluation, custom cover letter generation
 - **Link Discovery**: Find direct company career pages from aggregator listings
 - **Industry Profiles**: Tech, Finance, Healthcare, Gaming, Ecommerce, Automotive, Aerospace, ESG
