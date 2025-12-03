@@ -861,16 +861,10 @@ def update_job_notes(job_id: str, req: JobNotesRequest):
     """Update notes for a job."""
     tracker = get_tracker()
 
-    # Get existing job to preserve status
-    job = tracker.get_job(job_id)
-    if not job:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-
-    current_status = job.get("status", STATUS_NEW)
-    success = tracker.update_status(job_id, current_status, req.notes)
+    success = tracker.update_notes(job_id, req.notes)
 
     if not success:
-        raise HTTPException(status_code=500, detail="Failed to update notes")
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
     # Re-fetch job to return updated data
     job = tracker.get_job(job_id)
