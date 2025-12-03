@@ -45,6 +45,7 @@ Python, FastAPI, Django, Docker, Jenkins, PostgreSQL, Redis, Git
     found_terms = [term for term in key_terms if term.lower() in extracted.lower()]
     
     # At least 80% of key terms should be extracted
+    assert len(key_terms) > 0, "key_terms must not be empty to avoid division by zero"
     success_rate = len(found_terms) / len(key_terms) * 100
     assert success_rate >= 80, f"Only {success_rate:.1f}% of key terms extracted"
     
