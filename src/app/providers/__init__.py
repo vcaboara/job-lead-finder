@@ -7,7 +7,7 @@ To add a new provider:
 1. Create a new file (e.g., my_provider.py)
 2. Implement a class that inherits from MCPProvider
 3. Import and export it here
-4. Register in config_manager.py provider_map
+4. Register in MCPAggregator provider_map (mcp_providers.py)
 
 Currently available providers:
 - WeWorkRemotely: RSS-based remote jobs (fast, no auth)
