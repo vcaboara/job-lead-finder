@@ -31,6 +31,7 @@ DEFAULT_CONFIG = {
         "companyjobs": {"enabled": False, "name": "CompanyJobs"},  # Direct company career pages via Gemini
         "remoteok": {"enabled": True, "name": "RemoteOK"},
         "remotive": {"enabled": True, "name": "Remotive"},
+        "weworkremotely": {"enabled": True, "name": "WeWorkRemotely"},  # RSS-based remote job board
         "duckduckgo": {"enabled": False, "name": "DuckDuckGo"},
     },
     "search": {

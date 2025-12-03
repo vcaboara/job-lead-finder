@@ -26,6 +26,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as execut
 **Performance:**
 - RemoteOK: ~0.13s (fast API)
 - Remotive: ~1.0s (fast API)
+- WeWorkRemotely: ~0.5s (RSS feeds)
 - CompanyJobs (Gemini): 90-325s (SLOW - 90s timeout now enforced)
 
 ---
@@ -34,16 +35,17 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as execut
 
 ### ✅ Working Providers (No Auth Required)
 
-| Provider | Speed | Quality | Coverage | Tech Focus |
-|----------|-------|---------|----------|------------|
-| **RemoteOK** | 0.13s | High | 50-100 jobs | ✅ Tech-focused |
-| **Remotive** | 1.0s | High | 20-50 jobs | ✅ Tech-focused |
+| Provider           | Speed | Quality | Coverage    | Tech Focus           |
+| ------------------ | ----- | ------- | ----------- | -------------------- |
+| **RemoteOK**       | 0.13s | High    | 50-100 jobs | ✅ Tech-focused       |
+| **Remotive**       | 1.0s  | High    | 20-50 jobs  | ✅ Tech-focused       |
+| **WeWorkRemotely** | 0.5s  | High    | 30-80 jobs  | ✅ Tech-focused (RSS) |
 
 ### ⚠️ Problematic Provider
 
-| Provider | Speed | Quality | Coverage | Issues |
-|----------|-------|---------|----------|--------|
-| **CompanyJobs (Gemini)** | 90-325s | Low | 300+ jobs | ❌ Slow, hallucinated links, expensive API calls |
+| Provider                 | Speed   | Quality | Coverage  | Issues                                          |
+| ------------------------ | ------- | ------- | --------- | ----------------------------------------------- |
+| **CompanyJobs (Gemini)** | 90-325s | Low     | 300+ jobs | ❌ Slow, hallucinated links, expensive API calls |
 
 **Gemini Problems:**
 - Takes 5+ minutes even with timeout
@@ -54,12 +56,12 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as execut
 
 ### ❌ Not Implemented (Require Auth)
 
-| Provider | Status | Blocker |
-|----------|--------|---------|
-| **LinkedIn** | Scaffolded | Requires login/OAuth |
-| **Indeed** | Scaffolded | Requires login/scraping |
-| **GitHub Jobs** | Scaffolded | API deprecated |
-| **DuckDuckGo** | Scaffolded | Generic search, not job-specific |
+| Provider        | Status     | Blocker                          |
+| --------------- | ---------- | -------------------------------- |
+| **LinkedIn**    | Scaffolded | Requires login/OAuth             |
+| **Indeed**      | Scaffolded | Requires login/scraping          |
+| **GitHub Jobs** | Scaffolded | API deprecated                   |
+| **DuckDuckGo**  | Scaffolded | Generic search, not job-specific |
 
 ---
 
@@ -105,15 +107,15 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as execut
 
 **Candidate Aggregators:**
 
-| Source | API | Auth | Coverage | Difficulty |
-|--------|-----|------|----------|------------|
-| **We Work Remotely** | HTML scraping | None | ~100 jobs | Easy |
-| **Remote.co** | HTML scraping | None | ~50 jobs | Easy |
-| **FlexJobs** | Paid API | API key | 1000+ jobs | Medium |
-| **AngelList (Wellfound)** | GraphQL API | API key | 500+ startups | Medium |
-| **Stack Overflow Jobs** | REST API | API key | 100+ jobs | Medium |
-| **Adzuna** | REST API | API key | 5000+ jobs | Medium |
-| **Jooble** | REST API | API key | 1000+ jobs | Medium |
+| Source                    | API           | Auth    | Coverage      | Difficulty |
+| ------------------------- | ------------- | ------- | ------------- | ---------- |
+| **We Work Remotely**      | RSS feeds     | None    | ~100 jobs     | Easy       |
+| **Remote.co**             | HTML scraping | None    | ~50 jobs      | Easy       |
+| **FlexJobs**              | Paid API      | API key | 1000+ jobs    | Medium     |
+| **AngelList (Wellfound)** | GraphQL API   | API key | 500+ startups | Medium     |
+| **Stack Overflow Jobs**   | REST API      | API key | 100+ jobs     | Medium     |
+| **Adzuna**                | REST API      | API key | 5000+ jobs    | Medium     |
+| **Jooble**                | REST API      | API key | 1000+ jobs    | Medium     |
 
 **Implementation:**
 - Create new MCP classes (similar to RemoteOK pattern)

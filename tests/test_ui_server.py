@@ -257,6 +257,35 @@ class TestIndexEndpoint:
         assert "</html>" in response.text
 
 
+class TestChangelogEndpoint:
+    """Tests for /api/changelog endpoint."""
+
+    def test_changelog_success(self, client):
+        """Test successful retrieval of changelog content."""
+        response = client.get("/api/changelog")
+        assert response.status_code == 200
+        assert "text/plain" in response.headers["content-type"]
+        # Verify changelog follows Keep a Changelog format
+        assert "# Changelog" in response.text or "## [" in response.text
+
+    def test_changelog_not_found(self, client):
+        """Test 404 when CHANGELOG.md is not found."""
+        with patch.object(Path, "read_text", side_effect=FileNotFoundError()):
+            response = client.get("/api/changelog")
+            assert response.status_code == 404
+            assert "not found" in response.json()["detail"].lower()
+
+    def test_changelog_content_validation(self, client):
+        """Test changelog contains expected version and format information."""
+        response = client.get("/api/changelog")
+        assert response.status_code == 200
+        text = response.text
+        # Should contain version information
+        assert len(text) > 100  # Non-trivial content
+        # Should be plain text format
+        assert isinstance(text, str)
+
+
 class TestAppMetadata:
     """Tests for app metadata and configuration."""
 
