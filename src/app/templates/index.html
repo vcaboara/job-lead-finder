@@ -814,7 +814,7 @@ TODO: Fix/update search progress indicator
                         <option value="rejected" ${status === 'rejected' ? 'selected' : ''}>Rejected</option>
                     </select>
                     <button class="btn-notes" data-job-id="${escapeHtml(jobId)}">📝 Notes</button>
-                    <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">${hideButtonLabel}</button>
+                    <button class="btn-hide" data-job-id="${escapeHtml(jobId)}">${escapeHtml(hideButtonLabel)}</button>
                 </div>
                 <div class="job-notes" id="notes-${escapeHtml(jobId)}">
                     <textarea placeholder="Add notes about this job..." data-job-id="${escapeHtml(jobId)}">${escapeHtml(notes)}</textarea>
