@@ -13,7 +13,7 @@ from typing import Any, Dict
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .config_manager import (
     get_search_preferences,
@@ -105,11 +105,11 @@ def health():
 @app.get("/api/changelog")
 def get_changelog():
     """Get the project changelog documenting all version changes.
-    
+
     Returns:
         Plain text changelog following Keep a Changelog format.
         Includes version history, API changes, and feature documentation.
-        
+
     Raises:
         HTTPException: 404 if CHANGELOG.md not found.
     """
@@ -796,7 +796,11 @@ class CoverLetterRequest(BaseModel):
 class JobNotesRequest(BaseModel):
     """Request model for updating job notes."""
 
-    notes: str
+    notes: str = Field(
+        ...,
+        max_length=10000,
+        description="Job notes (max 10000 characters)",
+    )
 
 
 @app.get("/api/jobs/tracked")

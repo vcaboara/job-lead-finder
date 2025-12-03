@@ -101,6 +101,31 @@ def test_save_job_notes(client, mock_search_response):
     assert job_data["notes"] == test_notes
 
 
+def test_save_job_notes_exceeds_max_length(client, mock_search_response):
+    """Test that notes exceeding max length are rejected."""
+    # Create a job
+    with patch("app.ui_server._process_and_filter_leads") as mock_filter:
+        mock_filter.return_value = mock_search_response(job_id="notes_limit")["leads"]
+        response = client.post(
+            "/api/search",
+            json={
+                "query": "python developer",
+                "count": 1,
+                "evaluate": False,
+                "min_score": 0,
+            },
+        )
+    assert response.status_code == 200
+    data = response.json()
+    job = data["leads"][0]
+    job_id = job.get("job_id")
+
+    # Try to save notes that exceed 10000 characters
+    too_long_notes = "x" * 10001
+    response = client.post(f"/api/jobs/{job_id}/notes", json={"notes": too_long_notes})
+    assert response.status_code == 422  # Validation error
+
+
 def test_job_tracking_persists_across_searches(client):
     """Test that job tracking status persists when same job appears in multiple searches."""
     # First search
