@@ -105,7 +105,7 @@ class CompanyStore:
                 CREATE INDEX IF NOT EXISTS idx_jobs_company ON jobs(company_id);
                 CREATE INDEX IF NOT EXISTS idx_jobs_active ON jobs(active);
             """)
-            logger.info(f"Database initialized at {self.db_path}")
+            logger.info("Database initialized at %s", self.db_path)
 
     def save_company(self, company: Company) -> int:
         """Save or update a company.
