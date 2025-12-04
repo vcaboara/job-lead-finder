@@ -674,11 +674,11 @@ async def upload_resume(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="File is empty")
     
     # Determine max size based on file extension
-    file_ext = file.filename.lower()
-    if file_ext.endswith(".pdf"):
+    file_ext = Path(file.filename).suffix.lower()
+    if file_ext == ".pdf":
         max_size = MAX_PDF_SIZE
         size_label = "2MB"
-    elif file_ext.endswith(".docx"):
+    elif file_ext == ".docx":
         max_size = MAX_DOCX_SIZE
         size_label = "1MB"
     else:  # .txt or .md

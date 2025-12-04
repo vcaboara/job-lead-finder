@@ -95,7 +95,7 @@ def test_upload_docx_too_large():
     assert "1MB" in detail
 
 
-def test_upload_txt_at_size_limit():
+def test_upload_txt_under_size_limit():
     """Test uploading a text file well under 1MB limit."""
     client = TestClient(app)
     # Create realistic resume content (most resumes are 10-50KB)
@@ -111,7 +111,7 @@ def test_upload_txt_at_size_limit():
     assert resp.status_code == 200
 
 
-def test_upload_pdf_at_size_limit(create_test_pdf):
+def test_upload_pdf_under_size_limit(create_test_pdf):
     """Test uploading a small PDF file under 2MB limit."""
     client = TestClient(app)
     # Create a small PDF with reasonable content
