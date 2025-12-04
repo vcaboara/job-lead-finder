@@ -1,6 +1,6 @@
 """Base classes and interfaces for company discovery providers.
 
-Provides abstract base class that all discovery sources must implement,
+Provides an abstract base class that all discovery sources must implement,
 ensuring consistent interface across different data sources (HN, YC, GitHub, etc.).
 """
 
@@ -205,8 +205,8 @@ class BaseDiscoveryProvider(ABC):
             unsupported = [ind for ind in requested if ind not in supported]
             if unsupported:
                 raise ValueError(
-                    f"Provider {self.provider_name} does not support industries: {unsupported}. "
-                    f"Supported: {supported}"
+                    f"Provider {self.provider_name} does not support industries: {[ind.value for ind in unsupported]}. "
+                    f"Supported: {[ind.value for ind in supported]}"
                 )
 
         return True
