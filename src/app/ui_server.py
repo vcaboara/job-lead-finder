@@ -16,7 +16,7 @@ from zipfile import ZipFile, BadZipFile
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from .config_manager import get_search_preferences, load_config, save_config, scan_entity, scan_instructions, validate_url
 from .job_finder import generate_job_leads, save_to_file
