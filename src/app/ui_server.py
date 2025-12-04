@@ -1028,8 +1028,19 @@ class CompanyLinkRequest(BaseModel):
 
 class CoverLetterRequest(BaseModel):
     """Request model for cover letter generation."""
+
     job_description: str
     resume_text: str | None = None
+
+
+class JobNotesRequest(BaseModel):
+    """Request model for updating job notes."""
+
+    notes: str = Field(
+        ...,
+        max_length=10000,
+        description="Job notes (max 10000 characters)",
+    )
 
 
 @app.get("/api/jobs/tracked")
@@ -1105,6 +1116,21 @@ def set_company_link(job_id: str, req: CompanyLinkRequest):
 
     job = tracker.get_job(job_id)
     return JSONResponse({"message": "Company link updated", "job": job})
+
+
+@app.post("/api/jobs/{job_id}/notes")
+def update_job_notes(job_id: str, req: JobNotesRequest):
+    """Update notes for a job."""
+    tracker = get_tracker()
+
+    success = tracker.update_notes(job_id, req.notes)
+
+    if not success:
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    # Re-fetch job to get the updated last_updated timestamp
+    job = tracker.get_job(job_id)
+    return JSONResponse({"message": "Notes updated", "job": job})
 
 
 @app.post("/api/jobs/{job_id}/cover-letter")

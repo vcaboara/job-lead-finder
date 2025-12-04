@@ -141,6 +141,20 @@ class JobTracker:
         self.save()
         return True
 
+    def update_notes(self, job_id: str, notes: str) -> bool:
+        """Update notes for a job.
+
+        Returns True if successful, False if job not found.
+        """
+        if job_id not in self.jobs:
+            print(f"job_tracker: Job {job_id} not found")
+            return False
+
+        self.jobs[job_id]["notes"] = notes
+        self.jobs[job_id]["last_updated"] = datetime.now(timezone.utc).isoformat()
+        self.save()
+        return True
+
     def hide_job(self, job_id: str) -> bool:
         """Mark job as hidden (won't appear in search results)."""
         return self.update_status(job_id, STATUS_HIDDEN)

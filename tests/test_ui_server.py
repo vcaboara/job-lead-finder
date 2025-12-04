@@ -107,61 +107,65 @@ class TestSearchEndpoint:
     def test_search_with_default_resume(self, client, mock_api_key):
         """Test search uses default resume when not provided."""
         with patch("app.ui_server.generate_job_leads", return_value=[]) as mock_gen:
-            with patch("app.ui_server.save_to_file"):
-                with patch.object(Path, "exists", return_value=False):
-                    response = client.post(
-                        "/api/search",
-                        json={"query": "python developer", "count": 2},
-                    )
+            with patch("app.ui_server._process_and_filter_leads", return_value=[]):
+                with patch("app.ui_server.save_to_file"):
+                    with patch.object(Path, "exists", return_value=False):
+                        response = client.post(
+                            "/api/search",
+                            json={"query": "python developer", "count": 2},
+                        )
 
-                    assert response.status_code == 200
-                    # Check that generate_job_leads was called
-                    assert mock_gen.called
+                        assert response.status_code == 200
+                        # Check that generate_job_leads was called
+                        assert mock_gen.called
 
     def test_search_with_model_parameter(self, client, mock_api_key):
         """Test search with custom model parameter."""
         with patch("app.ui_server.generate_job_leads", return_value=[]) as mock_gen:
-            with patch("app.ui_server.save_to_file"):
-                response = client.post(
-                    "/api/search",
-                    json={
-                        "query": "python developer",
-                        "count": 2,
-                        "model": "custom-model",
-                    },
-                )
+            with patch("app.ui_server._process_and_filter_leads", return_value=[]):
+                with patch("app.ui_server.save_to_file"):
+                    response = client.post(
+                        "/api/search",
+                        json={
+                            "query": "python developer",
+                            "count": 2,
+                            "model": "custom-model",
+                        },
+                    )
 
-                assert response.status_code == 200
-                call_args = mock_gen.call_args
-                assert call_args[1]["model"] == "custom-model"
+                    assert response.status_code == 200
+                    call_args = mock_gen.call_args
+                    assert call_args[1]["model"] == "custom-model"
 
     def test_search_with_evaluate_parameter(self, client, mock_api_key):
         """Test search with evaluate parameter."""
         with patch("app.ui_server.generate_job_leads", return_value=[]) as mock_gen:
-            with patch("app.ui_server.save_to_file"):
-                response = client.post(
-                    "/api/search",
-                    json={
-                        "query": "python developer",
-                        "count": 2,
-                        "evaluate": True,
-                    },
-                )
+            with patch("app.ui_server._process_and_filter_leads", return_value=[]):
+                with patch("app.ui_server.save_to_file"):
+                    response = client.post(
+                        "/api/search",
+                        json={
+                            "query": "python developer",
+                            "count": 2,
+                            "evaluate": True,
+                        },
+                    )
 
-                assert response.status_code == 200
-                call_args = mock_gen.call_args
-                assert call_args[1]["evaluate"] is True
+                    assert response.status_code == 200
+                    call_args = mock_gen.call_args
+                    assert call_args[1]["evaluate"] is True
 
     def test_search_handles_exception(self, client, mock_api_key):
         """Test search endpoint handles exceptions gracefully."""
         with patch("app.ui_server.generate_job_leads", side_effect=Exception("Test error")):
-            response = client.post(
-                "/api/search",
-                json={"query": "python developer", "count": 2},
-            )
+            with patch("app.ui_server._process_and_filter_leads", return_value=[]):
+                response = client.post(
+                    "/api/search",
+                    json={"query": "python developer", "count": 2},
+                )
 
-            assert response.status_code == 500
-            assert "Test error" in response.json()["detail"]
+                assert response.status_code == 500
+                assert "Test error" in response.json()["detail"]
 
     def test_search_validation_missing_query(self, client, mock_api_key):
         """Test search validates required query field."""

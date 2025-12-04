@@ -49,6 +49,10 @@ Thumbs.db
 logs/*.txt
 !logs/.gitkeep
 
+# Test generated files
+job_tracking.json
+leads.json
+
 # Job search data (personal/private)
 config.json
 leads.json
