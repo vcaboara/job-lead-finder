@@ -199,7 +199,8 @@ class CompanyStore:
 
         query += " ORDER BY discovered_at DESC"
         if limit:
-            query += f" LIMIT {limit}"
+            query += " LIMIT ?"
+            params.append(limit)
 
         with self._connect() as conn:
             cursor = conn.cursor()
