@@ -57,6 +57,21 @@ def test_upload_file_too_large():
     assert "1MB" in detail
 
 
+def test_upload_md_too_large():
+    """Test uploading a markdown file larger than 1MB limit."""
+    client = TestClient(app)
+    large_content = "# Resume\n" + "x" * (1 * 1024 * 1024 + 1)  # Just over 1MB
+
+    files = {"file": ("large.md", BytesIO(large_content.encode()), "text/markdown")}
+    resp = client.post("/api/upload/resume", files=files)
+
+    assert resp.status_code == 400
+    detail = resp.json()["detail"]
+    assert "too large" in detail.lower()
+    assert "MD" in detail
+    assert "1MB" in detail
+
+
 def test_upload_pdf_too_large():
     """Test uploading a PDF file larger than 2MB limit."""
     client = TestClient(app)
