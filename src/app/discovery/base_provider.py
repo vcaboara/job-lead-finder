@@ -1,6 +1,6 @@
 """Base classes and interfaces for company discovery providers.
 
-Provides abstract base class that all discovery sources must implement,
+Provides an abstract base class that all discovery sources must implement,
 ensuring consistent interface across different data sources (HN, YC, GitHub, etc.).
 """
 
