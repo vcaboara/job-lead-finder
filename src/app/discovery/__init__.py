@@ -6,4 +6,4 @@ This module provides infrastructure for discovering companies through various so
 
 from .base_provider import BaseDiscoveryProvider, Company, DiscoveryResult
 
-__all__ = ["BaseDiscoveryProvider", "Company", "DiscoveryResult"]
+__all__ = ["BaseDiscoveryProvider", "Company", "DiscoveryResult", "IndustryType", "CompanySize"]
