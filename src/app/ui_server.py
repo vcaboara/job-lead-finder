@@ -341,9 +341,9 @@ def search(req: SearchRequest):
             from .job_tracker import generate_job_id
 
             job_id = generate_job_id(lead)
-            lead["job_id"] = job_id  # Always include job_id
             tracked_job = tracker.get_job(job_id)
             if tracked_job:
+                lead["job_id"] = job_id
                 lead["tracking_status"] = tracked_job.get("status", STATUS_NEW)
                 lead["tracking_notes"] = tracked_job.get("notes", "")
                 lead["company_link"] = tracked_job.get("company_link")
