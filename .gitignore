@@ -65,6 +65,7 @@ Vincent Resume.txt
 *.resume.txt
 IMPLEMENTED_FEATURES_AND_TODO.txt
 IMPLEMENTED_FEATURES_AND_TODO.md
+comments.json  # GitHub API response data from PR reviews
 
 # Local test artifacts
 /tests/.cache/
