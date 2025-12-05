@@ -12,6 +12,12 @@ from .base_provider import (
     IndustryType,
 )
 from .company_store import CompanyStore
+from .config import (
+    get_database_path,
+    get_discovery_config,
+    is_discovery_enabled,
+    update_discovery_config,
+)
 
 __all__ = [
     "BaseDiscoveryProvider",
@@ -20,4 +26,8 @@ __all__ = [
     "CompanyStore",
     "DiscoveryResult",
     "IndustryType",
+    "get_database_path",
+    "get_discovery_config",
+    "is_discovery_enabled",
+    "update_discovery_config",
 ]
