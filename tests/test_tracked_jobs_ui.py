@@ -74,7 +74,7 @@ def test_tracked_jobs_includes_metadata(client, mock_search_response):
     assert response.status_code == 200
     data = response.json()
     job = data["leads"][0]
-    
+
     # Track the job first
     track_result = _track_job_helper(client, job)
     job_id = track_result["job_id"]
@@ -112,7 +112,7 @@ def test_filter_tracked_jobs_by_status(client, mock_search_response):
         )
     assert response.status_code == 200
     job1 = response.json()["leads"][0]
-    
+
     # Track first job
     track_result1 = _track_job_helper(client, job1)
     job1_id = track_result1["job_id"]
@@ -128,7 +128,7 @@ def test_filter_tracked_jobs_by_status(client, mock_search_response):
         )
     assert response.status_code == 200
     job2 = response.json()["leads"][0]
-    
+
     # Track second job
     track_result2 = _track_job_helper(client, job2)
     job2_id = track_result2["job_id"]

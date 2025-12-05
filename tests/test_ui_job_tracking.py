@@ -41,7 +41,7 @@ def test_update_job_status(client, mock_search_response):
     assert len(data["leads"]) > 0
 
     job = data["leads"][0]
-    
+
     # Track the job first
     track_result = _track_job_from_search_result(client, job)
     job_id = track_result["job_id"]
@@ -75,7 +75,7 @@ def test_hide_job(client, mock_search_response):
     assert response.status_code == 200
     data = response.json()
     job = data["leads"][0]
-    
+
     # Track the job first
     track_result = _track_job_from_search_result(client, job)
     job_id = track_result["job_id"]
@@ -109,7 +109,7 @@ def test_save_job_notes(client, mock_search_response):
     assert response.status_code == 200
     data = response.json()
     job = data["leads"][0]
-    
+
     # Track the job first
     track_result = _track_job_from_search_result(client, job)
     job_id = track_result["job_id"]
@@ -118,7 +118,7 @@ def test_save_job_notes(client, mock_search_response):
     test_notes = "Great company culture, applied via referral"
     response = client.post(f"/api/jobs/{job_id}/notes", json={"notes": test_notes})
     assert response.status_code == 200
-    
+
     # Verify notes were saved
     response = client.get(f"/api/jobs/{job_id}")
     assert response.status_code == 200
@@ -185,7 +185,7 @@ def test_job_tracking_persists_across_searches(client, mock_search_response):
         assert response.status_code == 200
         data = response.json()
         job = data["leads"][0]
-        
+
         # Track the job first
         track_result = _track_job_from_search_result(client, job)
         job_id = track_result["job_id"]
