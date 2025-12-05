@@ -312,8 +312,6 @@ def search(req: SearchRequest):
                     if not tracker.is_job_hidden(lead):
                         seen_links.add(link)
                         all_valid_leads.append(lead)
-                        # Track new job automatically as "new" status
-                        tracker.track_job(lead, STATUS_NEW)
                     else:
                         hidden_count += 1
                 elif link:
