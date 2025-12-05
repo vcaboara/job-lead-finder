@@ -153,7 +153,6 @@ class CompanyStore:
                     raise RuntimeError("Failed to insert company")
                 logger.info("Saved new company: %s (ID: %d)", company.name, company_id)
 
-            conn.commit()
             return company_id
 
     def get_company(self, company_id: int) -> Optional[Company]:
