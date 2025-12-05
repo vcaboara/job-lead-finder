@@ -38,6 +38,9 @@ def update_discovery_config(**kwargs) -> bool:
         interval_hours, industries, locations, tech_stack
     
     Returns:
+        bool: True if configuration was successfully saved, False otherwise.
+    
+    Returns:
         True if configuration was successfully saved, False otherwise
     """
     config = load_config()
