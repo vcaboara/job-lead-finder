@@ -30,7 +30,7 @@ def temp_config(monkeypatch):
     config_path.unlink()
 
 
-def test_get_default_config():
+def test_get_default_config(temp_config):
     """Test default discovery configuration."""
     config = get_discovery_config()
     
@@ -41,32 +41,32 @@ def test_get_default_config():
     assert config["schedule"]["interval_hours"] == 24
 
 
-def test_is_discovery_enabled_default():
+def test_is_discovery_enabled_default(temp_config):
     """Test discovery disabled by default."""
     assert is_discovery_enabled() is False
 
 
-def test_get_database_path_default():
+def test_get_database_path_default(temp_config):
     """Test default database path."""
     path = get_database_path()
     assert path == Path("data/companies.db")
 
 
-def test_update_discovery_enabled():
+def test_update_discovery_enabled(temp_config):
     """Test enabling discovery."""
     success = update_discovery_config(enabled=True)
     assert success is True
     assert is_discovery_enabled() is True
 
 
-def test_update_database_path():
+def test_update_database_path(temp_config):
     """Test updating database path."""
     update_discovery_config(database_path="custom/path.db")
     path = get_database_path()
     assert path == Path("custom/path.db")
 
 
-def test_update_schedule():
+def test_update_schedule(temp_config):
     """Test updating schedule settings."""
     update_discovery_config(
         schedule_enabled=True,
@@ -80,7 +80,7 @@ def test_update_schedule():
     assert config["schedule"]["interval_hours"] == 12
 
 
-def test_update_filters():
+def test_update_filters(temp_config):
     """Test updating filter settings."""
     update_discovery_config(
         industries=[IndustryType.TECH.value, IndustryType.HEALTHCARE.value],
@@ -94,7 +94,7 @@ def test_update_filters():
     assert "Python" in config["filters"]["tech_stack"]
 
 
-def test_invalid_run_time():
+def test_invalid_run_time(temp_config):
     """Test invalid time format raises error."""
     with pytest.raises(ValueError, match="HH:MM format"):
         update_discovery_config(run_time="25:00")
@@ -103,19 +103,19 @@ def test_invalid_run_time():
         update_discovery_config(run_time="invalid")
 
 
-def test_invalid_interval():
+def test_invalid_interval(temp_config):
     """Test invalid interval raises error."""
     with pytest.raises(ValueError, match="at least 1"):
         update_discovery_config(interval_hours=0)
 
 
-def test_invalid_industry():
+def test_invalid_industry(temp_config):
     """Test invalid industry raises error."""
     with pytest.raises(ValueError):
         update_discovery_config(industries=["INVALID_INDUSTRY"])
 
 
-def test_partial_update():
+def test_partial_update(temp_config):
     """Test partial config updates preserve other values."""
     update_discovery_config(enabled=True, database_path="test.db")
     

@@ -18,11 +18,16 @@ _DEFAULTS = {
 
 
 def get_discovery_config() -> dict:
-    """Get discovery configuration with defaults."""
+    """Get discovery configuration with defaults.
+    
+    Returns a deep copy merged with defaults to prevent mutations
+    and ensure all default keys are present.
+    """
     config = load_config()
     if "discovery" not in config:
         return copy.deepcopy(_DEFAULTS)
-    return config["discovery"]
+    # Merge with defaults to handle missing keys in saved config
+    return {**copy.deepcopy(_DEFAULTS), **copy.deepcopy(config["discovery"])}
 
 
 def update_discovery_config(**kwargs) -> bool:
@@ -31,6 +36,9 @@ def update_discovery_config(**kwargs) -> bool:
     Supported kwargs:
         enabled, database_path, schedule_enabled, run_time, 
         interval_hours, industries, locations, tech_stack
+    
+    Returns:
+        True if configuration was successfully saved, False otherwise
     """
     config = load_config()
     discovery = get_discovery_config()
@@ -50,8 +58,9 @@ def update_discovery_config(**kwargs) -> bool:
         discovery["schedule"]["interval_hours"] = kwargs["interval_hours"]
     
     if "industries" in kwargs:
+        # Validate each industry is a valid enum value (raises ValueError if not)
         for ind in kwargs["industries"]:
-            IndustryType(ind)  # Validates enum
+            IndustryType(ind)
         discovery["filters"]["industries"] = kwargs["industries"]
     
     # Simple assignments
