@@ -105,7 +105,7 @@ class CompanyStore:
                 CREATE INDEX IF NOT EXISTS idx_jobs_company ON jobs(company_id);
                 CREATE INDEX IF NOT EXISTS idx_jobs_active ON jobs(active);
             """)
-            logger.info(f"Database initialized at {self.db_path}")
+            logger.info("Database initialized at %s", self.db_path)
 
     def save_company(self, company: Company) -> int:
         """Save or update a company.
@@ -149,10 +149,10 @@ class CompanyStore:
                       company.funding_stage, company.discovered_via, 
                       company.discovered_at.isoformat(), metadata))
                 company_id = cursor.lastrowid
-                assert company_id is not None
+                if company_id is None:
+                    raise RuntimeError("Failed to insert company")
                 logger.info("Saved new company: %s (ID: %d)", company.name, company_id)
 
-            conn.commit()
             return company_id
 
     def get_company(self, company_id: int) -> Optional[Company]:
@@ -172,9 +172,24 @@ class CompanyStore:
         active_only: bool = True,
         limit: Optional[int] = None,
     ) -> list[Company]:
-        """Find companies matching criteria."""
+        """Find companies matching criteria.
+
+        Args:
+            industries: Filter by industry types (None = no filter)
+            sizes: Filter by company sizes (None = no filter)
+            locations: Filter by locations (partial match, None = no filter)
+            tech_stack: Filter by technologies (partial match, None = no filter)
+            active_only: Only return active companies (default: True)
+            limit: Maximum number of results (None = no limit)
+
+        Returns:
+            List of Company objects matching all criteria, ordered by discovery date (newest first)
+        """
         query = "SELECT * FROM companies WHERE 1=1"
         params = []
+        def _escape_like(s: str) -> str:
+            """Escape special LIKE wildcards."""
+            return s.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
         if active_only:
             query += " AND active = 1"
@@ -191,15 +206,16 @@ class CompanyStore:
 
         if locations:
             query += " AND (" + " OR ".join(["locations LIKE ?"] * len(locations)) + ")"
-            params.extend([f'%"{loc}"%' for loc in locations])
+            params.extend([f'%"{_escape_like(loc)}"%' for loc in locations])
 
         if tech_stack:
             query += " AND (" + " OR ".join(["tech_stack LIKE ?"] * len(tech_stack)) + ")"
-            params.extend([f'%"{tech}"%' for tech in tech_stack])
+            params.extend([f'%"{_escape_like(tech)}"%' for tech in tech_stack])
 
         query += " ORDER BY discovered_at DESC"
         if limit:
-            query += f" LIMIT {limit}"
+            query += " LIMIT ?"
+            params.append(limit)
 
         with self._connect() as conn:
             cursor = conn.cursor()
@@ -214,18 +230,20 @@ class CompanyStore:
                 "UPDATE companies SET careers_url=?, updated_at=? WHERE id=?",
                 (careers_url, datetime.now(UTC).isoformat(), company_id)
             )
-            conn.commit()
             return cursor.rowcount > 0
 
     def mark_company_checked(self, company_id: int):
-        """Update last_checked timestamp."""
+        """Update last_checked timestamp.
+
+        Args:
+            company_id: The ID of the company to update.
+        """
         with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute(
                 "UPDATE companies SET last_checked=? WHERE id=?",
                 (datetime.now(UTC).isoformat(), company_id)
             )
-            conn.commit()
 
     def log_discovery(
         self,
@@ -237,7 +255,17 @@ class CompanyStore:
         metadata: Optional[dict] = None,
         duration_seconds: Optional[float] = None,
     ):
-        """Log a discovery operation."""
+        """Log a discovery operation.
+
+        Args:
+            source: The name or identifier of the discovery source (e.g., provider or script).
+            companies_found: The total number of companies found during the discovery operation.
+            companies_new: The number of new companies added to the database.
+            companies_updated: The number of existing companies updated.
+            errors: A list of error messages encountered during discovery, if any.
+            metadata: Additional metadata related to the discovery operation.
+            duration_seconds: The duration of the discovery operation in seconds.
+        """
         with self._connect() as conn:
             cursor = conn.cursor()
             cursor.execute("""
@@ -248,11 +276,18 @@ class CompanyStore:
             """, (source, datetime.now(UTC).isoformat(), companies_found, companies_new,
                   companies_updated, json.dumps(errors or []), json.dumps(metadata or {}),
                   duration_seconds))
-            conn.commit()
             logger.info("Logged discovery: %s - %d new, %d updated", source, companies_new, companies_updated)
 
     def get_stats(self) -> dict:
-        """Get database statistics."""
+        """Get database statistics.
+
+        Returns:
+            A dictionary with the following keys:
+                - total_companies: The total number of active companies in the database.
+                - by_industry: A mapping from industry name to count of active companies.
+                - by_size: A mapping from company size to count of active companies.
+                - discoveries_last_7_days: A mapping from source to count of new companies.
+        """
         with self._connect() as conn:
             cursor = conn.cursor()
 
@@ -290,17 +325,56 @@ class CompanyStore:
 
     def _row_to_company(self, row: sqlite3.Row) -> Company:
         """Convert database row to Company object."""
+        # Handle enum parsing with fallbacks
+        try:
+            industry = IndustryType(row["industry"])
+        except ValueError:
+            logger.warning("Invalid industry '%s' for company %s, defaulting to OTHER", row["industry"], row["name"])
+            industry = IndustryType.OTHER
+        
+        try:
+            size = CompanySize(row["size"])
+        except ValueError:
+            logger.warning("Invalid size '%s' for company %s, defaulting to UNKNOWN", row["size"], row["name"])
+            size = CompanySize.UNKNOWN
+        
+        # Handle JSON parsing with fallbacks
+        try:
+            tech_stack = json.loads(row["tech_stack"]) if row["tech_stack"] else []
+        except json.JSONDecodeError:
+            logger.warning("Invalid JSON in tech_stack for company %s", row["name"])
+            tech_stack = []
+        
+        try:
+            locations = json.loads(row["locations"]) if row["locations"] else []
+        except json.JSONDecodeError:
+            logger.warning("Invalid JSON in locations for company %s", row["name"])
+            locations = []
+        
+        try:
+            metadata = json.loads(row["metadata"]) if row["metadata"] else {}
+        except json.JSONDecodeError:
+            logger.warning("Invalid JSON in metadata for company %s", row["name"])
+            metadata = {}
+        
+        # Handle datetime parsing with fallback
+        try:
+            discovered_at = datetime.fromisoformat(row["discovered_at"])
+        except ValueError:
+            logger.warning("Invalid datetime '%s' for company %s", row["discovered_at"], row["name"])
+            discovered_at = datetime.now(UTC)
+        
         return Company(
             name=row["name"],
             website=row["website"],
             careers_url=row["careers_url"],
-            industry=IndustryType(row["industry"]),
-            size=CompanySize(row["size"]),
+            industry=industry,
+            size=size,
             description=row["description"] or "",
-            tech_stack=json.loads(row["tech_stack"]) if row["tech_stack"] else [],
-            locations=json.loads(row["locations"]) if row["locations"] else [],
+            tech_stack=tech_stack,
+            locations=locations,
             funding_stage=row["funding_stage"],
             discovered_via=row["discovered_via"],
-            discovered_at=datetime.fromisoformat(row["discovered_at"]),
-            metadata=json.loads(row["metadata"]) if row["metadata"] else {},
+            discovered_at=discovered_at,
+            metadata=metadata,
         )
