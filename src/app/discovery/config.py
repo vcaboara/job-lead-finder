@@ -1,0 +1,80 @@
+"""Discovery system configuration."""
+
+import copy
+from datetime import time
+from pathlib import Path
+
+from app.config_manager import load_config, save_config
+from app.discovery.base_provider import IndustryType
+
+_DEFAULTS = {
+    "enabled": False,
+    "database_path": "data/companies.db",
+    "schedule": {"enabled": False, "run_time": "09:00", "interval_hours": 24},
+    "filters": {"industries": [], "locations": [], "tech_stack": []},
+    "notifications": {"enabled": False, "min_new_companies": 5},
+    "providers": {"hackernews": {"enabled": True}},
+}
+
+
+def get_discovery_config() -> dict:
+    """Get discovery configuration with defaults."""
+    config = load_config()
+    if "discovery" not in config:
+        return copy.deepcopy(_DEFAULTS)
+    return config["discovery"]
+
+
+def update_discovery_config(**kwargs) -> bool:
+    """Update discovery configuration.
+    
+    Supported kwargs:
+        enabled, database_path, schedule_enabled, run_time, 
+        interval_hours, industries, locations, tech_stack
+    """
+    config = load_config()
+    discovery = get_discovery_config()
+    
+    # Validate and apply updates
+    if "run_time" in kwargs:
+        try:
+            h, m = kwargs["run_time"].split(":")
+            time(int(h), int(m))
+            discovery["schedule"]["run_time"] = kwargs["run_time"]
+        except (ValueError, AttributeError):
+            raise ValueError("run_time must be in HH:MM format")
+    
+    if "interval_hours" in kwargs:
+        if kwargs["interval_hours"] < 1:
+            raise ValueError("interval_hours must be at least 1")
+        discovery["schedule"]["interval_hours"] = kwargs["interval_hours"]
+    
+    if "industries" in kwargs:
+        for ind in kwargs["industries"]:
+            IndustryType(ind)  # Validates enum
+        discovery["filters"]["industries"] = kwargs["industries"]
+    
+    # Simple assignments
+    if "enabled" in kwargs:
+        discovery["enabled"] = kwargs["enabled"]
+    if "database_path" in kwargs:
+        discovery["database_path"] = kwargs["database_path"]
+    if "schedule_enabled" in kwargs:
+        discovery["schedule"]["enabled"] = kwargs["schedule_enabled"]
+    if "locations" in kwargs:
+        discovery["filters"]["locations"] = kwargs["locations"]
+    if "tech_stack" in kwargs:
+        discovery["filters"]["tech_stack"] = kwargs["tech_stack"]
+    
+    config["discovery"] = discovery
+    return save_config(config)
+
+
+def get_database_path() -> Path:
+    """Get configured database path."""
+    return Path(get_discovery_config()["database_path"])
+
+
+def is_discovery_enabled() -> bool:
+    """Check if discovery is enabled."""
+    return get_discovery_config().get("enabled", False)
