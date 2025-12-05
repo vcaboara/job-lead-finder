@@ -1,6 +1,8 @@
 """Tests for CompanyStore database operations."""
 
+import sqlite3
 import tempfile
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -22,7 +24,6 @@ def temp_db():
                 db_path.unlink()
             break
         except PermissionError:
-            import time
             time.sleep(0.1)
 
 
@@ -58,7 +59,6 @@ def test_initialize_creates_schema(temp_db):
     store = CompanyStore(temp_db)
     store.initialize()
 
-    import sqlite3
     with sqlite3.connect(str(temp_db)) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
@@ -237,7 +237,6 @@ def test_mark_company_checked(store, sample_company):
     company_id = store.save_company(sample_company)
     store.mark_company_checked(company_id)
 
-    import sqlite3
     with sqlite3.connect(str(store.db_path)) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT last_checked FROM companies WHERE id = ?", (company_id,))
@@ -256,7 +255,6 @@ def test_log_discovery(store):
         duration_seconds=15.5,
     )
 
-    import sqlite3
     with sqlite3.connect(str(store.db_path)) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM discovery_log ORDER BY timestamp DESC LIMIT 1")
@@ -290,3 +288,95 @@ def test_get_stats(store):
     assert stats["total_companies"] == 4
     assert stats["by_industry"][IndustryType.TECH.value] == 3
     assert stats["by_size"][CompanySize.STARTUP.value] == 3
+
+
+def test_find_active_only(store):
+    """Test filtering by active status."""
+    active = Company(
+        name="Active Co",
+        website="https://active.com",
+        industry=IndustryType.TECH,
+        size=CompanySize.STARTUP,
+        discovered_via="test",
+        discovered_at=datetime.now(UTC),
+    )
+    inactive = Company(
+        name="Inactive Co",
+        website="https://inactive.com",
+        industry=IndustryType.TECH,
+        size=CompanySize.STARTUP,
+        discovered_via="test",
+        discovered_at=datetime.now(UTC),
+    )
+
+    store.save_company(active)
+    inactive_id = store.save_company(inactive)
+
+    # Mark one as inactive
+    with sqlite3.connect(str(store.db_path)) as conn:
+        conn.execute("UPDATE companies SET active = 0 WHERE id = ?", (inactive_id,))
+        conn.commit()
+
+    # active_only=True (default) should filter out inactive
+    results = store.find_companies(active_only=True)
+    assert len(results) == 1
+    assert results[0].name == "Active Co"
+
+    # active_only=False should include all
+    results = store.find_companies(active_only=False)
+    assert len(results) == 2
+
+
+def test_update_careers_url_nonexistent(store):
+    """Test updating careers URL for non-existent company returns False."""
+    success = store.update_careers_url(999, "https://example.com/careers")
+    assert success is False
+
+
+def test_find_combined_filters(store):
+    """Test combining multiple filter parameters."""
+    # Create diverse companies
+    matching = Company(
+        name="Matching Co",
+        website="https://matching.com",
+        industry=IndustryType.TECH,
+        size=CompanySize.STARTUP,
+        locations=["San Francisco"],
+        tech_stack=["Python"],
+        discovered_via="test",
+        discovered_at=datetime.now(UTC),
+    )
+    wrong_industry = Company(
+        name="Wrong Industry",
+        website="https://wrong-industry.com",
+        industry=IndustryType.HEALTHCARE,
+        size=CompanySize.STARTUP,
+        locations=["San Francisco"],
+        tech_stack=["Python"],
+        discovered_via="test",
+        discovered_at=datetime.now(UTC),
+    )
+    wrong_size = Company(
+        name="Wrong Size",
+        website="https://wrong-size.com",
+        industry=IndustryType.TECH,
+        size=CompanySize.LARGE,
+        locations=["San Francisco"],
+        tech_stack=["Python"],
+        discovered_via="test",
+        discovered_at=datetime.now(UTC),
+    )
+
+    store.save_company(matching)
+    store.save_company(wrong_industry)
+    store.save_company(wrong_size)
+
+    # Combined filter should only return the matching company
+    results = store.find_companies(
+        industries=[IndustryType.TECH],
+        sizes=[CompanySize.STARTUP],
+        locations=["San Francisco"],
+        tech_stack=["Python"],
+    )
+    assert len(results) == 1
+    assert results[0].name == "Matching Co"
