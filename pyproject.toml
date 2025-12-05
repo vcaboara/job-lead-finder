@@ -18,7 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Development tools
-dev = ["pytest>=7.0", "pytest-cov>=5.0", "pre-commit", "black", "isort", "autopep8>=2.0.0"]
+dev = ["pytest>=7.0", "pytest-cov>=5.0", "pre-commit", "black", "isort"]
 # Web server dependencies (FastAPI + Uvicorn)
 web = ["fastapi>=0.100.0", "uvicorn[standard]>=0.23.0", "python-multipart>=0.0.6"]
 # Test dependencies
@@ -29,19 +29,17 @@ gemini = ["google-genai>=0.1.0"]
 [project.scripts]
 job-starter = "app.main:main"
 
-[tool.autopep8]
-max_line_length = 120
-in-place = true
-recursive = true
-aggressive = 1
-
 [tool.black]
 line-length = 120
 target-version = ['py310', 'py311']
+skip-string-normalization = false  # Use double quotes (Black's default)
 
 [tool.isort]
 profile = "black"
 line_length = 120
+
+# Remove autopep8 config since we're using Black
+# [tool.autopep8] - removed
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
