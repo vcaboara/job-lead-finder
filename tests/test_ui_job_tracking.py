@@ -5,6 +5,23 @@ from unittest.mock import patch
 from app.job_tracker import STATUS_APPLIED, STATUS_HIDDEN
 
 
+def _track_job_from_search_result(client, job):
+    """Helper to track a job from search results."""
+    track_response = client.post(
+        "/api/jobs/track",
+        json={
+            "title": job.get("title", "Test Job"),
+            "company": job.get("company", "Test Company"),
+            "location": job.get("location", "Remote"),
+            "summary": job.get("summary", "Test summary"),
+            "link": job.get("link", "https://example.com/job"),
+            "source": job.get("source", ""),
+        },
+    )
+    assert track_response.status_code == 200
+    return track_response.json()
+
+
 def test_update_job_status(client, mock_search_response):
     """Test updating job status via API."""
     # First, create a job by searching
@@ -24,8 +41,10 @@ def test_update_job_status(client, mock_search_response):
     assert len(data["leads"]) > 0
 
     job = data["leads"][0]
-    job_id = job.get("job_id")
-    assert job_id is not None
+
+    # Track the job first
+    track_result = _track_job_from_search_result(client, job)
+    job_id = track_result["job_id"]
 
     # Update status to applied
     response = client.post(f"/api/jobs/{job_id}/status", json={"status": STATUS_APPLIED})
@@ -56,7 +75,10 @@ def test_hide_job(client, mock_search_response):
     assert response.status_code == 200
     data = response.json()
     job = data["leads"][0]
-    job_id = job.get("job_id")
+
+    # Track the job first
+    track_result = _track_job_from_search_result(client, job)
+    job_id = track_result["job_id"]
 
     # Hide the job
     response = client.post(f"/api/jobs/{job_id}/hide")
@@ -87,12 +109,16 @@ def test_save_job_notes(client, mock_search_response):
     assert response.status_code == 200
     data = response.json()
     job = data["leads"][0]
-    job_id = job.get("job_id")
+
+    # Track the job first
+    track_result = _track_job_from_search_result(client, job)
+    job_id = track_result["job_id"]
 
     # Save notes
     test_notes = "Great company culture, applied via referral"
     response = client.post(f"/api/jobs/{job_id}/notes", json={"notes": test_notes})
     assert response.status_code == 200
+
     # Verify notes were saved
     response = client.get(f"/api/jobs/{job_id}")
     assert response.status_code == 200
@@ -159,7 +185,10 @@ def test_job_tracking_persists_across_searches(client, mock_search_response):
         assert response.status_code == 200
         data = response.json()
         job = data["leads"][0]
-        job_id = job.get("job_id")
+
+        # Track the job first
+        track_result = _track_job_from_search_result(client, job)
+        job_id = track_result["job_id"]
 
         # Mark as applied
         response = client.post(f"/api/jobs/{job_id}/status", json={"status": STATUS_APPLIED})
@@ -228,9 +257,10 @@ def test_get_tracked_jobs(client, mock_search_response):
         data = response.json()
         if data["leads"]:
             job = data["leads"][0]
-            job_id = job.get("job_id")
-            if job_id:
-                client.post(f"/api/jobs/{job_id}/status", json={"status": STATUS_APPLIED})
+            # Track the job first
+            track_result = _track_job_from_search_result(client, job)
+            job_id = track_result["job_id"]
+            client.post(f"/api/jobs/{job_id}/status", json={"status": STATUS_APPLIED})
 
     # Get all tracked jobs
     response = client.get("/api/jobs/tracked")

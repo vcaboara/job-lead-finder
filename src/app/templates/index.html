@@ -303,6 +303,16 @@ TODO: Fix/update search progress indicator
             opacity: 0.8;
         }
 
+        .btn-track {
+            background: #4CAF50;
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn-track:hover {
+            background: #45a049;
+        }
+
         .btn-hide {
             background: #f44336;
             color: white;
@@ -706,7 +716,7 @@ TODO: Fix/update search progress indicator
 
                 <!-- Tracked Jobs Tab -->
                 <div class="config-panel" id="panel-tracked-jobs">
-                    <div style="margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap;">
+                    <div style="margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
                         <button onclick="loadTrackedJobs()" aria-label="Refresh tracked jobs"
                             style="padding:8px 16px;">🔄 Refresh</button>
                         <select id="statusFilter" onchange="filterTrackedJobs()"
@@ -718,6 +728,9 @@ TODO: Fix/update search progress indicator
                             <option value="offer">Offer</option>
                             <option value="rejected">Rejected</option>
                         </select>
+                        <button onclick="clearAllTrackedJobs()" aria-label="Clear all tracked jobs"
+                            style="padding:8px 16px; background:#f44336; color:white; margin-left:auto;">🗑️ Clear
+                            All</button>
                     </div>
                     <div class="leads-list" id="trackedJobsList">
                         <div class="empty-state">
@@ -802,7 +815,20 @@ TODO: Fix/update search progress indicator
             const trackedDate = showTrackedDate && job.first_seen ?
                 `<div style="font-size:0.85em; color:#666; margin-top:8px;">Tracked: ${escapeHtml(new Date(job.first_seen).toLocaleDateString())}</div>` : '';
 
-            return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
+            // Track button (only show for new/untracked jobs)
+            const trackButton = status === 'new' ?
+                `<button class="btn-track" data-job-id="${escapeHtml(jobId)}">⭐ Track</button>` : '';
+
+            // Store job data in card for tracking (only for untracked jobs)
+            const jobDataAttrs = status === 'new' ? `
+                data-job-title="${escapeHtml(title)}"
+                data-job-company="${escapeHtml(company)}"
+                data-job-location="${escapeHtml(location)}"
+                data-job-summary="${escapeHtml(summary)}"
+                data-job-link="${escapeHtml(link)}"
+                data-job-source="${escapeHtml(job.source || '')}"` : '';
+
+            return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}"${jobDataAttrs}>
                 <h3>${escapeHtml(title)}${sourceBadge}${statusBadge}</h3>
                 <div class="company">${escapeHtml(company)}</div>
                 <div class="location">📍 ${escapeHtml(location)}</div>
@@ -811,7 +837,8 @@ TODO: Fix/update search progress indicator
                 ${trackedDate}
                 <a href="${sanitizeUrl(link)}" target="_blank">View on site →</a>
                 <div class="job-actions">
-                    <select class="status-select" data-job-id="${escapeHtml(jobId)}">
+                    ${trackButton}
+                    <select class="status-select" data-job-id="${escapeHtml(jobId)}" ${status === 'new' ? 'style="display:none"' : ''}>
                         <option value="new" ${validateStatus(status) === 'new' ? 'selected' : ''}>New</option>
                         <option value="applied" ${validateStatus(status) === 'applied' ? 'selected' : ''}>Applied</option>
                         <option value="interviewing" ${validateStatus(status) === 'interviewing' ? 'selected' : ''}>Interviewing</option>
@@ -829,6 +856,13 @@ TODO: Fix/update search progress indicator
 
         // Shared function to attach event listeners to job cards
         function attachJobCardListeners(container, onStatusChange, onHide) {
+            container.querySelectorAll('.btn-track').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const jobId = this.getAttribute('data-job-id');
+                    await trackJob(jobId);
+                });
+            });
+
             container.querySelectorAll('.status-select').forEach(select => {
                 select.addEventListener('change', function () {
                     const jobId = this.getAttribute('data-job-id');
@@ -913,6 +947,43 @@ TODO: Fix/update search progress indicator
         }
 
         // Job tracking functions
+        async function trackJob(jobId) {
+            try {
+                // Get the card to extract job data
+                const card = document.querySelector(`[data-job-id="${CSS.escape(jobId)}"]`);
+                if (!card) throw new Error('Job card not found');
+
+                // Extract job data from card attributes
+                const jobData = {
+                    title: card.getAttribute('data-job-title') || 'Untitled',
+                    company: card.getAttribute('data-job-company') || 'Unknown Company',
+                    location: card.getAttribute('data-job-location') || 'Location not specified',
+                    summary: card.getAttribute('data-job-summary') || '',
+                    link: card.getAttribute('data-job-link') || '#',
+                    source: card.getAttribute('data-job-source') || ''
+                };
+
+                // Track the job with full data
+                const resp = await fetch('/api/jobs/track', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(jobData)
+                });
+                if (!resp.ok) throw new Error('Failed to track job');
+
+                // Update UI: hide track button, show status dropdown
+                const trackBtn = card.querySelector('.btn-track');
+                const statusSelect = card.querySelector('.status-select');
+                if (trackBtn) trackBtn.remove();
+                if (statusSelect) statusSelect.style.display = '';
+
+                showStatus('Job is now being tracked!', 'success');
+            } catch (e) {
+                showStatus(`Error tracking job: ${e.message}`, 'error');
+                console.error(e);
+            }
+        }
+
         async function updateJobStatus(jobId, status) {
             try {
                 const resp = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/status`, {
@@ -1121,6 +1192,21 @@ TODO: Fix/update search progress indicator
             if (!confirm('Delete this tracked job? This will also hide it from future searches.')) return;
             await hideJob(jobId);
             await loadTrackedJobs();
+        }
+
+        async function clearAllTrackedJobs() {
+            if (!confirm('Are you sure you want to clear ALL tracked jobs? This cannot be undone.')) return;
+
+            try {
+                const resp = await fetch('/api/jobs/tracked/clear', { method: 'DELETE' });
+                if (!resp.ok) throw new Error('Failed to clear tracked jobs');
+
+                showStatus('All tracked jobs cleared', 'success');
+                await loadTrackedJobs();
+            } catch (e) {
+                showStatus(`Error clearing tracked jobs: ${e.message}`, 'error');
+                console.error(e);
+            }
         }
 
         // --- Configuration UI ---
