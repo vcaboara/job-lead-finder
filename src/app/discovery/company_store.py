@@ -187,6 +187,9 @@ class CompanyStore:
         """
         query = "SELECT * FROM companies WHERE 1=1"
         params = []
+        def _escape_like(s: str) -> str:
+            """Escape special LIKE wildcards."""
+            return s.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
 
         if active_only:
             query += " AND active = 1"
@@ -203,11 +206,11 @@ class CompanyStore:
 
         if locations:
             query += " AND (" + " OR ".join(["locations LIKE ?"] * len(locations)) + ")"
-            params.extend([f'%"{loc}"%' for loc in locations])
+            params.extend([f'%"{_escape_like(loc)}"%' for loc in locations])
 
         if tech_stack:
             query += " AND (" + " OR ".join(["tech_stack LIKE ?"] * len(tech_stack)) + ")"
-            params.extend([f'%"{tech}"%' for tech in tech_stack])
+            params.extend([f'%"{_escape_like(tech)}"%' for tech in tech_stack])
 
         query += " ORDER BY discovered_at DESC"
         if limit:
@@ -227,7 +230,6 @@ class CompanyStore:
                 "UPDATE companies SET careers_url=?, updated_at=? WHERE id=?",
                 (careers_url, datetime.now(UTC).isoformat(), company_id)
             )
-            conn.commit()
             return cursor.rowcount > 0
 
     def mark_company_checked(self, company_id: int):
@@ -242,7 +244,6 @@ class CompanyStore:
                 "UPDATE companies SET last_checked=? WHERE id=?",
                 (datetime.now(UTC).isoformat(), company_id)
             )
-            conn.commit()
 
     def log_discovery(
         self,
@@ -275,7 +276,6 @@ class CompanyStore:
             """, (source, datetime.now(UTC).isoformat(), companies_found, companies_new,
                   companies_updated, json.dumps(errors or []), json.dumps(metadata or {}),
                   duration_seconds))
-            conn.commit()
             logger.info("Logged discovery: %s - %d new, %d updated", source, companies_new, companies_updated)
 
     def get_stats(self) -> dict:
@@ -335,8 +335,8 @@ class CompanyStore:
         try:
             size = CompanySize(row["size"])
         except ValueError:
-            logger.warning("Invalid size '%s' for company %s, defaulting to OTHER", row["size"], row["name"])
-            size = CompanySize.OTHER
+            logger.warning("Invalid size '%s' for company %s, defaulting to UNKNOWN", row["size"], row["name"])
+            size = CompanySize.UNKNOWN
         
         # Handle JSON parsing with fallbacks
         try:
