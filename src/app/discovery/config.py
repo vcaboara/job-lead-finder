@@ -35,7 +35,8 @@ def update_discovery_config(**kwargs) -> bool:
     
     Supported kwargs:
         enabled, database_path, schedule_enabled, run_time, 
-        interval_hours, industries, locations, tech_stack
+        interval_hours, industries, locations, tech_stack,
+        notifications_enabled, min_new_companies, provider_settings
     
     Returns:
         True if configuration was successfully saved, False otherwise
@@ -63,6 +64,16 @@ def update_discovery_config(**kwargs) -> bool:
             IndustryType(ind)
         discovery["filters"]["industries"] = kwargs["industries"]
     
+    if "min_new_companies" in kwargs:
+        if kwargs["min_new_companies"] < 1:
+            raise ValueError("min_new_companies must be at least 1")
+        discovery["notifications"]["min_new_companies"] = kwargs["min_new_companies"]
+    
+    if "provider_settings" in kwargs:
+        if not isinstance(kwargs["provider_settings"], dict):
+            raise ValueError("provider_settings must be a dictionary")
+        discovery["providers"] = kwargs["provider_settings"]
+    
     # Simple assignments
     if "enabled" in kwargs:
         discovery["enabled"] = kwargs["enabled"]
@@ -74,6 +85,8 @@ def update_discovery_config(**kwargs) -> bool:
         discovery["filters"]["locations"] = kwargs["locations"]
     if "tech_stack" in kwargs:
         discovery["filters"]["tech_stack"] = kwargs["tech_stack"]
+    if "notifications_enabled" in kwargs:
+        discovery["notifications"]["enabled"] = kwargs["notifications_enabled"]
     
     config["discovery"] = discovery
     return save_config(config)

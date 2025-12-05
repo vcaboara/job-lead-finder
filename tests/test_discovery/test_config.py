@@ -125,3 +125,39 @@ def test_partial_update(temp_config):
     assert config2["enabled"] is True
     assert config2["database_path"] == "test.db"
     assert config2["schedule"]["enabled"] is True
+
+
+def test_update_notifications(temp_config):
+    """Test updating notification settings."""
+    update_discovery_config(
+        notifications_enabled=True,
+        min_new_companies=10
+    )
+    
+    config = get_discovery_config()
+    assert config["notifications"]["enabled"] is True
+    assert config["notifications"]["min_new_companies"] == 10
+
+
+def test_update_providers(temp_config):
+    """Test updating provider settings."""
+    providers = {
+        "hackernews": {"enabled": True},
+        "ycombinator": {"enabled": False}
+    }
+    update_discovery_config(provider_settings=providers)
+    
+    config = get_discovery_config()
+    assert config["providers"] == providers
+
+
+def test_invalid_min_new_companies(temp_config):
+    """Test invalid min_new_companies raises error."""
+    with pytest.raises(ValueError, match="at least 1"):
+        update_discovery_config(min_new_companies=0)
+
+
+def test_invalid_provider_settings(temp_config):
+    """Test invalid provider_settings raises error."""
+    with pytest.raises(ValueError, match="must be a dictionary"):
+        update_discovery_config(provider_settings="invalid")
