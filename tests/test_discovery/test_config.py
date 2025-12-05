@@ -118,7 +118,6 @@ def test_invalid_industry():
 def test_partial_update():
     """Test partial config updates preserve other values."""
     update_discovery_config(enabled=True, database_path="test.db")
-    config1 = get_discovery_config()
     
     update_discovery_config(schedule_enabled=True)
     config2 = get_discovery_config()
