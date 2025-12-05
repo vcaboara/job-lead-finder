@@ -303,6 +303,16 @@ TODO: Fix/update search progress indicator
             opacity: 0.8;
         }
 
+        .btn-track {
+            background: #4CAF50;
+            color: white;
+            font-weight: 600;
+        }
+
+        .btn-track:hover {
+            background: #45a049;
+        }
+
         .btn-hide {
             background: #f44336;
             color: white;
@@ -802,6 +812,10 @@ TODO: Fix/update search progress indicator
             const trackedDate = showTrackedDate && job.first_seen ?
                 `<div style="font-size:0.85em; color:#666; margin-top:8px;">Tracked: ${escapeHtml(new Date(job.first_seen).toLocaleDateString())}</div>` : '';
 
+            // Track button (only show for new/untracked jobs)
+            const trackButton = status === 'new' ?
+                `<button class="btn-track" data-job-id="${escapeHtml(jobId)}">⭐ Track</button>` : '';
+
             return `<div class="lead-card" data-job-id="${escapeHtml(jobId)}">
                 <h3>${escapeHtml(title)}${sourceBadge}${statusBadge}</h3>
                 <div class="company">${escapeHtml(company)}</div>
@@ -811,7 +825,8 @@ TODO: Fix/update search progress indicator
                 ${trackedDate}
                 <a href="${sanitizeUrl(link)}" target="_blank">View on site →</a>
                 <div class="job-actions">
-                    <select class="status-select" data-job-id="${escapeHtml(jobId)}">
+                    ${trackButton}
+                    <select class="status-select" data-job-id="${escapeHtml(jobId)}" ${status === 'new' ? 'style="display:none"' : ''}>
                         <option value="new" ${validateStatus(status) === 'new' ? 'selected' : ''}>New</option>
                         <option value="applied" ${validateStatus(status) === 'applied' ? 'selected' : ''}>Applied</option>
                         <option value="interviewing" ${validateStatus(status) === 'interviewing' ? 'selected' : ''}>Interviewing</option>
@@ -829,6 +844,13 @@ TODO: Fix/update search progress indicator
 
         // Shared function to attach event listeners to job cards
         function attachJobCardListeners(container, onStatusChange, onHide) {
+            container.querySelectorAll('.btn-track').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const jobId = this.getAttribute('data-job-id');
+                    await trackJob(jobId);
+                });
+            });
+
             container.querySelectorAll('.status-select').forEach(select => {
                 select.addEventListener('change', function () {
                     const jobId = this.getAttribute('data-job-id');
@@ -913,6 +935,32 @@ TODO: Fix/update search progress indicator
         }
 
         // Job tracking functions
+        async function trackJob(jobId) {
+            try {
+                // Start tracking by updating status to 'new' (which adds it to tracked jobs)
+                const resp = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'new' })
+                });
+                if (!resp.ok) throw new Error('Failed to track job');
+
+                // Update UI: hide track button, show status dropdown
+                const card = document.querySelector(`[data-job-id="${CSS.escape(jobId)}"]`);
+                if (card) {
+                    const trackBtn = card.querySelector('.btn-track');
+                    const statusSelect = card.querySelector('.status-select');
+                    if (trackBtn) trackBtn.remove();
+                    if (statusSelect) statusSelect.style.display = '';
+                }
+
+                showStatus('Job is now being tracked!', 'success');
+            } catch (e) {
+                showStatus(`Error tracking job: ${e.message}`, 'error');
+                console.error(e);
+            }
+        }
+
         async function updateJobStatus(jobId, status) {
             try {
                 const resp = await fetch(`/api/jobs/${encodeURIComponent(jobId)}/status`, {
