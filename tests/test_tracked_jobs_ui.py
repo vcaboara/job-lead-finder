@@ -133,3 +133,42 @@ def test_tracked_jobs_empty_when_none_tracked(client):
     tracked = response.json()
     assert "jobs" in tracked
     assert len(tracked["jobs"]) == 0
+
+
+def test_track_job_endpoint_creates_new_tracked_job(client):
+    """Test that the /api/jobs/track endpoint creates a new tracked job."""
+    job_data = {
+        "title": "Senior Python Developer",
+        "company": "Test Company Inc",
+        "location": "Remote",
+        "summary": "We are looking for a senior Python developer...",
+        "link": "https://example.com/job/12345",
+        "source": "TestBoard",
+    }
+
+    # Track the job
+    response = client.post("/api/jobs/track", json=job_data)
+    assert response.status_code == 200
+    data = response.json()
+
+    # Verify response structure
+    assert "message" in data
+    assert "job" in data
+    assert "job_id" in data
+
+    # Verify the tracked job has the correct data
+    job = data["job"]
+    assert job["title"] == job_data["title"]
+    assert job["company"] == job_data["company"]
+    assert job["location"] == job_data["location"]
+    assert job["summary"] == job_data["summary"]
+    assert job["link"] == job_data["link"]
+    assert job["source"] == job_data["source"]
+    assert job["status"] == "new"
+
+    # Verify the job appears in tracked jobs
+    tracked_response = client.get("/api/jobs/tracked")
+    assert tracked_response.status_code == 200
+    tracked = tracked_response.json()
+    assert len(tracked["jobs"]) == 1
+    assert tracked["jobs"][0]["job_id"] == data["job_id"]

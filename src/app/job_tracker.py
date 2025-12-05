@@ -225,6 +225,11 @@ class JobTracker:
         job_id = generate_job_id(job)
         return job_id in self.get_hidden_job_ids()
 
+    def clear_all_jobs(self) -> None:
+        """Clear all tracked jobs from the database."""
+        self.jobs = {}
+        self.save()
+
 
 # Global tracker instance
 _tracker: JobTracker | None = None
