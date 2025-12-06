@@ -87,11 +87,12 @@ class TestCareersURLBuilder:
         assert len(urls) == len(CAREERS_PATHS) + 1
 
     def test_build_careers_urls_with_path(self):
-        """Test that base domain is extracted correctly."""
+        """Test URL generation when given a full path."""
         urls = build_careers_urls("https://acme.com/some/path")
 
-        # Should use base domain, not the full URL
+        # First URL should be the original (could be a specific page)
         assert urls[0] == "https://acme.com/some/path"
+        # Other URLs should use base domain with careers paths
         assert "https://acme.com/careers" in urls
 
     def test_build_careers_urls_invalid(self):
