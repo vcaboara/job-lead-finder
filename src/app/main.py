@@ -1,8 +1,8 @@
 """Minimal starter CLI linking job search and evaluation providers."""
 
 import argparse
-import os
 import json
+import os
 
 from dotenv import load_dotenv
 
@@ -134,6 +134,21 @@ def build_parser():
     probe_p.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     sub_map["probe"] = probe_p
 
+    # Add 'discover' command for company discovery
+    discover_p = sub.add_parser("discover", help="Discover companies using JSearch API")
+    discover_p.add_argument(
+        "--query", "-q", help="Job search query (e.g., 'Python developer')", default="Software Engineer"
+    )
+    discover_p.add_argument("--location", "-l", help="Location filter (e.g., 'San Francisco, CA')", default=None)
+    discover_p.add_argument("--industry", "-i", help="Industry filter (tech, finance, healthcare, etc.)", default=None)
+    discover_p.add_argument(
+        "--tech-stack", "-t", nargs="*", help="Tech stack filter (Python, React, etc.)", default=None
+    )
+    discover_p.add_argument("--max-results", "-n", type=int, default=20, help="Maximum results to fetch")
+    discover_p.add_argument("--save", "-s", action="store_true", help="Save results to database")
+    discover_p.add_argument("--verbose", "-v", action="store_true", help="Show detailed output")
+    sub_map["discover"] = discover_p
+
     return p, sub_map
 
 
@@ -193,9 +208,10 @@ def main(argv=None):
     elif args.cmd == "probe":
         from .gemini_provider import simple_gemini_query
 
-        prompt = (
-            args.prompt
-            or 'Return a JSON array with one example job: [{"title": "Test", "company": "X", "summary": "S", "url": "http://example.com"}]'
+        prompt = args.prompt or (
+            "Return a JSON array with one example job: "
+            '[{"title": "Test", "company": "X", "summary": "S", '
+            '"url": "http://example.com"}]'
         )
         try:
             resp = simple_gemini_query(
@@ -207,6 +223,107 @@ def main(argv=None):
         except Exception as e:
             print("Probe failed:", e)
             return 2
+    elif args.cmd == "discover":
+        from .discovery import CompanyStore, IndustryType
+        from .discovery.providers.jsearch_provider import JSearchProvider
+
+        # Check for API key
+        api_key = os.getenv("RAPIDAPI_KEY")
+        if not api_key:
+            print("Error: RAPIDAPI_KEY not found in environment")
+            print("Please set your RapidAPI key in .env file:")
+            print("  RAPIDAPI_KEY=your_key_here")
+            return 1
+
+        # Initialize provider
+        try:
+            provider = JSearchProvider()
+        except Exception as e:
+            print(f"Error initializing JSearch provider: {e}")
+            return 1
+
+        # Build filters
+        filters = {
+            "query": args.query,
+            "limit": args.max_results,
+        }
+
+        if args.location:
+            filters["locations"] = [args.location]
+
+        if args.tech_stack:
+            filters["tech_stack"] = args.tech_stack
+
+        if args.industry:
+            try:
+                filters["industry"] = IndustryType[args.industry.upper()]
+            except KeyError:
+                print(f"Invalid industry: {args.industry}")
+                print(f"Valid options: {', '.join([i.name.lower() for i in IndustryType])}")
+                return 1
+
+        # Discover companies
+        if args.verbose:
+            print(f"Searching for companies with query: '{args.query}'")
+            print(f"Filters: {filters}")
+            print()
+
+        try:
+            result = provider.discover_companies(filters=filters)
+        except Exception as e:
+            print(f"Discovery failed: {e}")
+            return 1
+
+        # Display results
+        print(f"\n{'='*80}")
+        print(f"Discovery Results: {len(result.companies)} companies found")
+        print(f"{'='*80}\n")
+
+        for i, company in enumerate(result.companies, 1):
+            print(f"{i}. {company.name}")
+            if company.website:
+                print(f"   Website: {company.website}")
+            if company.careers_url:
+                print(f"   Careers: {company.careers_url}")
+            if company.locations:
+                print(f"   Locations: {', '.join(company.locations)}")
+            if company.industry:
+                print(f"   Industry: {company.industry.value}")
+            if company.size:
+                print(f"   Size: {company.size.value}")
+            if company.tech_stack:
+                print(f"   Tech Stack: {', '.join(company.tech_stack)}")
+            if company.description:
+                desc = company.description[:150] + "..." if len(company.description) > 150 else company.description
+                print(f"   Description: {desc}")
+            print()
+
+        # Save to database if requested
+        if args.save:
+            store = CompanyStore()
+            store.initialize()  # Ensure tables exist
+            saved_count = 0
+            skipped_count = 0
+            for company in result.companies:
+                if not company.website:
+                    skipped_count += 1
+                    if args.verbose:
+                        print(f"  Skipping {company.name} (no website)")
+                    continue
+                store.save_company(company)
+                saved_count += 1
+            store.close()
+            print(f"\n✓ Saved {saved_count} companies to database")
+            if skipped_count > 0:
+                print(f"  (Skipped {skipped_count} companies without websites)")
+
+        # Show errors if any
+        if result.errors:
+            print(f"\nWarnings/Errors ({len(result.errors)}):")
+            for error in result.errors[:5]:  # Show first 5
+                print(f"  - {error}")
+
+        return 0
     else:
         parser.print_help()
         return 0

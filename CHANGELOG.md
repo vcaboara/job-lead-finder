@@ -8,6 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Company Discovery System** - Passive job discovery via JSearch API (RapidAPI)
+  - New `discovery/` package with modular architecture:
+    - `BaseDiscoveryProvider`: Abstract interface for discovery providers
+    - `CompanyStore`: SQLite database for storing discovered companies
+    - `JSearchProvider`: Real-time job aggregation from Indeed, LinkedIn, Glassdoor
+  - CLI command: `python -m app.main discover`
+    - Search by query, location, industry, tech stack
+    - Save results to database with `--save` flag
+    - Verbose mode for detailed output
+  - Tech stack detection for 30+ technologies (Python, React, AWS, etc.)
+  - Industry classification (tech, finance, healthcare, etc.)
+  - Comprehensive test suite: 13 tests covering all discovery functionality
+  - Documentation: `docs/JSEARCH_PROVIDER.md`
 - **Format-Specific File Size Limits** - Improved resume upload validation
   - Text files (.txt, .md): 1MB limit
   - PDF files: 2MB limit (larger due to formatting overhead)
@@ -115,7 +128,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Categories
 - **Added**: New features
-- **Changed**: Changes in existing functionality  
+- **Changed**: Changes in existing functionality
 - **Deprecated**: Soon-to-be removed features
 - **Removed**: Removed features
 - **Fixed**: Bug fixes
@@ -124,7 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Performance Baselines
 - **RemoteOK**: ~0.13s
-- **Remotive**: ~1.0s  
+- **Remotive**: ~1.0s
 - **WeWorkRemotely**: ~0.5s
 - **DuckDuckGo**: ~2-3s
 - **CompanyJobs (Gemini)**: 90-325s (disabled by default)
