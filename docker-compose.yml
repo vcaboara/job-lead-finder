@@ -41,7 +41,7 @@ services:
       - ./:/app:delegated
       - job-data:/app/data # Shared volume for database
       - job-logs:/app/logs # Shared volume for logs
-    working_dir: /app/src
+    working_dir: /app
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}

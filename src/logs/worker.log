@@ -1,0 +1,32 @@
+2025-12-06 22:45:14,035 - __main__ - INFO - Starting background worker...
+2025-12-06 22:45:14,036 - __main__ - INFO - Starting background worker...
+2025-12-06 22:45:14,039 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-06 22:45:14,039 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-06 22:45:14,040 - apscheduler.scheduler - INFO - Added job "Find direct links for tracked jobs" to job store "default"
+2025-12-06 22:45:14,040 - apscheduler.scheduler - INFO - Added job "Cleanup old hidden jobs" to job store "default"
+2025-12-06 22:45:14,040 - apscheduler.scheduler - INFO - Scheduler started
+2025-12-06 22:45:14,040 - app.background_scheduler - INFO - Background scheduler started:
+2025-12-06 22:45:14,041 - app.background_scheduler - INFO -   - Direct link discovery: every 60 minutes
+2025-12-06 22:45:14,041 - app.background_scheduler - INFO -   - Hidden job cleanup: every 24 hours
+2025-12-06 22:45:14,041 - __main__ - INFO - Background scheduler started successfully
+2025-12-06 23:04:28,075 - __main__ - INFO - Received signal 15, initiating graceful shutdown...
+2025-12-06 23:04:28,595 - __main__ - INFO - Shutting down background scheduler...
+2025-12-06 23:04:28,596 - app.background_scheduler - INFO - Background scheduler stopped
+2025-12-06 23:04:28,596 - __main__ - INFO - Background worker stopped
+2025-12-06 23:04:28,596 - apscheduler.scheduler - INFO - Scheduler has been shut down
+2025-12-06 23:04:29,479 - __main__ - INFO - Starting background worker...
+2025-12-06 23:04:29,480 - __main__ - INFO - Starting background worker...
+2025-12-06 23:04:29,481 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-06 23:04:29,482 - apscheduler.scheduler - INFO - Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2025-12-06 23:04:29,482 - apscheduler.scheduler - INFO - Added job "Find direct links for tracked jobs" to job store "default"
+2025-12-06 23:04:29,483 - apscheduler.scheduler - INFO - Added job "Cleanup old hidden jobs" to job store "default"
+2025-12-06 23:04:29,483 - apscheduler.scheduler - INFO - Scheduler started
+2025-12-06 23:04:29,483 - app.background_scheduler - INFO - Background scheduler started:
+2025-12-06 23:04:29,484 - app.background_scheduler - INFO -   - Direct link discovery: every 60 minutes
+2025-12-06 23:04:29,484 - app.background_scheduler - INFO -   - Hidden job cleanup: every 24 hours
+2025-12-06 23:04:29,485 - __main__ - INFO - Background scheduler started successfully
+2025-12-06 23:10:50,980 - __main__ - INFO - Received signal 15, initiating graceful shutdown...
+2025-12-06 23:10:51,800 - __main__ - INFO - Shutting down background scheduler...
+2025-12-06 23:10:51,800 - app.background_scheduler - INFO - Background scheduler stopped
+2025-12-06 23:10:51,800 - __main__ - INFO - Background worker stopped
+2025-12-06 23:10:51,801 - apscheduler.scheduler - INFO - Scheduler has been shut down
