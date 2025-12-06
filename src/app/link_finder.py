@@ -12,7 +12,6 @@ Benefits:
 """
 
 import logging
-import re
 from typing import Dict, Optional
 from urllib.parse import urlparse
 
@@ -119,18 +118,13 @@ async def find_direct_link(job_data: Dict, timeout: int = 10) -> Optional[Dict]:
 
     # If it's not an aggregator, return the link as-is
     if not is_aggregator(job_link):
-        return {
-            "direct_url": job_link,
-            "source": "direct",
-            "confidence": "high"
-        }
+        return {"direct_url": job_link, "source": "direct", "confidence": "high"}
 
     # Try to extract company website
     company_website = extract_company_website(job_data)
 
     if not company_website:
-        logger.debug(
-            f"No company website found for {job_data.get('title', 'Unknown')}")
+        logger.debug(f"No company website found for {job_data.get('title', 'Unknown')}")
         return None
 
     # Generate potential careers URLs
@@ -140,36 +134,33 @@ async def find_direct_link(job_data: Dict, timeout: int = 10) -> Optional[Dict]:
     async with httpx.AsyncClient(timeout=timeout, follow_redirects=True) as client:
         for url in potential_urls:
             try:
-                response = await client.get(url, headers={
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                })
+                response = await client.get(
+                    url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+                )
 
                 if response.status_code == 200:
                     # Check if page looks like a careers page
                     content = response.text.lower()
                     careers_indicators = [
-                        "careers", "jobs", "join our team", "openings",
-                        "work with us", "employment", "apply now"
+                        "careers",
+                        "jobs",
+                        "join our team",
+                        "openings",
+                        "work with us",
+                        "employment",
+                        "apply now",
                     ]
 
                     if any(indicator in content for indicator in careers_indicators):
                         logger.info(f"Found careers page: {url}")
-                        return {
-                            "direct_url": url,
-                            "source": "careers_page",
-                            "confidence": "medium"
-                        }
+                        return {"direct_url": url, "source": "careers_page", "confidence": "medium"}
             except Exception as e:
                 logger.debug(f"Failed to check {url}: {e}")
                 continue
 
     # If we found a company website but no specific careers page
     if company_website:
-        return {
-            "direct_url": company_website,
-            "source": "company_homepage",
-            "confidence": "low"
-        }
+        return {"direct_url": company_website, "source": "company_homepage", "confidence": "low"}
 
     return None
 
@@ -185,6 +176,7 @@ async def find_direct_links_batch(jobs: list[Dict], max_concurrent: int = 5) -> 
         Dictionary mapping job IDs to direct link info
     """
     import asyncio
+
     from app.job_tracker import generate_job_id
 
     results = {}

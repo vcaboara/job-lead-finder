@@ -51,10 +51,6 @@ async def main():
     # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
-
-    logger.info("Starting background worker...")
 
     # Get the scheduler singleton and start it
     scheduler = get_scheduler()
@@ -62,10 +58,7 @@ async def main():
     # Configure intervals
     # - Link discovery: every 60 minutes
     # - Job cleanup: every 24 hours
-    scheduler.start(
-        find_links_interval_minutes=60,
-        cleanup_interval_hours=24
-    )
+    scheduler.start(find_links_interval_minutes=60, cleanup_interval_hours=24)
     logger.info("Background scheduler started successfully")
 
     # Keep the worker running until shutdown is requested
