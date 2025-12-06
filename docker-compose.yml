@@ -21,9 +21,36 @@ services:
     build:
       args:
         INSTALL_TEST_DEPS: "false"
+    volumes:
+      - ./:/app:delegated
+      - job-data:/app/data  # Shared volume for database
+      - job-logs:/app/logs  # Shared volume for logs
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
     ports:
       - "8000:8000"
     command: python -m uvicorn app.ui_server:app --host 0.0.0.0 --port 8000
     tty: true
+
+  worker:
+    extends: app
+    build:
+      args:
+        INSTALL_TEST_DEPS: "false"
+    volumes:
+      - ./:/app:delegated
+      - job-data:/app/data  # Shared volume for database
+      - job-logs:/app/logs  # Shared volume for logs
+    working_dir: /app/src
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - RAPIDAPI_KEY=${RAPIDAPI_KEY}
+    command: python -m app.worker
+    restart: unless-stopped
+    depends_on:
+      - ui
+
+volumes:
+  job-data:
+  job-logs:

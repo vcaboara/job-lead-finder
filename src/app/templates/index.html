@@ -674,29 +674,37 @@ TODO: Fix/update search progress indicator
 
 <body>
     <!-- Top Navigation -->
-    <nav style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); padding: 16px 24px; margin-bottom: 24px;">
-        <div style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
+    <nav
+        style="background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); padding: 16px 24px; margin-bottom: 24px;">
+        <div
+            style="max-width: 1400px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 32px;">
-                <h1 style="font-size: 1.5em; margin: 0; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+                <h1
+                    style="font-size: 1.5em; margin: 0; background: var(--accent-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
                     💼 JobFlow
                 </h1>
                 <div class="main-tabs" style="display: flex; gap: 8px;">
-                    <button class="main-tab active" data-tab="search" style="padding: 8px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.2s;">
+                    <button class="main-tab active" data-tab="search"
+                        style="padding: 8px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.2s;">
                         🔍 Search Jobs
                     </button>
-                    <button class="main-tab" data-tab="tracker" style="padding: 8px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.2s;">
+                    <button class="main-tab" data-tab="tracker"
+                        style="padding: 8px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.2s;">
                         📊 Tracker
                     </button>
-                    <button class="main-tab" data-tab="resume" style="padding: 8px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.2s;">
+                    <button class="main-tab" data-tab="resume"
+                        style="padding: 8px 16px; background: none; border: none; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; font-weight: 500; transition: all 0.2s;">
                         📄 Resume
                     </button>
                 </div>
             </div>
             <div style="display: flex; align-items: center; gap: 16px;">
-                <button id="settingsBtn" style="padding: 8px 16px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-secondary); cursor: pointer; font-weight: 500; width: auto;">
+                <button id="settingsBtn"
+                    style="padding: 8px 16px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-secondary); cursor: pointer; font-weight: 500; width: auto;">
                     ⚙️ Settings
                 </button>
-                <button id="themeToggle" style="padding: 8px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-secondary); cursor: pointer; font-size: 1.2em; width: auto; line-height: 1;">
+                <button id="themeToggle"
+                    style="padding: 8px 12px; background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-secondary); cursor: pointer; font-size: 1.2em; width: auto; line-height: 1;">
                     🌙
                 </button>
             </div>
@@ -704,227 +712,227 @@ TODO: Fix/update search progress indicator
     </nav>
 
     <div class="container">
-            <div class="search-panel">
-                <h2>Search</h2>
-                <form id="searchForm">
-                    <div class="form-group">
-                        <label for="query">Query *</label>
-                        <input type="text" id="query" name="query" placeholder="e.g., remote python developer"
-                            value="python remote automation" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Resume (optional - supports .txt, .md, .pdf, .docx)</label>
-                        <input type="file" id="resumeFile" accept=".txt,.md,.pdf,.docx"
-                            style="width:100%; margin-bottom:8px;">
-                        <div style="display:flex; gap:8px; margin-bottom:8px;">
-                            <button type="button" id="uploadResumeBtn"
-                                style="flex:1; padding:6px 12px; font-size:0.9em;">Upload</button>
-                            <button type="button" id="deleteResumeBtn"
-                                style="flex:1; padding:6px 12px; font-size:0.9em; background:#d32f2f;">Delete</button>
-                        </div>
-                        <textarea id="resume" name="resume"
-                            placeholder="Paste resume or it will appear here after upload..."
-                            style="background:#f5f5f5;"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="count">Results Count (searches 10x this amount)</label>
-                        <input type="number" id="count" name="count" value="10" min="1" max="50">
-                    </div>
-                    <div class="form-group">
-                        <label for="minScore">Min Score (0-100, default 60)</label>
-                        <input type="number" id="minScore" name="minScore" value="60" min="0" max="100"
-                            title="Only show jobs with scores at or above this threshold">
-                    </div>
-                    <button type="submit" style="background: var(--accent-gradient); font-size: 1.05em; padding: 14px;">
-                        ✨ Search with AI
-                    </button>
-                </form>
-                <hr style="margin:28px 0 18px; border:none; border-top:1px solid var(--border-color);" />
-                <div id="configSection">
-                    <h2 style="font-size:1.3em; margin-bottom:12px;">Configuration</h2>
-
-                    <!-- Config Tabs -->
-                    <div class="config-tabs">
-                        <button class="config-tab active" data-tab="industry">Industry</button>
-                        <button class="config-tab" data-tab="providers">Providers</button>
-                        <button class="config-tab" data-tab="location">Location</button>
-                        <button class="config-tab" data-tab="search">Search</button>
-                        <button class="config-tab" data-tab="blocked">Blocked</button>
-                    </div>
-
-                    <!-- Industry Profile Tab -->
-                    <div class="config-panel active" id="panel-industry">
-                        <div class="form-group">
-                            <label for="industryProfile">Industry Profile</label>
-                            <select id="industryProfile"
-                                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
-                                <option value="tech">Technology & Software</option>
-                                <option value="finance">Financial Technology & Banking</option>
-                                <option value="healthcare">Healthcare & Medical Technology</option>
-                                <option value="gaming">Gaming & Interactive Entertainment</option>
-                                <option value="ecommerce">E-commerce & Retail Technology</option>
-                                <option value="automotive">Automotive & Autonomous Vehicles</option>
-                                <option value="aerospace">Aerospace & Defense</option>
-                                <option value="esg">ESG & Sustainability (Climate Tech, Clean Energy)</option>
-                            </select>
-                        </div>
-                        <button id="saveIndustryBtn" type="button" style="width:100%;"
-                            title="Save this industry profile to customize which companies are targeted in searches">
-                            Save Profile & Update Company List
-                        </button>
-                        <div id="industryInfo"
-                            style="margin-top:12px; padding:10px; background:#f8f9fa; border-radius:6px; font-size:0.9em; color:#666;">
-                        </div>
-                    </div>
-
-                    <!-- Providers Tab -->
-                    <div class="config-panel" id="panel-providers">
-                        <div id="providersList"></div>
-                    </div>
-
-                    <!-- Location Tab -->
-                    <div class="config-panel" id="panel-location">
-                        <div class="form-group">
-                            <label for="defaultLocation">Default Location</label>
-                            <input type="text" id="defaultLocation" placeholder="e.g., United States" />
-                        </div>
-                        <div class="form-group" style="display:flex; gap:20px; flex-wrap:wrap;">
-                            <label style="display:flex; align-items:center; gap:8px;">
-                                <input type="checkbox" id="preferRemote" />
-                                <span>Prefer Remote</span>
-                            </label>
-                            <label style="display:flex; align-items:center; gap:8px;">
-                                <input type="checkbox" id="allowHybrid" />
-                                <span>Allow Hybrid</span>
-                            </label>
-                            <label style="display:flex; align-items:center; gap:8px;">
-                                <input type="checkbox" id="allowOnsite" />
-                                <span>Allow On-site</span>
-                            </label>
-                        </div>
-                        <button id="saveLocationBtn" type="button" style="width:100%;">Save Location
-                            Preferences</button>
-                    </div>
-
-                    <!-- Search Parameters Tab -->
-                    <div class="config-panel" id="panel-search">
-                        <div class="form-group">
-                            <label for="defaultCount">Default Result Count</label>
-                            <input type="number" id="defaultCount" min="1" max="50" placeholder="e.g., 10"
-                                title="Number of valid job results to return after filtering" />
-                            <small style="display:block; margin-top:4px; color:#666;">
-                                How many valid jobs to return after filtering out invalid links
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label for="oversampleMultiplier">Oversample Multiplier</label>
-                            <input type="number" id="oversampleMultiplier" min="5" max="20" placeholder="e.g., 10"
-                                title="How many extra jobs to fetch to account for invalid links" />
-                            <small style="display:block; margin-top:4px; color:#666;">
-                                Fetches N×count jobs to account for invalid links (e.g., 10× means requesting 100 jobs
-                                to get 10 valid ones)
-                            </small>
-                        </div>
-                        <div class="form-group" style="display:flex; align-items:center; gap:8px;">
-                            <label style="display:flex; align-items:center; gap:8px;">
-                                <input type="checkbox" id="enableAiRanking" />
-                                <span>Enable AI Ranking</span>
-                            </label>
-                            <small style="display:block; margin-top:4px; color:#666;">
-                                Use AI to rank and filter job relevance (requires resume)
-                            </small>
-                        </div>
-                        <div class="form-group">
-                            <label for="minScore">Minimum Score Threshold</label>
-                            <input type="number" id="minScore" min="0" max="100" placeholder="e.g., 60"
-                                title="Only show jobs scoring at or above this threshold" />
-                            <small style="display:block; margin-top:4px; color:#666;">
-                                Filter out jobs with scores below this threshold (0 = show all, 60 = good matches only)
-                            </small>
-                        </div>
-                        <button id="saveSearchBtn" type="button" style="width:100%;">Save Search Parameters</button>
-                    </div>
-
-                    <!-- Blocked Entities Tab -->
-                    <div class="config-panel" id="panel-blocked">
-                        <div class="form-group">
-                            <label for="blockedEntity">Add Blocked Entity</label>
-                            <input type="text" id="blockedEntity" placeholder="domain.com or Employer Name" />
-                        </div>
-                        <div class="form-group">
-                            <label for="blockedType">Type</label>
-                            <select id="blockedType"
-                                style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
-                                <option value="site">Site</option>
-                                <option value="employer">Employer</option>
-                            </select>
-                        </div>
-                        <button id="addBlockedBtn" type="button" style="margin-bottom:18px;">Add to Block List</button>
-                        <div style="margin-bottom:20px;">
-                            <h3 style="margin-bottom:10px; font-size:1.05em;">Blocked Entities</h3>
-                            <ul id="blockedList"
-                                style="list-style:none; padding:0; display:flex; flex-direction:column; gap:8px;"></ul>
-                        </div>
-                    </div>
-
-                    <!-- Link Validator (always visible) -->
-                    <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
-                        <h3 style="margin-bottom:10px; font-size:1.05em;">Validate Link</h3>
-                        <div class="form-group" style="margin-bottom:10px;">
-                            <input type="text" id="validateUrl" placeholder="https://example.com/job" />
-                        </div>
-                        <button id="validateLinkBtn" type="button" style="width:100%;">Validate Link</button>
-                        <div id="validateResult"
-                            style="margin-top:10px; font-size:0.85em; color:#333; min-height:18px;"></div>
-                    </div>
+        <div class="search-panel">
+            <h2>Search</h2>
+            <form id="searchForm">
+                <div class="form-group">
+                    <label for="query">Query *</label>
+                    <input type="text" id="query" name="query" placeholder="e.g., remote python developer"
+                        value="python remote automation" required>
                 </div>
-            </div>
-            <div class="leads-panel">
-                <h2>Jobs</h2>
-                <div class="config-tabs" style="margin-bottom:20px;">
-                    <button class="config-tab active" data-tab="search-results">Search Results</button>
-                    <button class="config-tab" data-tab="tracked-jobs">Tracked Jobs</button>
+                <div class="form-group">
+                    <label>Resume (optional - supports .txt, .md, .pdf, .docx)</label>
+                    <input type="file" id="resumeFile" accept=".txt,.md,.pdf,.docx"
+                        style="width:100%; margin-bottom:8px;">
+                    <div style="display:flex; gap:8px; margin-bottom:8px;">
+                        <button type="button" id="uploadResumeBtn"
+                            style="flex:1; padding:6px 12px; font-size:0.9em;">Upload</button>
+                        <button type="button" id="deleteResumeBtn"
+                            style="flex:1; padding:6px 12px; font-size:0.9em; background:#d32f2f;">Delete</button>
+                    </div>
+                    <textarea id="resume" name="resume"
+                        placeholder="Paste resume or it will appear here after upload..."
+                        style="background:#f5f5f5;"></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="count">Results Count (searches 10x this amount)</label>
+                    <input type="number" id="count" name="count" value="10" min="1" max="50">
+                </div>
+                <div class="form-group">
+                    <label for="minScore">Min Score (0-100, default 60)</label>
+                    <input type="number" id="minScore" name="minScore" value="60" min="0" max="100"
+                        title="Only show jobs with scores at or above this threshold">
+                </div>
+                <button type="submit" style="background: var(--accent-gradient); font-size: 1.05em; padding: 14px;">
+                    ✨ Search with AI
+                </button>
+            </form>
+            <hr style="margin:28px 0 18px; border:none; border-top:1px solid var(--border-color);" />
+            <div id="configSection">
+                <h2 style="font-size:1.3em; margin-bottom:12px;">Configuration</h2>
+
+                <!-- Config Tabs -->
+                <div class="config-tabs">
+                    <button class="config-tab active" data-tab="industry">Industry</button>
+                    <button class="config-tab" data-tab="providers">Providers</button>
+                    <button class="config-tab" data-tab="location">Location</button>
+                    <button class="config-tab" data-tab="search">Search</button>
+                    <button class="config-tab" data-tab="blocked">Blocked</button>
                 </div>
 
-                <!-- Search Results Tab -->
-                <div class="config-panel active" id="panel-search-results">
-                    <div class="status" id="status"></div>
-                    <div style="margin-bottom:10px;">
-                        <span id="resultsCount" style="color:#666; font-size:0.9em;"></span>
-                    </div>
-                    <div class="leads-list" id="leadsList">
-                        <div class="empty-state">
-                            <p>No leads yet. Search to get started!</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tracked Jobs Tab -->
-                <div class="config-panel" id="panel-tracked-jobs">
-                    <div style="margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-                        <button onclick="loadTrackedJobs()" aria-label="Refresh tracked jobs"
-                            style="padding:8px 16px;">🔄 Refresh</button>
-                        <select id="statusFilter" onchange="filterTrackedJobs()"
-                            style="padding:8px; border:1px solid #ddd; border-radius:4px;">
-                            <option value="all">All Statuses</option>
-                            <option value="new">New</option>
-                            <option value="applied">Applied</option>
-                            <option value="interviewing">Interviewing</option>
-                            <option value="offer">Offer</option>
-                            <option value="rejected">Rejected</option>
+                <!-- Industry Profile Tab -->
+                <div class="config-panel active" id="panel-industry">
+                    <div class="form-group">
+                        <label for="industryProfile">Industry Profile</label>
+                        <select id="industryProfile"
+                            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="tech">Technology & Software</option>
+                            <option value="finance">Financial Technology & Banking</option>
+                            <option value="healthcare">Healthcare & Medical Technology</option>
+                            <option value="gaming">Gaming & Interactive Entertainment</option>
+                            <option value="ecommerce">E-commerce & Retail Technology</option>
+                            <option value="automotive">Automotive & Autonomous Vehicles</option>
+                            <option value="aerospace">Aerospace & Defense</option>
+                            <option value="esg">ESG & Sustainability (Climate Tech, Clean Energy)</option>
                         </select>
-                        <button onclick="clearAllTrackedJobs()" aria-label="Clear all tracked jobs"
-                            style="padding:8px 16px; background:#f44336; color:white; margin-left:auto;">🗑️ Clear
-                            All</button>
                     </div>
-                    <div class="leads-list" id="trackedJobsList">
-                        <div class="empty-state">
-                            <p>No tracked jobs yet. Status changes and notes will appear here!</p>
-                        </div>
+                    <button id="saveIndustryBtn" type="button" style="width:100%;"
+                        title="Save this industry profile to customize which companies are targeted in searches">
+                        Save Profile & Update Company List
+                    </button>
+                    <div id="industryInfo"
+                        style="margin-top:12px; padding:10px; background:#f8f9fa; border-radius:6px; font-size:0.9em; color:#666;">
+                    </div>
+                </div>
+
+                <!-- Providers Tab -->
+                <div class="config-panel" id="panel-providers">
+                    <div id="providersList"></div>
+                </div>
+
+                <!-- Location Tab -->
+                <div class="config-panel" id="panel-location">
+                    <div class="form-group">
+                        <label for="defaultLocation">Default Location</label>
+                        <input type="text" id="defaultLocation" placeholder="e.g., United States" />
+                    </div>
+                    <div class="form-group" style="display:flex; gap:20px; flex-wrap:wrap;">
+                        <label style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" id="preferRemote" />
+                            <span>Prefer Remote</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" id="allowHybrid" />
+                            <span>Allow Hybrid</span>
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" id="allowOnsite" />
+                            <span>Allow On-site</span>
+                        </label>
+                    </div>
+                    <button id="saveLocationBtn" type="button" style="width:100%;">Save Location
+                        Preferences</button>
+                </div>
+
+                <!-- Search Parameters Tab -->
+                <div class="config-panel" id="panel-search">
+                    <div class="form-group">
+                        <label for="defaultCount">Default Result Count</label>
+                        <input type="number" id="defaultCount" min="1" max="50" placeholder="e.g., 10"
+                            title="Number of valid job results to return after filtering" />
+                        <small style="display:block; margin-top:4px; color:#666;">
+                            How many valid jobs to return after filtering out invalid links
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label for="oversampleMultiplier">Oversample Multiplier</label>
+                        <input type="number" id="oversampleMultiplier" min="5" max="20" placeholder="e.g., 10"
+                            title="How many extra jobs to fetch to account for invalid links" />
+                        <small style="display:block; margin-top:4px; color:#666;">
+                            Fetches N×count jobs to account for invalid links (e.g., 10× means requesting 100 jobs
+                            to get 10 valid ones)
+                        </small>
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:center; gap:8px;">
+                        <label style="display:flex; align-items:center; gap:8px;">
+                            <input type="checkbox" id="enableAiRanking" />
+                            <span>Enable AI Ranking</span>
+                        </label>
+                        <small style="display:block; margin-top:4px; color:#666;">
+                            Use AI to rank and filter job relevance (requires resume)
+                        </small>
+                    </div>
+                    <div class="form-group">
+                        <label for="minScore">Minimum Score Threshold</label>
+                        <input type="number" id="minScore" min="0" max="100" placeholder="e.g., 60"
+                            title="Only show jobs scoring at or above this threshold" />
+                        <small style="display:block; margin-top:4px; color:#666;">
+                            Filter out jobs with scores below this threshold (0 = show all, 60 = good matches only)
+                        </small>
+                    </div>
+                    <button id="saveSearchBtn" type="button" style="width:100%;">Save Search Parameters</button>
+                </div>
+
+                <!-- Blocked Entities Tab -->
+                <div class="config-panel" id="panel-blocked">
+                    <div class="form-group">
+                        <label for="blockedEntity">Add Blocked Entity</label>
+                        <input type="text" id="blockedEntity" placeholder="domain.com or Employer Name" />
+                    </div>
+                    <div class="form-group">
+                        <label for="blockedType">Type</label>
+                        <select id="blockedType"
+                            style="width:100%; padding:10px; border:1px solid #ddd; border-radius:5px;">
+                            <option value="site">Site</option>
+                            <option value="employer">Employer</option>
+                        </select>
+                    </div>
+                    <button id="addBlockedBtn" type="button" style="margin-bottom:18px;">Add to Block List</button>
+                    <div style="margin-bottom:20px;">
+                        <h3 style="margin-bottom:10px; font-size:1.05em;">Blocked Entities</h3>
+                        <ul id="blockedList"
+                            style="list-style:none; padding:0; display:flex; flex-direction:column; gap:8px;"></ul>
+                    </div>
+                </div>
+
+                <!-- Link Validator (always visible) -->
+                <div style="margin-top:20px; padding-top:20px; border-top:1px solid #eee;">
+                    <h3 style="margin-bottom:10px; font-size:1.05em;">Validate Link</h3>
+                    <div class="form-group" style="margin-bottom:10px;">
+                        <input type="text" id="validateUrl" placeholder="https://example.com/job" />
+                    </div>
+                    <button id="validateLinkBtn" type="button" style="width:100%;">Validate Link</button>
+                    <div id="validateResult" style="margin-top:10px; font-size:0.85em; color:#333; min-height:18px;">
                     </div>
                 </div>
             </div>
         </div>
+        <div class="leads-panel">
+            <h2>Jobs</h2>
+            <div class="config-tabs" style="margin-bottom:20px;">
+                <button class="config-tab active" data-tab="search-results">Search Results</button>
+                <button class="config-tab" data-tab="tracked-jobs">Tracked Jobs</button>
+            </div>
+
+            <!-- Search Results Tab -->
+            <div class="config-panel active" id="panel-search-results">
+                <div class="status" id="status"></div>
+                <div style="margin-bottom:10px;">
+                    <span id="resultsCount" style="color:#666; font-size:0.9em;"></span>
+                </div>
+                <div class="leads-list" id="leadsList">
+                    <div class="empty-state">
+                        <p>No leads yet. Search to get started!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tracked Jobs Tab -->
+            <div class="config-panel" id="panel-tracked-jobs">
+                <div style="margin-bottom:15px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+                    <button onclick="loadTrackedJobs()" aria-label="Refresh tracked jobs" style="padding:8px 16px;">🔄
+                        Refresh</button>
+                    <select id="statusFilter" onchange="filterTrackedJobs()"
+                        style="padding:8px; border:1px solid #ddd; border-radius:4px;">
+                        <option value="all">All Statuses</option>
+                        <option value="new">New</option>
+                        <option value="applied">Applied</option>
+                        <option value="interviewing">Interviewing</option>
+                        <option value="offer">Offer</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                    <button onclick="clearAllTrackedJobs()" aria-label="Clear all tracked jobs"
+                        style="padding:8px 16px; background:#f44336; color:white; margin-left:auto;">🗑️ Clear
+                        All</button>
+                </div>
+                <div class="leads-list" id="trackedJobsList">
+                    <div class="empty-state">
+                        <p>No tracked jobs yet. Status changes and notes will appear here!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     </div>
     <script>
         // HTML escaping to prevent XSS
