@@ -18,6 +18,9 @@ from pathlib import Path
 
 from app.background_scheduler import get_scheduler
 
+# Ensure logs directory exists before configuring logging
+Path("logs").mkdir(exist_ok=True)
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -43,10 +46,11 @@ def signal_handler(signum, frame):
 
 async def main():
     """Run the background worker."""
-    # Ensure logs directory exists
-    Path("logs").mkdir(exist_ok=True)
+    logger.info("Starting background worker...")
 
     # Register signal handlers for graceful shutdown
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
