@@ -4,8 +4,8 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.app.discovery.base_provider import IndustryType
-from src.app.discovery.providers.jsearch_provider import JSearchProvider
+from app.discovery.base_provider import IndustryType
+from app.discovery.providers.jsearch_provider import JSearchProvider
 
 
 @pytest.fixture
