@@ -32,7 +32,9 @@ def store(temp_db):
     """Create initialized CompanyStore."""
     store = CompanyStore(temp_db)
     store.initialize()
-    return store
+    yield store
+    # Explicitly cleanup database connections
+    store.close()
 
 
 @pytest.fixture
@@ -59,12 +61,16 @@ def test_initialize_creates_schema(temp_db):
     store = CompanyStore(temp_db)
     store.initialize()
 
+    # Use with statement to ensure connection closes properly
     with sqlite3.connect(str(temp_db)) as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         tables = {row[0] for row in cursor.fetchall()}
 
     assert {"companies", "jobs", "discovery_log", "custom_industries"}.issubset(tables)
+    
+    # Explicitly close to prevent resource leaks
+    store.close()
 
 
 def test_save_and_get_company(store, sample_company):

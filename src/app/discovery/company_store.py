@@ -33,12 +33,28 @@ class CompanyStore:
         """Initialize store with database path."""
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._conn: sqlite3.Connection | None = None
 
     def _connect(self) -> sqlite3.Connection:
-        """Get database connection."""
-        conn = sqlite3.connect(str(self.db_path))
-        conn.row_factory = sqlite3.Row
-        return conn
+        """Get database connection.
+        
+        Returns the same connection instance for the lifetime of this store.
+        Call close() to explicitly close the connection when done.
+        """
+        if self._conn is None:
+            self._conn = sqlite3.connect(str(self.db_path))
+            self._conn.row_factory = sqlite3.Row
+        return self._conn
+
+    def close(self):
+        """Close the database connection.
+        
+        This is mainly for testing - in production, connections are
+        closed automatically when the store is garbage collected.
+        """
+        if self._conn is not None:
+            self._conn.close()
+            self._conn = None
 
     def initialize(self):
         """Create database schema."""
