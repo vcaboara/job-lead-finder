@@ -89,6 +89,12 @@ def build_careers_urls(company_website: str) -> list[str]:
     """
     try:
         parsed = urlparse(company_website)
+
+        # Validate that we have a proper scheme and netloc
+        if not parsed.scheme or not parsed.netloc:
+            logger.debug(f"Invalid URL format: {company_website}")
+            return []
+
         base = f"{parsed.scheme}://{parsed.netloc}"
 
         urls = []
