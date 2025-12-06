@@ -10,8 +10,43 @@ TODO: Fix/update search progress indicator
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Job Lead Finder</title>
+    <title>JobFlow - AI-Powered Job Discovery</title>
     <style>
+        :root {
+            /* Dark theme colors */
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --bg-card: #1e293b;
+            --bg-card-hover: #2d3748;
+
+            /* Accent colors */
+            --accent-primary: #3b82f6;
+            --accent-secondary: #06b6d4;
+            --accent-gradient: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
+
+            /* Status colors */
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+
+            /* Text colors */
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+
+            /* Borders */
+            --border-color: #334155;
+            --border-hover: #475569;
+
+            /* Shadows */
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.5);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.6), 0 8px 10px -6px rgb(0 0 0 / 0.6);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -20,45 +55,52 @@ TODO: Fix/update search progress indicator
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
-            padding: 20px 20px 10px 20px;
+            padding: 20px;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
         }
 
         header {
             text-align: center;
-            color: white;
-            margin-bottom: 40px;
+            margin-bottom: 48px;
         }
 
         header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
+            font-size: 2.8em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            background: var(--accent-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
         header p {
-            font-size: 1.1em;
-            opacity: 0.9;
+            font-size: 1.15em;
+            color: var(--text-secondary);
+            font-weight: 400;
         }
 
         .content {
             display: grid;
-            grid-template-columns: 380px 1fr;
-            gap: 20px;
-            margin-bottom: 20px;
+            grid-template-columns: 400px 1fr;
+            gap: 24px;
+            margin-bottom: 24px;
         }
 
         .search-panel,
         .leads-panel {
-            background: white;
-            border-radius: 10px;
+            background: var(--bg-secondary);
+            border-radius: 16px;
             padding: 24px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-color);
         }
 
         .search-panel {
@@ -67,42 +109,50 @@ TODO: Fix/update search progress indicator
 
         .search-panel h2,
         .leads-panel h2 {
-            color: #333;
-            margin-bottom: 12px;
-            font-size: 1.2em;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            font-size: 1.3em;
+            font-weight: 600;
         }
 
         .form-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
 
         .form-group label {
             display: block;
-            margin-bottom: 5px;
-            color: #555;
+            margin-bottom: 8px;
+            color: var(--text-secondary);
             font-weight: 500;
+            font-size: 0.95em;
         }
 
         .form-group input,
-        .form-group textarea {
+        .form-group textarea,
+        .form-group select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
             font-family: inherit;
             font-size: 1em;
+            color: var(--text-primary);
+            transition: all 0.2s ease;
         }
 
         .form-group textarea {
-            min-height: 80px;
+            min-height: 100px;
             resize: vertical;
         }
 
         .form-group input:focus,
-        .form-group textarea:focus {
+        .form-group textarea:focus,
+        .form-group select:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: var(--bg-secondary);
         }
 
         .checkbox-group {
@@ -118,215 +168,262 @@ TODO: Fix/update search progress indicator
 
         button {
             width: 100%;
-            padding: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 12px 24px;
+            background: var(--accent-gradient);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             font-size: 1em;
             font-weight: 600;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-sm);
         }
 
         button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.3);
+            filter: brightness(1.1);
+        }
+
+        button:active {
+            transform: translateY(0);
         }
 
         button:disabled {
-            opacity: 0.6;
+            opacity: 0.5;
             cursor: not-allowed;
             transform: none;
+            filter: none;
         }
 
         .leads-list {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 16px;
             max-height: 800px;
             overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .leads-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .leads-list::-webkit-scrollbar-track {
+            background: var(--bg-tertiary);
+            border-radius: 4px;
+        }
+
+        .leads-list::-webkit-scrollbar-thumb {
+            background: var(--border-hover);
+            border-radius: 4px;
+        }
+
+        .leads-list::-webkit-scrollbar-thumb:hover {
+            background: var(--text-muted);
         }
 
         .lead-card {
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 16px;
-            background: #f9f9f9;
-            transition: all 0.2s;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            background: var(--bg-card);
+            transition: all 0.3s ease;
+            cursor: pointer;
         }
 
         .lead-card:hover {
-            background: #f0f0f0;
-            border-color: #667eea;
-            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.1);
+            background: var(--bg-card-hover);
+            border-color: var(--accent-primary);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+            transform: translateY(-2px);
         }
 
         .lead-card h3 {
-            color: #333;
-            margin-bottom: 8px;
-            font-size: 1.1em;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            font-size: 1.2em;
+            font-weight: 600;
         }
 
         .lead-card .company {
-            color: #667eea;
+            color: var(--accent-secondary);
             font-weight: 600;
             margin-bottom: 8px;
+            font-size: 0.95em;
         }
 
         .lead-card .location {
-            color: #888;
+            color: var(--text-muted);
             font-size: 0.9em;
-            margin-bottom: 8px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         .lead-card .summary {
-            color: #666;
+            color: var(--text-secondary);
             font-size: 0.95em;
-            line-height: 1.4;
-            margin-bottom: 10px;
+            line-height: 1.6;
+            margin-bottom: 12px;
         }
 
         .lead-card .score-section {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin: 10px 0;
-            padding-top: 10px;
-            border-top: 1px solid #e0e0e0;
+            gap: 10px;
+            margin: 12px 0;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-color);
         }
 
         .score-badge {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: var(--accent-gradient);
             color: white;
-            padding: 8px 12px;
-            border-radius: 5px;
+            padding: 8px 14px;
+            border-radius: 6px;
             font-weight: 600;
             font-size: 0.9em;
-            flex-shrink: 0;
-            white-space: nowrap;
+            width: fit-content;
+            box-shadow: var(--shadow-sm);
         }
 
         .score-badge.high {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
         }
 
         .score-badge.medium {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
         }
 
         .score-badge.low {
-            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
         }
 
         .reasoning {
             font-size: 0.9em;
-            color: #444;
-            line-height: 1.5;
-            background: #f8f9fa;
-            padding: 10px;
-            border-radius: 5px;
-            border-left: 3px solid #667eea;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            background: var(--bg-tertiary);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-primary);
         }
 
         .reasoning strong {
-            color: #333;
+            color: var(--text-primary);
             font-weight: 600;
         }
 
         .source-badge {
             display: inline-block;
-            background: #4CAF50;
+            background: var(--success);
             color: white;
-            padding: 4px 10px;
-            border-radius: 4px;
+            padding: 4px 12px;
+            border-radius: 6px;
             font-size: 0.75em;
             font-weight: 600;
             margin-left: 8px;
             vertical-align: middle;
+            box-shadow: var(--shadow-sm);
         }
 
         .source-badge.aggregator {
-            background: #9e9e9e;
+            background: var(--text-muted);
         }
 
         .lead-card a {
             display: inline-block;
-            margin-top: 10px;
-            color: #667eea;
+            margin-top: 12px;
+            color: var(--accent-secondary);
             text-decoration: none;
             font-weight: 500;
+            transition: color 0.2s ease;
         }
 
         .lead-card a:hover {
+            color: var(--accent-primary);
             text-decoration: underline;
         }
 
         .job-actions {
             display: flex;
             gap: 8px;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #e0e0e0;
+            margin-top: 14px;
+            padding-top: 14px;
+            border-top: 1px solid var(--border-color);
             align-items: center;
         }
 
         .job-actions select {
-            padding: 4px 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 0.8em;
-            background: white;
+            padding: 6px 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.85em;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
             cursor: pointer;
-            width: 120px;
-            height: 28px;
-            box-sizing: border-box;
+            width: 130px;
+            height: 32px;
+            transition: all 0.2s ease;
+        }
+
+        .job-actions select:hover {
+            border-color: var(--accent-primary);
         }
 
         .job-actions button {
             padding: 0;
             border: none;
-            border-radius: 4px;
-            font-size: 0.75em;
+            border-radius: 6px;
+            font-size: 0.8em;
             cursor: pointer;
-            font-weight: 500;
-            transition: opacity 0.2s;
-            width: 70px;
-            height: 28px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            width: 75px;
+            height: 32px;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            box-sizing: border-box;
         }
 
         .job-actions button:hover {
-            opacity: 0.8;
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
         }
 
         .btn-track {
-            background: #4CAF50;
+            background: var(--success);
             color: white;
-            font-weight: 600;
         }
 
         .btn-track:hover {
-            background: #45a049;
+            background: #059669;
         }
 
         .btn-hide {
-            background: #f44336;
+            background: var(--danger);
             color: white;
+        }
+
+        .btn-hide:hover {
+            background: #dc2626;
         }
 
         .btn-notes {
-            background: #2196F3;
+            background: var(--info);
             color: white;
         }
 
+        .btn-notes:hover {
+            background: #2563eb;
+        }
+
         .job-notes {
-            margin-top: 10px;
+            margin-top: 12px;
             display: none;
-            background: transparent;
         }
 
         .job-notes.show {
@@ -335,56 +432,72 @@ TODO: Fix/update search progress indicator
 
         .job-notes textarea {
             width: 100%;
-            min-height: 80px;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            min-height: 100px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
             font-size: 0.9em;
             resize: vertical;
-            background: white;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-family: inherit;
+        }
+
+        .job-notes textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
         }
 
         .status-badge {
             display: inline-block;
-            padding: 4px 8px;
-            border-radius: 3px;
+            padding: 5px 10px;
+            border-radius: 6px;
             font-size: 0.75em;
             font-weight: 600;
             text-transform: uppercase;
             margin-left: 8px;
+            letter-spacing: 0.5px;
         }
 
         .status-badge.new {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            border: 1px solid rgba(59, 130, 246, 0.3);
         }
 
         .status-badge.applied {
-            background: #fff3e0;
-            color: #f57c00;
+            background: rgba(245, 158, 11, 0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.3);
         }
 
         .status-badge.interviewing {
-            background: #f3e5f5;
-            color: #7b1fa2;
+            background: rgba(139, 92, 246, 0.2);
+            color: #a78bfa;
+            border: 1px solid rgba(139, 92, 246, 0.3);
         }
 
         .status-badge.offer {
-            background: #e8f5e9;
-            color: #388e3c;
+            background: rgba(16, 185, 129, 0.2);
+            color: #34d399;
+            border: 1px solid rgba(16, 185, 129, 0.3);
         }
 
         .status-badge.rejected {
-            background: #ffebee;
-            color: #d32f2f;
+            background: rgba(239, 68, 68, 0.2);
+            color: #f87171;
+            border: 1px solid rgba(239, 68, 68, 0.3);
         }
 
         .status {
             text-align: center;
-            padding: 20px;
+            padding: 16px 20px;
             margin-bottom: 20px;
-            border-radius: 8px;
+            border-radius: 10px;
             display: none;
+            font-weight: 500;
+            border: 1px solid;
         }
 
         .status.show {
@@ -392,24 +505,36 @@ TODO: Fix/update search progress indicator
         }
 
         .status.loading {
-            background: #e3f2fd;
-            color: #1976d2;
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border-color: rgba(59, 130, 246, 0.3);
         }
 
         .status.success {
-            background: #e8f5e9;
-            color: #388e3c;
+            background: rgba(16, 185, 129, 0.1);
+            color: #34d399;
+            border-color: rgba(16, 185, 129, 0.3);
         }
 
         .status.error {
-            background: #ffebee;
-            color: #d32f2f;
+            background: rgba(239, 68, 68, 0.1);
+            color: #f87171;
+            border-color: rgba(239, 68, 68, 0.3);
         }
 
         .empty-state {
             text-align: center;
-            padding: 40px 20px;
-            color: #999;
+            padding: 60px 20px;
+            color: var(--text-muted);
+            font-size: 1.05em;
+        }
+
+        .empty-state::before {
+            content: "🔍";
+            display: block;
+            font-size: 3em;
+            margin-bottom: 16px;
+            opacity: 0.5;
         }
 
         @media (max-width: 768px) {
@@ -418,50 +543,87 @@ TODO: Fix/update search progress indicator
             }
 
             header h1 {
-                font-size: 1.8em;
+                font-size: 2em;
+            }
+
+            .search-panel,
+            .leads-panel {
+                padding: 20px;
+            }
+
+            .config-tabs {
+                overflow-x: scroll;
             }
         }
 
         /* Config tabs */
         .config-tabs {
             display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-            border-bottom: 2px solid #eee;
+            gap: 4px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+            overflow-x: auto;
         }
 
         .config-tab {
-            padding: 8px 16px;
+            padding: 10px 18px;
             background: none;
             border: none;
             cursor: pointer;
-            color: #666;
+            color: var(--text-muted);
             font-weight: 500;
             border-bottom: 2px solid transparent;
             margin-bottom: -2px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            font-size: 0.95em;
+        }
+
+        .config-tab:hover {
+            color: var(--text-secondary);
         }
 
         .config-tab.active {
-            color: #667eea;
-            border-bottom-color: #667eea;
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
         }
 
         .config-panel {
             display: none;
+            animation: fadeIn 0.3s ease;
         }
 
         .config-panel.active {
             display: block;
         }
 
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .provider-toggle {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 6px;
-            margin-bottom: 8px;
+            padding: 14px;
+            background: var(--bg-tertiary);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .provider-toggle:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-hover);
         }
 
         .toggle-switch {
@@ -513,11 +675,13 @@ TODO: Fix/update search progress indicator
 <body>
     <div class="container">
         <header>
-            <h1>🔍 Job Lead Finder</h1>
-            <p>AI-powered job search with intelligent evaluation</p>
-            <p style="margin-top: 10px; font-size: 0.9em;">
-                <a href="/docs" target="_blank" style="color: white; text-decoration: underline; opacity: 0.9;">API
-                    Documentation</a>
+            <h1>JobFlow</h1>
+            <p>Find your next role with AI-powered job matching</p>
+            <p style="margin-top: 12px; font-size: 0.9em;">
+                <a href="/docs" target="_blank" 
+                   style="color: var(--accent-secondary); text-decoration: none; border-bottom: 1px solid var(--accent-secondary); transition: opacity 0.2s;">
+                    📖 API Documentation
+                </a>
             </p>
         </header>
         <div class="content">
@@ -552,9 +716,11 @@ TODO: Fix/update search progress indicator
                         <input type="number" id="minScore" name="minScore" value="60" min="0" max="100"
                             title="Only show jobs with scores at or above this threshold">
                     </div>
-                    <button type="submit">Search</button>
+                    <button type="submit" style="background: var(--accent-gradient); font-size: 1.05em; padding: 14px;">
+                        ✨ Search with AI
+                    </button>
                 </form>
-                <hr style="margin:28px 0 18px; border:none; border-top:1px solid #ddd;" />
+                <hr style="margin:28px 0 18px; border:none; border-top:1px solid var(--border-color);" />
                 <div id="configSection">
                     <h2 style="font-size:1.3em; margin-bottom:12px;">Configuration</h2>
 
