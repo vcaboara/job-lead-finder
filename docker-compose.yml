@@ -23,8 +23,8 @@ services:
         INSTALL_TEST_DEPS: "false"
     volumes:
       - ./:/app:delegated
-      - job-data:/app/data  # Shared volume for database
-      - job-logs:/app/logs  # Shared volume for logs
+      - job-data:/app/data # Shared volume for database
+      - job-logs:/app/logs # Shared volume for logs
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
     ports:
@@ -39,8 +39,8 @@ services:
         INSTALL_TEST_DEPS: "false"
     volumes:
       - ./:/app:delegated
-      - job-data:/app/data  # Shared volume for database
-      - job-logs:/app/logs  # Shared volume for logs
+      - job-data:/app/data # Shared volume for database
+      - job-logs:/app/logs # Shared volume for logs
     working_dir: /app/src
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
