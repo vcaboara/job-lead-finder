@@ -19,11 +19,11 @@ dependencies = [
 
 [project.optional-dependencies]
 # Development tools
-dev = ["pytest>=7.0", "pytest-cov>=5.0", "pre-commit", "black", "isort"]
+dev = ["pytest>=7.0", "pytest-cov>=5.0", "pytest-asyncio>=0.21.0", "pre-commit", "black", "isort"]
 # Web server dependencies (FastAPI + Uvicorn)
 web = ["fastapi>=0.100.0", "uvicorn[standard]>=0.23.0", "python-multipart>=0.0.6"]
 # Test dependencies
-test = ["pytest>=7.0", "pytest-cov>=5.0", "reportlab"]
+test = ["pytest>=7.0", "pytest-cov>=5.0", "pytest-asyncio>=0.21.0", "reportlab"]
 # Gemini AI provider (google-genai supports google_search tool)
 gemini = ["google-genai>=0.1.0"]
 
