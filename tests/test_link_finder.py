@@ -150,7 +150,9 @@ class TestFindDirectLink:
             result = await find_direct_link(job)
 
             assert result is not None
-            assert "acme.com" in result["direct_url"]
+            # Verify domain is in the result URL (test assertion, not URL sanitization)
+            result_url = result["direct_url"]
+            assert result_url.startswith("https://acme.com")
             assert result["source"] in ["careers_page", "company_homepage"]
 
     @pytest.mark.asyncio
