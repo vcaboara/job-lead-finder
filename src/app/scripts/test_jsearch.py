@@ -26,10 +26,8 @@ def main():
         default="python developer",
         help="Job search query (default: python developer)",
     )
-    parser.add_argument("--limit", type=int, default=10,
-                        help="Number of companies to return (default: 10)")
-    parser.add_argument("--location", default="remote",
-                        help="Location to search (default: remote)")
+    parser.add_argument("--limit", type=int, default=10, help="Number of companies to return (default: 10)")
+    parser.add_argument("--location", default="remote", help="Location to search (default: remote)")
     parser.add_argument(
         "--date-posted",
         default="week",
@@ -86,10 +84,8 @@ def main():
                 print(f"   Careers: {company.careers_url or 'N/A'}")
                 print(f"   Industry: {company.industry.value}")
                 print(f"   Size: {company.size.value}")
-                print(
-                    f"   Locations: {', '.join(company.locations) if company.locations else 'N/A'}")
-                print(
-                    f"   Tech Stack: {', '.join(company.tech_stack) if company.tech_stack else 'N/A'}")
+                print(f"   Locations: {', '.join(company.locations) if company.locations else 'N/A'}")
+                print(f"   Tech Stack: {', '.join(company.tech_stack) if company.tech_stack else 'N/A'}")
                 if company.metadata.get("job_title"):
                     print(f"   Job Title: {company.metadata['job_title']}")
             print("=" * 80)

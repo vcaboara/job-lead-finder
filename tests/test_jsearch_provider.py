@@ -221,8 +221,7 @@ class TestJSearchDiscovery:
             MagicMock(status_code=200, json=lambda: page1_response),
             MagicMock(status_code=200, json=lambda: page2_response),
             # Empty page to stop pagination
-            MagicMock(status_code=200, json=lambda: {
-                      "status": "OK", "data": []}),
+            MagicMock(status_code=200, json=lambda: {"status": "OK", "data": []}),
         ]
 
         mock_client = MagicMock()
@@ -304,8 +303,7 @@ class TestJSearchDiscovery:
 
     def test_extract_company_missing_name(self, provider_with_api_key):
         """Test extraction fails gracefully when employer name is missing."""
-        job_data = {"job_title": "Developer",
-                    "job_description": "Some description"}
+        job_data = {"job_title": "Developer", "job_description": "Some description"}
 
         company = provider_with_api_key._extract_company_from_job(job_data)
         assert company is None
