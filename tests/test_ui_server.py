@@ -236,7 +236,7 @@ class TestIndexEndpoint:
         response = client.get("/")
         assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
-        assert "Job Lead Finder" in response.text
+        assert "JobFlow" in response.text
 
     def test_index_contains_api_endpoints(self, client):
         """Test index HTML references API endpoints."""
