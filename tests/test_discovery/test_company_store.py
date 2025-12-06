@@ -68,7 +68,7 @@ def test_initialize_creates_schema(temp_db):
         tables = {row[0] for row in cursor.fetchall()}
 
     assert {"companies", "jobs", "discovery_log", "custom_industries"}.issubset(tables)
-    
+
     # Explicitly close to prevent resource leaks
     store.close()
 
@@ -87,7 +87,7 @@ def test_save_and_get_company(store, sample_company):
 def test_save_duplicate_updates(store, sample_company):
     """Test that duplicate website updates existing record."""
     id1 = store.save_company(sample_company)
-    
+
     sample_company.description = "Updated"
     id2 = store.save_company(sample_company)
 
@@ -232,7 +232,7 @@ def test_find_with_limit(store):
 def test_update_careers_url(store, sample_company):
     """Test updating careers URL."""
     company_id = store.save_company(sample_company)
-    
+
     success = store.update_careers_url(company_id, "https://acme.com/jobs")
     assert success is True
     assert store.get_company(company_id).careers_url == "https://acme.com/jobs"
@@ -272,23 +272,27 @@ def test_log_discovery(store):
 def test_get_stats(store):
     """Test statistics aggregation."""
     for i in range(3):
-        store.save_company(Company(
-            name=f"Tech {i}",
-            website=f"https://tech{i}.com",
-            industry=IndustryType.TECH,
-            size=CompanySize.STARTUP,
+        store.save_company(
+            Company(
+                name=f"Tech {i}",
+                website=f"https://tech{i}.com",
+                industry=IndustryType.TECH,
+                size=CompanySize.STARTUP,
+                discovered_via="test",
+                discovered_at=datetime.now(UTC),
+            )
+        )
+
+    store.save_company(
+        Company(
+            name="Health",
+            website="https://health.com",
+            industry=IndustryType.HEALTHCARE,
+            size=CompanySize.SMALL,
             discovered_via="test",
             discovered_at=datetime.now(UTC),
-        ))
-
-    store.save_company(Company(
-        name="Health",
-        website="https://health.com",
-        industry=IndustryType.HEALTHCARE,
-        size=CompanySize.SMALL,
-        discovered_via="test",
-        discovered_at=datetime.now(UTC),
-    ))
+        )
+    )
 
     stats = store.get_stats()
     assert stats["total_companies"] == 4
