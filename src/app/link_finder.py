@@ -48,8 +48,9 @@ def is_aggregator(url: str) -> bool:
     """Check if URL is from a job aggregator."""
     try:
         domain = urlparse(url).netloc.lower()
-        # Remove www. prefix
-        domain = domain.replace("www.", "")
+        # Remove www. prefix if present at the start
+        if domain.startswith("www."):
+            domain = domain[4:]
         return any(agg in domain for agg in AGGREGATOR_DOMAINS)
     except Exception:
         return False
