@@ -6,18 +6,19 @@ Track all development tasks for Job Lead Finder project.
 
 ### 🎯 High Priority
 
-- [ ] **Integrate JSearch into UI** (Started: Dec 5, 2025)
+- [ ] **Integrate JSearch into UI** (Not Started)
   - [ ] Add "Discover Companies" button to UI
   - [ ] Create discovery results page
   - [ ] Show JSearch companies in searchable list
   - [ ] Allow filtering by tech stack, location, etc.
   - [ ] Save discovered companies to database
 
-- [ ] **Discovery Service** (Not Started)
-  - [ ] Create discovery service class
-  - [ ] Add CLI command: `python -m app.main discover`
-  - [ ] Integrate with company_store
-  - [ ] Add discovery history tracking
+- [x] **Discovery CLI Command** (Completed: Dec 6, 2025)
+  - [x] Create CLI command: `python -m app.main discover`
+  - [x] Support query, location, industry, tech stack filters
+  - [x] Add --save flag to persist to database
+  - [x] Add --verbose flag for detailed output
+  - [x] Handle companies without websites gracefully
 
 ### 📋 Medium Priority
 
@@ -45,6 +46,21 @@ Track all development tasks for Job Lead Finder project.
   - [ ] Search across all fields
 
 ## ✅ Recently Completed
+
+- [x] **Discovery CLI Command** (Completed: Dec 6, 2025)
+  - [x] Added `discover` subcommand to main.py
+  - [x] Query, location, industry, tech stack filters
+  - [x] Save to database with --save flag
+  - [x] Skip companies without websites
+  - [x] Verbose output mode
+  - [x] Integration with JSearchProvider
+
+- [x] **Documentation Updates** (Completed: Dec 6, 2025)
+  - [x] Updated README.md with JSearch discovery feature
+  - [x] Added environment setup section for API keys
+  - [x] Updated project structure to show discovery/ package
+  - [x] Added CHANGELOG entry for discovery system
+  - [x] Updated CLI usage examples
 
 - [x] **JSearch Provider Implementation** (Completed: Dec 5, 2025)
   - [x] Create jsearch_provider.py with BaseDiscoveryProvider interface

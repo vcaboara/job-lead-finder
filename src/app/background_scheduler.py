@@ -38,9 +38,7 @@ class BackgroundScheduler:
 
         # Filter jobs that don't have a direct link yet and are from aggregators
         jobs_needing_links = [
-            job
-            for job in tracked_jobs
-            if not job.get("company_link") and job.get("source") != "CompanyJobs"
+            job for job in tracked_jobs if not job.get("company_link") and job.get("source") != "CompanyJobs"
         ]
 
         if not jobs_needing_links:
@@ -54,15 +52,13 @@ class BackgroundScheduler:
                 result = await find_direct_link(job, timeout=5)
 
                 if result and result.get("direct_url"):
-                    tracker.set_company_link(
-                        job["job_id"], result["direct_url"])
+                    tracker.set_company_link(job["job_id"], result["direct_url"])
                     logger.info(
                         f"Found direct link for {job.get('title', 'Unknown')}: "
                         f"{result['direct_url']} ({result['confidence']} confidence)"
                     )
             except Exception as e:
-                logger.error(
-                    f"Error finding link for {job.get('job_id')}: {e}")
+                logger.error(f"Error finding link for {job.get('job_id')}: {e}")
 
             # Rate limiting - wait between requests
             await asyncio.sleep(2)
@@ -73,15 +69,14 @@ class BackgroundScheduler:
         """Remove hidden jobs older than 30 days to keep database clean."""
         from datetime import timedelta
 
-        from app.job_tracker import JobTracker, STATUS_HIDDEN
+        from app.job_tracker import STATUS_HIDDEN, JobTracker
 
         logger.info("Cleaning up old hidden jobs...")
 
         tracker = JobTracker()
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
 
-        hidden_jobs = tracker.get_all_jobs(
-            status_filter=[STATUS_HIDDEN], include_hidden=True)
+        hidden_jobs = tracker.get_all_jobs(status_filter=[STATUS_HIDDEN], include_hidden=True)
 
         removed_count = 0
         for job in hidden_jobs:
@@ -135,11 +130,9 @@ class BackgroundScheduler:
         self.scheduler.start()
         self.is_running = True
 
-        logger.info(f"Background scheduler started:")
-        logger.info(
-            f"  - Direct link discovery: every {find_links_interval_minutes} minutes")
-        logger.info(
-            f"  - Hidden job cleanup: every {cleanup_interval_hours} hours")
+        logger.info("Background scheduler started:")
+        logger.info(f"  - Direct link discovery: every {find_links_interval_minutes} minutes")
+        logger.info(f"  - Hidden job cleanup: every {cleanup_interval_hours} hours")
 
     def stop(self):
         """Stop the background scheduler."""
@@ -172,3 +165,9 @@ def get_scheduler() -> BackgroundScheduler:
     if _scheduler is None:
         _scheduler = BackgroundScheduler()
     return _scheduler
+
+
+def reset_scheduler() -> None:
+    """Reset the global scheduler instance (primarily for testing)."""
+    global _scheduler
+    _scheduler = None

@@ -6,6 +6,10 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 
 - **Job Aggregation**: WeWorkRemotely + RemoteOK + Remotive + CompanyJobs (Gemini-powered company career page search)
   - Round-robin distribution ensures diversity across all providers
+- **Company Discovery**: Passive job discovery via JSearch API (RapidAPI)
+  - Real-time job aggregation from Indeed, LinkedIn, Glassdoor, etc.
+  - Automated company extraction and tech stack detection
+  - SQLite database for discovered companies
 - **Job Tracking**: Track application status (new, applied, interviewing, rejected, offer, hidden)
 - **Web UI**: FastAPI dashboard at http://localhost:8000 with search, upload, configuration
 - **Enhanced Resume Upload**: Upload resumes in multiple formats (.txt, .md, .pdf, .docx)
@@ -33,20 +37,50 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 3. **Configure** (optional):
    - Set `GEMINI_API_KEY` for AI features (cover letters, CompanyJobs search)
    - Get key: https://aistudio.google.com/app/apikey
+   - Set `RAPIDAPI_KEY` for company discovery via JSearch
+   - Get key: https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch
 
 ### CLI Usage
 
 ```powershell
-# With uv (recommended - faster, better dependency management)
+# Job search
 uv run python -m app.main find -q "remote python developer" --resume "Your resume" -n 10
+
+# Company discovery (requires RAPIDAPI_KEY in .env)
+uv run python -m app.main discover -q "Python developer" -l "San Francisco" -n 10
+uv run python -m app.main discover -q "DevOps engineer" -l "Remote" --save  # Save to DB
+uv run python -m app.main discover -q "ML engineer" --tech-stack Python TensorFlow -n 20
+
+# Health check
 uv run python -m app.main health
 
 # Traditional installation
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -e .[web,gemini]
+
+# Job search
 python -m app.main find -q "remote python developer" --resume "Your resume" -n 10
+
+# Company discovery
+python -m app.main discover -q "Python developer" -l "Remote" -n 10 --save
 ```
+
+## Environment Setup
+
+Create a `.env` file in the project root:
+
+```bash
+# Optional: For AI-powered job evaluation and cover letters
+GEMINI_API_KEY=your_gemini_api_key_here
+
+# Optional: For company discovery via JSearch
+RAPIDAPI_KEY=your_rapidapi_key_here
+```
+
+**Get API Keys**:
+- Gemini: https://aistudio.google.com/app/apikey
+- RapidAPI (JSearch): https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch
 
 ## Development
 
@@ -85,7 +119,7 @@ pre-commit install
 
 ```
 src/app/
-├── main.py              # CLI entry point
+├── main.py              # CLI entry point (find, discover, probe, health)
 ├── ui_server.py         # FastAPI REST API + web UI
 ├── job_finder.py        # Job search orchestration
 ├── job_tracker.py       # Track applications and status
@@ -94,9 +128,18 @@ src/app/
 ├── link_validator.py    # URL validation
 ├── industry_profiles.py # 8 industry-specific company lists
 ├── config_manager.py    # Configuration management
+├── discovery/           # Company discovery system
+│   ├── base_provider.py    # Abstract provider interface
+│   ├── company_store.py    # SQLite database for companies
+│   ├── config.py           # Discovery configuration
+│   └── providers/
+│       └── jsearch_provider.py  # JSearch API integration
 └── templates/           # HTML templates
 
-tests/                   # 164 passing tests
+tests/                   # 259 passing tests (13 for JSearch)
+data/
+├── tracked_jobs.json    # Job tracking persistence
+└── discovery.db         # Discovered companies database
 ```
 
 ## Configuration
