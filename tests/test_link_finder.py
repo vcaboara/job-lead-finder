@@ -1,5 +1,6 @@
 """Tests for direct link finder functionality."""
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -258,8 +259,6 @@ class TestFindDirectLinksBatch:
         call_times = []
 
         async def mock_find(job):
-            import asyncio
-
             call_times.append(asyncio.get_event_loop().time())
             await asyncio.sleep(0.1)
             return {"direct_url": job["link"], "source": "direct", "confidence": "high"}

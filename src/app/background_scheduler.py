@@ -165,3 +165,9 @@ def get_scheduler() -> BackgroundScheduler:
     if _scheduler is None:
         _scheduler = BackgroundScheduler()
     return _scheduler
+
+
+def reset_scheduler() -> None:
+    """Reset the global scheduler instance (primarily for testing)."""
+    global _scheduler
+    _scheduler = None

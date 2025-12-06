@@ -2,9 +2,6 @@
 
 import signal
 from pathlib import Path
-from unittest.mock import MagicMock
-
-import pytest
 
 
 class TestSignalHandler:
@@ -12,7 +9,7 @@ class TestSignalHandler:
 
     def test_signal_handler_sets_shutdown_flag(self):
         """Test that signal handler sets shutdown flag."""
-        # Import locally to avoid module-level logging issues
+        # Import locally since worker module creates file handlers at import time
         import app.worker as worker_module
 
         worker_module.shutdown_requested = False
@@ -24,6 +21,7 @@ class TestSignalHandler:
 
     def test_signal_handler_with_different_signals(self):
         """Test signal handler with different signal types."""
+        # Import locally since worker module creates file handlers at import time
         import app.worker as worker_module
 
         for sig in [signal.SIGINT, signal.SIGTERM]:

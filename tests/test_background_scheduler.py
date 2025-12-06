@@ -1,5 +1,6 @@
 """Tests for background scheduler functionality."""
 
+import asyncio
 from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock, patch
 
@@ -63,8 +64,6 @@ class TestBackgroundScheduler:
         assert scheduler.is_running is True
 
         # Give time for scheduler to actually start
-        import asyncio
-
         await asyncio.sleep(0.1)
 
         scheduler.stop()
@@ -225,10 +224,10 @@ class TestSchedulerSingleton:
 
     def test_get_scheduler_creates_new_instance(self):
         """Test that first call creates a new scheduler."""
-        # Reset global state
-        import app.background_scheduler
+        from app.background_scheduler import reset_scheduler
 
-        app.background_scheduler._scheduler = None
+        # Reset global state using public API
+        reset_scheduler()
 
         scheduler = get_scheduler()
         assert isinstance(scheduler, BackgroundScheduler)
