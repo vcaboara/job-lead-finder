@@ -1,8 +1,7 @@
 """Tests for background scheduler functionality."""
 
-import asyncio
 from datetime import datetime, timedelta, timezone
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -109,9 +108,10 @@ class TestSchedulerFunctions:
             }
         ]
 
-        with patch("app.background_scheduler.JobTracker") as mock_tracker_class, patch(
-            "app.background_scheduler.find_direct_link"
-        ) as mock_find_link:
+        with (
+            patch("app.background_scheduler.JobTracker") as mock_tracker_class,
+            patch("app.background_scheduler.find_direct_link") as mock_find_link,
+        ):
             mock_tracker = MagicMock()
             mock_tracker.get_all_jobs.return_value = mock_jobs
             mock_tracker_class.return_value = mock_tracker
@@ -136,9 +136,10 @@ class TestSchedulerFunctions:
             }
         ]
 
-        with patch("app.background_scheduler.JobTracker") as mock_tracker_class, patch(
-            "app.background_scheduler.find_direct_link"
-        ) as mock_find_link:
+        with (
+            patch("app.background_scheduler.JobTracker") as mock_tracker_class,
+            patch("app.background_scheduler.find_direct_link") as mock_find_link,
+        ):
             mock_tracker = MagicMock()
             mock_tracker.get_all_jobs.return_value = mock_jobs
             mock_tracker_class.return_value = mock_tracker
@@ -159,8 +160,9 @@ class TestSchedulerFunctions:
             {"job_id": "recent_job", "status": "hidden", "last_updated": recent_date},
         ]
 
-        with patch("app.background_scheduler.JobTracker") as mock_tracker_class, patch(
-            "app.background_scheduler.STATUS_HIDDEN", "hidden"
+        with (
+            patch("app.background_scheduler.JobTracker") as mock_tracker_class,
+            patch("app.background_scheduler.STATUS_HIDDEN", "hidden"),
         ):
             mock_tracker = MagicMock()
             mock_tracker.get_all_jobs.return_value = mock_jobs

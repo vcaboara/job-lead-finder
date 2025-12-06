@@ -2,7 +2,7 @@
 
 import asyncio
 import signal
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -114,9 +114,6 @@ class TestWorkerLogging:
 
         logs_dir = Path("logs")
 
-        # Import worker module (this creates the logs directory)
-        import app.worker
-
-        # Directory should exist
+        # Directory should exist (created by worker module import)
         assert logs_dir.exists()
         assert logs_dir.is_dir()

@@ -1,10 +1,10 @@
 """Tests for direct link finder functionality."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from app.link_finder import (
-    AGGREGATOR_DOMAINS,
     CAREERS_PATHS,
     build_careers_urls,
     extract_company_website,
