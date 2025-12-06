@@ -13,13 +13,7 @@ from typing import Optional
 
 import httpx
 
-from ..base_provider import (
-    BaseDiscoveryProvider,
-    Company,
-    CompanySize,
-    DiscoveryResult,
-    IndustryType,
-)
+from ..base_provider import BaseDiscoveryProvider, Company, CompanySize, DiscoveryResult, IndustryType
 
 logger = logging.getLogger(__name__)
 
@@ -92,14 +86,13 @@ class JSearchProvider(BaseDiscoveryProvider):
         location_str = ", ".join(locations) if locations else "remote"
         search_query = f"{query} in {location_str}"
 
-        logger.info(
-            f"[JSearch] Searching for: '{search_query}' (limit={limit}, date_posted={date_posted})"
-        )
+        logger.info(f"[JSearch] Searching for: '{search_query}' (limit={limit}, date_posted={date_posted})")
 
         try:
             companies_map = {}  # Deduplicate by company name
             page = 1
-            num_pages = (limit // 10) + 1  # JSearch returns ~10 results per page
+            # JSearch returns ~10 results per page
+            num_pages = (limit // 10) + 1
 
             with httpx.Client(timeout=30.0) as client:
                 for _ in range(num_pages):
@@ -123,9 +116,7 @@ class JSearchProvider(BaseDiscoveryProvider):
                     )
 
                     if response.status_code != 200:
-                        logger.error(
-                            f"[JSearch] API error: {response.status_code} - {response.text}"
-                        )
+                        logger.error(f"[JSearch] API error: {response.status_code} - {response.text}")
                         break
 
                     data = response.json()
@@ -153,9 +144,7 @@ class JSearchProvider(BaseDiscoveryProvider):
 
             companies = list(companies_map.values())[:limit]
 
-            logger.info(
-                f"[JSearch] Discovery complete: {len(companies)} unique companies found"
-            )
+            logger.info(f"[JSearch] Discovery complete: {len(companies)} unique companies found")
 
             return DiscoveryResult(
                 source=self.provider_name,

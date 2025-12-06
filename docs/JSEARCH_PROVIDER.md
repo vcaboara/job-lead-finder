@@ -200,7 +200,7 @@ result = provider.discover_companies({
 
 # Filter for companies with AI/ML tech stack
 ml_companies = [
-    c for c in result.companies 
+    c for c in result.companies
     if any(tech in c.tech_stack for tech in ["tensorflow", "pytorch"])
 ]
 ```

@@ -1,12 +1,10 @@
 """Tests for JSearch discovery provider."""
 
-import json
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.app.discovery.base_provider import CompanySize, IndustryType
+from src.app.discovery.base_provider import IndustryType
 from src.app.discovery.providers.jsearch_provider import JSearchProvider
 
 
@@ -28,7 +26,10 @@ def mock_jsearch_response():
                 "employer_logo": "https://example.com/logo1.png",
                 "employer_website": "https://techcorp.com",
                 "job_title": "Senior Python Developer",
-                "job_description": "Looking for a Python developer with AWS and Docker experience. Build scalable APIs with FastAPI and PostgreSQL.",
+                "job_description": (
+                    "Looking for a Python developer with AWS and Docker experience. "
+                    "Build scalable APIs with FastAPI and PostgreSQL."
+                ),
                 "job_city": "San Francisco",
                 "job_state": "CA",
                 "job_country": "US",
@@ -56,9 +57,7 @@ def mock_jsearch_response():
                 "job_is_remote": True,
                 "job_posted_at_datetime_utc": "2024-01-14T08:15:00Z",
                 "job_apply_link": "https://startupxyz.io/jobs/apply/456",
-                "job_highlights": {
-                    "Qualifications": ["JavaScript/TypeScript", "React experience"]
-                },
+                "job_highlights": {"Qualifications": ["JavaScript/TypeScript", "React experience"]},
             },
         ],
     }
@@ -107,9 +106,7 @@ class TestJSearchDiscovery:
     """Tests for company discovery via JSearch API."""
 
     @patch("httpx.Client")
-    def test_discover_companies_basic(
-        self, mock_client_class, provider_with_api_key, mock_jsearch_response
-    ):
+    def test_discover_companies_basic(self, mock_client_class, provider_with_api_key, mock_jsearch_response):
         """Test basic company discovery."""
         # Mock httpx client
         mock_response = MagicMock()
@@ -150,9 +147,7 @@ class TestJSearchDiscovery:
         assert "mongodb" in company2.tech_stack
 
     @patch("httpx.Client")
-    def test_discover_companies_deduplication(
-        self, mock_client_class, provider_with_api_key, mock_jsearch_response
-    ):
+    def test_discover_companies_deduplication(self, mock_client_class, provider_with_api_key, mock_jsearch_response):
         """Test that duplicate companies are filtered out."""
         # Add duplicate company to response
         duplicate_job = mock_jsearch_response["data"][0].copy()
@@ -199,9 +194,7 @@ class TestJSearchDiscovery:
         assert len(result.companies) == 0
 
     @patch("httpx.Client")
-    def test_discover_companies_pagination(
-        self, mock_client_class, provider_with_api_key, mock_jsearch_response
-    ):
+    def test_discover_companies_pagination(self, mock_client_class, provider_with_api_key, mock_jsearch_response):
         """Test pagination to fetch more results."""
         # First page response
         page1_response = mock_jsearch_response.copy()
@@ -227,7 +220,9 @@ class TestJSearchDiscovery:
         mock_responses = [
             MagicMock(status_code=200, json=lambda: page1_response),
             MagicMock(status_code=200, json=lambda: page2_response),
-            MagicMock(status_code=200, json=lambda: {"status": "OK", "data": []}),  # Empty page to stop pagination
+            # Empty page to stop pagination
+            MagicMock(status_code=200, json=lambda: {
+                      "status": "OK", "data": []}),
         ]
 
         mock_client = MagicMock()
@@ -244,9 +239,7 @@ class TestJSearchDiscovery:
         assert mock_client.get.call_count == 3
 
     @patch("httpx.Client")
-    def test_discover_companies_with_filters(
-        self, mock_client_class, provider_with_api_key, mock_jsearch_response
-    ):
+    def test_discover_companies_with_filters(self, mock_client_class, provider_with_api_key, mock_jsearch_response):
         """Test discovery with various filters."""
         mock_response = MagicMock()
         mock_response.status_code = 200
@@ -268,7 +261,7 @@ class TestJSearchDiscovery:
             "remote_jobs_only": True,
         }
 
-        result = provider_with_api_key.discover_companies(filters)
+        provider_with_api_key.discover_companies(filters)
 
         # Verify API was called with correct parameters
         call_args = mock_client.get.call_args
@@ -311,7 +304,8 @@ class TestJSearchDiscovery:
 
     def test_extract_company_missing_name(self, provider_with_api_key):
         """Test extraction fails gracefully when employer name is missing."""
-        job_data = {"job_title": "Developer", "job_description": "Some description"}
+        job_data = {"job_title": "Developer",
+                    "job_description": "Some description"}
 
         company = provider_with_api_key._extract_company_from_job(job_data)
         assert company is None
@@ -337,10 +331,10 @@ class TestJSearchDiscovery:
     def test_extract_tech_stack(self, provider_with_api_key):
         """Test technology extraction from job description."""
         job_data = {
-            "job_description": "We use Python, React, PostgreSQL, Docker, and AWS. Looking for Node.js and Kubernetes experience.",
-            "job_highlights": {
-                "Qualifications": ["TypeScript is a plus"]
-            },
+            "job_description": (
+                "We use Python, React, PostgreSQL, Docker, and AWS. " "Looking for Node.js and Kubernetes experience."
+            ),
+            "job_highlights": {"Qualifications": ["TypeScript is a plus"]},
         }
 
         tech_stack = provider_with_api_key._extract_tech_stack(job_data)

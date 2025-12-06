@@ -10,12 +10,12 @@ import os
 import sys
 from pathlib import Path
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
-
 from dotenv import load_dotenv
 
 from src.app.discovery.providers.jsearch_provider import JSearchProvider
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
 
 def main():
@@ -26,12 +26,10 @@ def main():
         default="python developer",
         help="Job search query (default: python developer)",
     )
-    parser.add_argument(
-        "--limit", type=int, default=10, help="Number of companies to return (default: 10)"
-    )
-    parser.add_argument(
-        "--location", default="remote", help="Location to search (default: remote)"
-    )
+    parser.add_argument("--limit", type=int, default=10,
+                        help="Number of companies to return (default: 10)")
+    parser.add_argument("--location", default="remote",
+                        help="Location to search (default: remote)")
     parser.add_argument(
         "--date-posted",
         default="week",
@@ -55,11 +53,14 @@ def main():
         print("Get your key at: https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch")
         sys.exit(1)
 
-    print(f"[JSearch Test] Initializing provider...")
+    print("[JSearch Test] Initializing provider...")
     provider = JSearchProvider()
 
     print(f"[JSearch Test] Searching for: '{args.query}' in '{args.location}'")
-    print(f"[JSearch Test] Filters: limit={args.limit}, date_posted={args.date_posted}, remote_only={args.remote_only}")
+    print(
+        f"[JSearch Test] Filters: limit={args.limit}, "
+        f"date_posted={args.date_posted}, remote_only={args.remote_only}"
+    )
     print()
 
     try:
@@ -73,7 +74,7 @@ def main():
             }
         )
 
-        print(f"[JSearch Test] Discovery complete!")
+        print("[JSearch Test] Discovery complete!")
         print(f"[JSearch Test] Found {len(result.companies)} unique companies")
         print()
 
@@ -85,8 +86,10 @@ def main():
                 print(f"   Careers: {company.careers_url or 'N/A'}")
                 print(f"   Industry: {company.industry.value}")
                 print(f"   Size: {company.size.value}")
-                print(f"   Locations: {', '.join(company.locations) if company.locations else 'N/A'}")
-                print(f"   Tech Stack: {', '.join(company.tech_stack) if company.tech_stack else 'N/A'}")
+                print(
+                    f"   Locations: {', '.join(company.locations) if company.locations else 'N/A'}")
+                print(
+                    f"   Tech Stack: {', '.join(company.tech_stack) if company.tech_stack else 'N/A'}")
                 if company.metadata.get("job_title"):
                     print(f"   Job Title: {company.metadata['job_title']}")
             print("=" * 80)

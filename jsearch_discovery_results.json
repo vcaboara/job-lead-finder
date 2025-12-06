@@ -1,0 +1,501 @@
+{
+  "source": "jsearch",
+  "total_found": 20,
+  "timestamp": "2025-12-06T01:38:48.522049+00:00",
+  "companies": [
+    {
+      "name": "Polcode",
+      "website": "https://polcode.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "react",
+        "go",
+        "aws"
+      ],
+      "description": "100% remotely or from our office in Warsaw\nB2B: 100-130 PLN/H + VAT\n\nHi, Polcode here!\n\nWe\u2019re a global, people-first software house matching ambitious developers with challenging projects. Our team of over 100 professionals helps build and improve digital businesses, software platforms, eCommerce stores, websites, apps, and everything in between. And they\u2019re good at it.\n\nWe are currently seeking an experienced Python/Django Developer (full-stack oriented) to join a fast-moving German AI startup ",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaVBXEcSpM4IsaVE5uaYnteOgEt28y8H3yO1E4&s=0",
+        "job_title": "Python Developer /Full-stack Oriented/ - AI SaaS Platform / Immediate Start",
+        "posted_date": "2025-12-05T09:00:00.000Z",
+        "source_job_id": "dFK2m9L27tYACfRjAAAAAA=="
+      }
+    },
+    {
+      "name": "BELIEVE Solutions",
+      "website": null,
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "go",
+        "aws",
+        "azure",
+        "gcp",
+        "docker"
+      ],
+      "description": "About the project\n\nAs an AI Engineer, you will have a direct and impactful role, potentially shaping the trajectory of the company. You'll be able to experience firsthand the substantial influence your contributions will have on our company's growth and success. This dynamic environment encourages innovation and creativity, empowering you to shape the future of payment technology.\n\nHow your day-to-day work will look like\n\n\u2705 Collaborate closely with cross-functional teams, including data scientis",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTff7R6Z5Dot3MSMpRJ3GFecNKhObBV-qYYKBaT&s=0",
+        "job_title": "(N) AI Engineer  (Python, LLM libraries - AI third-party services & AWS )",
+        "posted_date": "2025-12-04T00:00:00.000Z",
+        "source_job_id": "DpmOg4bW1Adkqq5qAAAAAA=="
+      }
+    },
+    {
+      "name": "CyberCoders",
+      "website": "https://cybercoders.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "javascript",
+        "react",
+        "java",
+        "go",
+        "aws",
+        "azure",
+        "gcp",
+        "docker",
+        "kubernetes",
+        "sql",
+        "postgresql",
+        "kafka"
+      ],
+      "description": "Senior / Lead Fullstack Python Engineer\n\nLocation: Remote (US)\n\nCompensation: $175,000 - $225,000\n\nReports to: Senior Director of Software Engineering\n\nAbout the Role\n\nWe're looking for a Senior / Lead Fullstack Python Engineer to join a rapidly growing SaaS company that is building next-generation, AI-driven platforms. In this role, you'll combine hands-on coding with technical leadership, mentoring other engineers and shaping the direction of complex, highly scalable systems.\n\nYou'll work cros",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ7EfkXlgVv-zgqK75MkcGNvtZ5rIOcjLC1AH-2&s=0",
+        "job_title": "Senior Fullstack Python Engineer",
+        "posted_date": "2025-12-04T00:00:00.000Z",
+        "source_job_id": "jym_NXzTbxafwPuuAAAAAA=="
+      }
+    },
+    {
+      "name": "vmysmartpros",
+      "website": "https://teach.mysmartpros.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "javascript",
+        "java",
+        "rust",
+        "aws"
+      ],
+      "description": "Salesforce / Python Developer-100%Remote - Stellent IT - USA - work from home job\n\nCompany: Stellent IT\n\nJob description: Salesforce / Python Developer\n\n100%Remote\n\nPhone+Skype\n\n6+Month\n\nJob Description\n\nAt GDIT we build cutting-edge applications that help the end user accomplish their mission.\n\nWe are GDIT. We stay at the forefront of innovation to solve complex technical challenges. Our work depends on a Salesforce Development Team joining our team remotely to support the Centers for Medicare ",
+      "metadata": {
+        "logo_url": null,
+        "job_title": "Salesforce / Python Developer-100%Remote in USA",
+        "posted_date": "2025-12-03T00:00:00.000Z",
+        "source_job_id": "tJPNpojJBRjZy3PDAAAAAA=="
+      }
+    },
+    {
+      "name": "SES",
+      "website": null,
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "aws",
+        "kubernetes",
+        "sql"
+      ],
+      "description": "AWS Python Developer - Python, AWS, RDS, Kinesis\n\nRemote - Will be supporting MST hours or CST hours\n\nTop 5 Technical Skills:\n\u2022 3-6 years developing solutions across multiple architecture domains (applications, data, integration, infrastructure & security)\n\u2022 4+ years Programming experience and fluent in Python\n\u2022 4+ years of solid experience in AWS technologies such as: Redshift, Dynamo DB, EMR, EC2, S3, Lambda, Step Functions, Event Bridge, RDS, IAM, Kubernetes\n\u2022 4+ years developing SQL, DBMS (R",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS54wcx2ayeQgN1GzzZcZWl3nSk5_68F0TOUAZs&s=0",
+        "job_title": "Lead Python Developer - AWS, Kinesis OR Quicksight",
+        "posted_date": "2025-12-03T00:00:00.000Z",
+        "source_job_id": "s0kr0k-eCisnjoOiAAAAAA=="
+      }
+    },
+    {
+      "name": "1063 Accenture Flex LLC Company",
+      "website": null,
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "go",
+        "rust",
+        "sql"
+      ],
+      "description": "Accenture Flex offers you the flexibility of local fixed-duration project-based work powered by Accenture, a leading global professional services company. Accenture is consistently recognized on FORTUNE's 100 Best Companies to Work For and Diversity Inc's Top 50 Companies For Diversity lists. As an Accenture Flex employee, you will apply your skills and experience to help drive business transformation for leading organizations and communities. In addition to delivering innovative solutions for A",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR9MY9Q_zvjfH9mVkFuc7D-9I_-V2QjLBqeHbu7&s=0",
+        "job_title": "Junior Python Developer 6033131",
+        "posted_date": "2025-12-02T00:00:00.000Z",
+        "source_job_id": "YyoVIB0NAM6eZapqAAAAAA=="
+      }
+    },
+    {
+      "name": "RTI International",
+      "website": null,
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "go",
+        "sql"
+      ],
+      "description": "Note: The job is a remote job and is open to candidates in USA. RTI International is an independent, scientific research institute dedicated to improving the human condition. The Programmer/Analyst will work with researcher teams to analyze and synthesize complex qualitative and quantitative administrative health data from multiple sources into meaningful results.\n\nResponsibilities\n\u2022 Developing coding expertise and best practices to query, merge, and analyze complex healthcare data from large re",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTwu7hJWb--sJZROc9ebVFUMHKIvpLoaC2fDKDM&s=0",
+        "job_title": "[Remote] Early Career Python Programmer/Data Analyst",
+        "posted_date": "2025-12-03T00:00:00.000Z",
+        "source_job_id": "xEVsnK703kK0C37wAAAAAA=="
+      }
+    },
+    {
+      "name": "GDasu",
+      "website": null,
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python"
+      ],
+      "description": "Position: Remote Web Scraper (Python) - Blockchain & Paid Skills\nLocation: Germany\n\nYou will start accepting contract and/or full-time job opportunities in the LD Talent slack. (more info)\n\nWhile you are not assigned to a contract or hired for a full-time opportunity, you can choose to learn online and do paid passion projects to grow your skills. You will get paid $40 per skill you learn and project you do. Doing these passion projects will also help you get more and better matches. (more info)",
+      "metadata": {
+        "logo_url": null,
+        "job_title": "Remote Web Scraper; Python - Blockchain & Paid Skills",
+        "posted_date": "2025-12-02T00:00:00.000Z",
+        "source_job_id": "k-8WRnPG6LuqOdpeAAAAAA=="
+      }
+    },
+    {
+      "name": "DataSmart Point GmbH",
+      "website": "https://datasmartpoint.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "typescript",
+        "react",
+        "go"
+      ],
+      "description": "Ein f\u00fchrendes Unternehmen im Bereich Data Analytics sucht einen Full-Stack Softwareentwickler (m/w/d). Du entwickelst Webanwendungen mit Technologien wie Python, Django, TypeScript und React. Die Stelle ist vollst\u00e4ndig remote und bietet verschiedene Anstellungsarten. Erfahrungen aus echten Projekten sind erforderlich sowie ein Interesse an Data Science und KI. Die Bezahlung liegt zwischen 18\u201325 \u20ac pro Stunde.\n#J-18808-Ljbffr DataSmart Point GmbH",
+      "metadata": {
+        "logo_url": null,
+        "job_title": "Remote Full-Stack Entwickler: Python/Django & React",
+        "posted_date": "2025-11-30T00:00:00.000Z",
+        "source_job_id": "IEG_FpkbBBPP2Me8AAAAAA=="
+      }
+    },
+    {
+      "name": "CloudLinux",
+      "website": "https://cloudlinux.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "javascript",
+        "react",
+        "java",
+        "go",
+        "docker",
+        "kubernetes",
+        "sql",
+        "postgresql",
+        "kafka"
+      ],
+      "description": "This a Full Remote job, the offer is available from: Europe\n\nCloudLinux is a global remote-first company. We are driven by our principles: do the right thing, employees first, we are remote first, and we deliver high volume, low-cost Linux infrastructure and security products that help companies to increase the efficiency of their operations. Every person on our team supports each other and does what we can to ensure we all are successful.\n\nCheck out our website for more information - https://cl",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS-gxvbsNUIG5f_2vkTctseImAPzHsSPlYa8L60&s=0",
+        "job_title": "Senior Python/Full Stack Developer (Django-focused) (remote-only, Europe)",
+        "posted_date": "2025-12-01T00:00:00.000Z",
+        "source_job_id": "32etQdAcE8RXR2NQAAAAAA=="
+      }
+    },
+    {
+      "name": "nant",
+      "website": "https://nanthealth.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "go",
+        "docker",
+        "sql",
+        "postgresql",
+        "redis"
+      ],
+      "description": "We\u2019re adding a Principal Python Engineer to our AirStrip team! In this role, you\u2019ll be a recognized subject matter expert driving technical direction for our Insight healthcare platform. You\u2019ll architect and build the distributed systems that power near real-time patient monitoring across hospitals nationwide. Your expertise will shape how we integrate with hospital systems, modernize our microservices architecture, and scale our platform to support growing healthcare demands.\n\nThis isn\u2019t just a",
+      "metadata": {
+        "logo_url": null,
+        "job_title": "Principal Software Engineer (Python) | Remote | AirStrip",
+        "posted_date": "2025-12-01T00:00:00.000Z",
+        "source_job_id": "Im1_TmjshuyCA-2dAAAAAA=="
+      }
+    },
+    {
+      "name": "PETADATA",
+      "website": null,
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "aws"
+      ],
+      "description": "Position: Senior AWS Lambda Python Developer (Remote)\nA technology company is seeking a highly skilled Senior Cloud AWS Lambda Developer with a solid background in software development and extensive experience in AWS Lambda using Python. The role involves leading the development of scalable serverless applications, conducting code reviews, and mentoring junior team members. Candidates should possess over 15 years of experience in software development and 5 years specifically in AWS Lambda.\n\nThis",
+      "metadata": {
+        "logo_url": null,
+        "job_title": "Senior AWS Lambda Python Developer; Remote",
+        "posted_date": "2025-12-01T00:00:00.000Z",
+        "source_job_id": "S6SjeOfip3t-vFB7AAAAAA=="
+      }
+    },
+    {
+      "name": "Varsity Tutors",
+      "website": "https://www.varsitytutors.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "go"
+      ],
+      "description": "Remote Python Tutor\n\nThe Varsity Tutors Live Learning Platform has thousands of students looking for remote online Python tutors. As a tutor on the Varsity Tutors Platform, you\u2019ll have the flexibility to set your own schedule, earn competitive rates, and make a real impact on students\u2019 learning journeys\u2014all from the comfort of your home.\n\nWhy Join Our Platform?\n\u2022 Base contract rates start at $18/hour and increase for specialized subjects. Plus, you\u2019ll earn incrementally higher pay for each sessi",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTFpAx9y4fN_v757T1xTUVX8UtvP_c-KDDc9uz3&s=0",
+        "job_title": "Python Tutor",
+        "posted_date": "2025-12-01T00:00:00.000Z",
+        "source_job_id": "uCDeLd7DOBFLJLz9AAAAAA=="
+      }
+    },
+    {
+      "name": "Devsu",
+      "website": "https://devsu.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "typescript",
+        "react",
+        "go",
+        "aws"
+      ],
+      "description": "Our client, an AI-powered financial technology company, is looking for an Engineering Manager. The company automates data extraction and financial modeling for investment professionals. They deliver accurate, auditable data and modern workflows to help analysts spend less time on rote work and more time on insight.\n\nResponsibilities:\n\u2022 Lead, coach, and grow a distributed team of software engineers building production systems used daily by leading asset managers, hedge funds, and banks.\n\u2022 Own del",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTaVBXEcSpM4IsaVE5uaYnteOgEt28y8H3yO1E4&s=0",
+        "job_title": "Engineering Manager /Python/ React / AWS/",
+        "posted_date": "2025-12-05T05:00:00.000Z",
+        "source_job_id": "FDbV5wn1ZDwUQakZAAAAAA=="
+      }
+    },
+    {
+      "name": "020 Cisco Systems, Inc.",
+      "website": null,
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "go",
+        "aws",
+        "azure",
+        "gcp",
+        "kubernetes",
+        "tensorflow",
+        "pytorch"
+      ],
+      "description": "The application window is expected to close on: December 19th, 2025 Job posting may be removed earlier if the position is filled or if a sufficient number of applications are received. Software Engineering: AI/ML Platform Experience ( Golang/Python + DSA + Kubernetes ) (hybrid) Meet the Team Platform team of data scientists, researchers, and other experienced engineers where you will actively participate the technical direction, ensuring the performance, reliability, and scalability of AI system",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSgthNpO3rocjBOmZqIhYrkphz9zbGG6DQ5B9CQ&s=0",
+        "job_title": "Software Engineering: AI/ML Platform Experience ( Golang/Python + DSA + Kubernetes ) (hybrid)",
+        "posted_date": "2025-12-03T00:00:00.000Z",
+        "source_job_id": "JqYTciaFk4oKTy0DAAAAAA=="
+      }
+    },
+    {
+      "name": "Benzinga",
+      "website": "https://www.benzinga.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "go",
+        "rust",
+        "aws",
+        "docker",
+        "kubernetes",
+        "kafka",
+        "tensorflow",
+        "pytorch"
+      ],
+      "description": "Job Title: AI / Machine Learning Engineer (AI / Python / Go)\nLocation: Remote\nEmployment Type: Full Time (40+ hrs) Independent Contractor\nCompany Name: Benzinga\nAbout Benzinga\nBenzinga is a fast-growing financial media and data technology company reshaping how investors access information. We combine artificial intelligence, machine learning, and real-time data pipelines to surface insights before they hit the mainstream. Our platforms deliver structured news, sentiment analytics, and financial ",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSH1YfPsa11M3X3dAHQH3y2b5JQKI902YiJXK3y&s=0",
+        "job_title": "Software Developer (Go / AI / Python)",
+        "posted_date": "2025-12-01T00:00:00.000Z",
+        "source_job_id": "zhYCqjWvU28C8BDYAAAAAA=="
+      }
+    },
+    {
+      "name": "Cloudlinux",
+      "website": "https://cloudlinux.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "react",
+        "java",
+        "go",
+        "docker",
+        "kubernetes",
+        "sql",
+        "kafka"
+      ],
+      "description": "Position: Senior Python/Full Stack Developer (Django-focused) (remote-only, Europe)\n\nCloud Linux is a global remote\u2011first company. We are driven by our principles: do the right thing, employees first, we are remote first, and we deliver high volume, low\u2011cost Linux infrastructure and security products that help companies to increase the efficiency of their operations. Every person on our team supports each other and does what we can to ensure we all are successful.\n\nCheck out our website for more",
+      "metadata": {
+        "logo_url": null,
+        "job_title": "Senior Python\u200b/Full Stack Developer; Django-focused; remote-, Europe",
+        "posted_date": "2025-11-30T00:00:00.000Z",
+        "source_job_id": "zshzTWCuO6ALfKHhAAAAAA=="
+      }
+    },
+    {
+      "name": "Swayable",
+      "website": "https://www.swayable.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "javascript",
+        "node.js",
+        "java",
+        "go",
+        "mongodb"
+      ],
+      "description": "About Swayable\n\nSwayable is a fast-growing AI and automated data science platform that measures public opinion and the impact of messages and advertising content on it. We are a 40-person team backed by top technology and social impact investors, including Y Combinator. Founded in 2018 by physics PhDs, it is led by the former Executive Director for Digital Strategy at the New York Times. Clients include major consumer-facing brands (American Express, Airbnb, Paramount Pictures), technology compa",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTc_P03oG9eNi_ctRxfJ79Htf9uB1c8nLQ6mT2t&s=0",
+        "job_title": "Senior AI/ML Engineer/ Python / Scientific Computing",
+        "posted_date": "2025-12-03T00:00:00.000Z",
+        "source_job_id": "kjh_Um0BqnGXraChAAAAAA=="
+      }
+    },
+    {
+      "name": "Relitix",
+      "website": "https://relitix.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "go",
+        "sql"
+      ],
+      "description": "ABOUT THE MISSION\n\nRelitix is currently seeking a hands-on Senior Data Engineer to lead a critical transformation of our data platform. We are moving away from legacy structures and re-engineering our ecosystem into a modern, Python-scripted Lakehouse architecture. This is not a maintenance role; it is a builder role for an engineer who values code-first engineering over GUI tools.\n\nIf you are energized by owning systems end-to-end and want to build a platform that will scale significantly, we w",
+      "metadata": {
+        "logo_url": null,
+        "job_title": "Senior Data Engineer (Python / Databricks)",
+        "posted_date": "2025-12-04T00:00:00.000Z",
+        "source_job_id": "gK6-F4eYw_4My8NpAAAAAA=="
+      }
+    },
+    {
+      "name": "Fulcrum",
+      "website": "https://www.fulcrumapp.com",
+      "careers_url": null,
+      "industry": "tech",
+      "size": "unknown",
+      "locations": [
+        "Remote"
+      ],
+      "tech_stack": [
+        "python",
+        "typescript",
+        "react",
+        "go"
+      ],
+      "description": "About Fulcrum: We\u2019re a team of tech-savvy, creative & passionate IT professionals. We\u2019ve created a vibrant and performance-driven culture for ourselves where everyone is free to think & act outside the box. There are literally no limits to what you can do here, as long as we WOW our clients and OVER deliver what we promise.\nWe are now looking for FullStack developer (full-time, remote) to join our team.\n\nAbout the Project\nThe company is developing an advanced AI-driven platform designed to autom",
+      "metadata": {
+        "logo_url": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQRWP8pUMsL3c3mXu-JciwFG6z0hL-8m-rokdsE&s=0",
+        "job_title": "Fullstack Engineer (React, Python)",
+        "posted_date": "2025-12-03T00:00:00.000Z",
+        "source_job_id": "6FEyD91azl1jbx77AAAAAA=="
+      }
+    }
+  ],
+  "metadata": {
+    "query": "python developer in remote",
+    "total_jobs_found": 21,
+    "companies_returned": 20,
+    "date_posted_filter": "week",
+    "remote_only": false
+  }
+}
