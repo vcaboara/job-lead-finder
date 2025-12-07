@@ -123,7 +123,7 @@ class TestMCPAggregator:
                 "remotive": {"enabled": True},
             }
         }
-        
+
         agg = MCPAggregator()
         # CompanyJobs disabled by default (slow), RemoteOK and Remotive enabled
         assert len(agg.providers) == 2  # RemoteOK and Remotive
@@ -155,7 +155,7 @@ class TestMCPAggregator:
                 "remotive": {"enabled": True},
             }
         }
-        
+
         # Only Remotive is available (others mocked as unavailable)
         mock_remotive.return_value = True
         mock_remoteok.return_value = False
@@ -184,7 +184,7 @@ class TestMCPAggregator:
                 "remotive": {"enabled": True},
             }
         }
-        
+
         # Only Remotive available (CompanyJobs and RemoteOK mocked unavailable)
         mock_remotive_avail.return_value = True
         mock_remoteok_avail.return_value = False
@@ -233,7 +233,7 @@ class TestMCPAggregator:
                 "remotive": {"enabled": True},
             }
         }
-        
+
         # Only RemoteOK available (Remotive and CompanyJobs unavailable)
         mock_remoteok_avail.return_value = True
         mock_remotive_avail.return_value = False
@@ -296,7 +296,7 @@ class TestMCPAggregator:
             {"title": "Job 2", "link": "https://remoteok.com/2", "source": "RemoteOK"},
             {"title": "Job 3", "link": "https://remoteok.com/3", "source": "RemoteOK"},
         ]
-        
+
         provider2 = Mock(spec=MCPProvider)
         provider2.name = "Remotive"
         provider2.enabled = True
@@ -306,7 +306,7 @@ class TestMCPAggregator:
             {"title": "Job B", "link": "https://remotive.io/b", "source": "Remotive"},
             {"title": "Job C", "link": "https://remotive.io/c", "source": "Remotive"},
         ]
-        
+
         provider3 = Mock(spec=MCPProvider)
         provider3.name = "WeWorkRemotely"
         provider3.enabled = True
@@ -315,13 +315,13 @@ class TestMCPAggregator:
             {"title": "Job X", "link": "https://wwr.com/x", "source": "WeWorkRemotely"},
             {"title": "Job Y", "link": "https://wwr.com/y", "source": "WeWorkRemotely"},
         ]
-        
+
         agg = MCPAggregator(providers=[provider1, provider2, provider3])
         jobs = agg.search_jobs("python", count_per_provider=5, total_count=6)
-        
+
         # Should get 6 jobs total, distributed across providers (round-robin)
         assert len(jobs) == 6
-        
+
         # Count jobs per source
         sources = [job["source"] for job in jobs]
         source_counts = {
@@ -329,7 +329,7 @@ class TestMCPAggregator:
             "Remotive": sources.count("Remotive"),
             "WeWorkRemotely": sources.count("WeWorkRemotely"),
         }
-        
+
         # Each provider should contribute exactly 2 jobs (round-robin distribution)
         # With 6 total jobs and 3 providers, round-robin should distribute evenly
         assert source_counts["RemoteOK"] == 2
@@ -378,7 +378,7 @@ class TestWeWorkRemotelyMCP:
         # Should find Python job (query filtering)
         assert len(jobs) >= 1
         assert any("Python" in job["title"] for job in jobs)
-        
+
         # Check job structure
         for job in jobs:
             assert "title" in job
@@ -388,7 +388,7 @@ class TestWeWorkRemotelyMCP:
             assert "source" in job
             assert job["source"] == "WeWorkRemotely"
             assert job["location"] == "Remote"
-        
+
         # Verify company extraction works
         python_job = [j for j in jobs if "Python" in j["title"]][0]
         assert python_job["company"] == "TestCorp"
@@ -425,12 +425,12 @@ class TestWeWorkRemotelyMCP:
         mock_get.return_value = mock_response
 
         provider = WeWorkRemotelyMCP()
-        
+
         # Test short term "Go"
         jobs = provider.search_jobs("Go", count=10)
         assert len(jobs) >= 1
         assert any("Go" in job["title"] or "Go" in job["summary"] for job in jobs)
-        
+
         # Test short term "UI"
         jobs = provider.search_jobs("UI", count=10)
         assert len(jobs) >= 1

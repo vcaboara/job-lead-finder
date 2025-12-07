@@ -6,14 +6,14 @@ Reduce token usage and improve AI assistant effectiveness by leveraging existing
 ## Repositories to Evaluate
 
 ### 1. Rulebook AI
-**URL**: https://github.com/botingw/rulebook-ai  
-**Purpose**: AI-specific project configuration system  
+**URL**: https://github.com/botingw/rulebook-ai
+**Purpose**: AI-specific project configuration system
 **Potential Use**:
 - Structured rulebook format for project guidelines
 - May replace or augment `.github/copilot-instructions.md`
 - Better organization of project-specific AI instructions
 
-**Status**: TODO - Needs evaluation  
+**Status**: TODO - Needs evaluation
 **Action Items**:
 - [ ] Review rulebook-ai structure and features
 - [ ] Compare with current `.github/copilot-instructions.md`
@@ -23,14 +23,14 @@ Reduce token usage and improve AI assistant effectiveness by leveraging existing
 ---
 
 ### 2. Claude Code Settings
-**URL**: https://github.com/feiskyer/claude-code-settings  
-**Purpose**: Claude-specific project settings and best practices  
+**URL**: https://github.com/feiskyer/claude-code-settings
+**Purpose**: Claude-specific project settings and best practices
 **Potential Use**:
 - Claude-optimized configuration patterns
 - May complement GitHub Copilot instructions
 - Cross-AI-assistant compatibility
 
-**Status**: TODO - Needs evaluation  
+**Status**: TODO - Needs evaluation
 **Action Items**:
 - [ ] Review Claude-specific settings format
 - [ ] Extract reusable patterns for JobFlow
@@ -40,14 +40,14 @@ Reduce token usage and improve AI assistant effectiveness by leveraging existing
 ---
 
 ### 3. AI Coding Style Guides
-**URL**: https://github.com/lidangzzz/AI-Coding-Style-Guides  
-**Purpose**: Token-optimized coding style guides for AI assistants  
+**URL**: https://github.com/lidangzzz/AI-Coding-Style-Guides
+**Purpose**: Token-optimized coding style guides for AI assistants
 **Potential Use**:
 - **Primary Goal**: Reduce token consumption
 - Reference instead of duplicating common patterns
 - Standardized AI interaction patterns
 
-**Status**: TODO - High priority for token reduction  
+**Status**: TODO - High priority for token reduction
 **Action Items**:
 - [ ] Review token-efficient style guide patterns
 - [ ] Identify which guides apply to JobFlow stack (Python, JS, FastAPI)
@@ -90,7 +90,7 @@ Reduce token usage and improve AI assistant effectiveness by leveraging existing
 - Want to switch branches temporarily
 - Unsure if changes will be kept
 
-**Current Recommendation**: 
+**Current Recommendation**:
 Start with stash for initial exploration, promote to branch if changes look promising.
 
 ---

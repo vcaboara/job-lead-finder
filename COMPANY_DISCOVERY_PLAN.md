@@ -54,13 +54,13 @@
   - File: `src/app/discovery/base_provider.py`
   - Abstract base class for all discovery sources
   - Methods: `discover_companies()`, `get_metadata()`, `supported_industries()`
-  
+
 - [ ] **1.2 Company Database Schema**
   - File: `src/app/discovery/company_store.py`
   - SQLite database for discovered companies
   - Schema: companies, jobs, discovery_log
   - CRUD operations with async support
-  
+
 - [ ] **1.3 Configuration System**
   - Add to `config.json`: discovery settings
   - Industry preferences
@@ -84,12 +84,12 @@
   - Parse monthly "Who is hiring?" threads
   - Extract: company name, description, tech stack, location
   - Detect thread ID automatically (changes monthly)
-  
+
 - [ ] **2.2 Company Extraction Logic**
   - Use Gemini to parse unstructured HN posts
   - Extract structured data: company, role, requirements
   - Detect careers URL if mentioned
-  
+
 - [ ] **2.3 CLI Command**
   - `python -m app.main discover --source hn`
   - Store discovered companies in database
@@ -112,13 +112,13 @@
   - Given company website, find careers page
   - Common patterns: `/careers`, `/jobs`, `/join`, `/work-with-us`
   - Use sitemap.xml if available
-  
+
 - [ ] **3.2 Job Listing Scraper**
   - File: `src/app/discovery/job_scraper.py`
   - Extract job listings from careers pages
   - Handle different formats (Greenhouse, Lever, custom)
   - Respect robots.txt
-  
+
 - [ ] **3.3 Background Service**
   - File: `src/app/discovery/crawler_daemon.py`
   - Async job checking (100+ companies/hour)
@@ -141,13 +141,13 @@
   - Use existing Gemini evaluation
   - Match against uploaded resume
   - Score: company size, tech stack, role fit
-  
+
 - [ ] **4.2 Notification System**
   - File: `src/app/discovery/notifier.py`
   - Email digest (HTML template)
   - Webhook support (Slack, Discord)
   - In-app notification queue
-  
+
 - [ ] **4.3 UI Integration**
   - New tab: "Discovered Companies"
   - Show: company name, last checked, # of jobs
@@ -170,12 +170,12 @@
   - Fetch YC company directory
   - Filter by batch, status (active/acquired)
   - ~4000 companies
-  
+
 - [ ] **5.2 GitHub Organizations Provider**
   - File: `src/app/discovery/providers/github_provider.py`
   - Find orgs with active repos in user's tech stack
   - Filter by language, activity, size
-  
+
 - [ ] **5.3 Industry-Agnostic Providers**
   - LinkedIn company search API
   - Crunchbase API (requires key)
@@ -197,12 +197,12 @@
   - Async/concurrent crawling
   - Caching strategies
   - Database indexing
-  
+
 - [ ] **6.2 User Experience**
   - Onboarding flow for discovery setup
   - Discovery status dashboard
   - Company watchlist feature
-  
+
 - [ ] **6.3 Monitoring & Logging**
   - Discovery metrics (companies/day, success rate)
   - Error tracking for failed scrapes
@@ -343,7 +343,7 @@ The provider interface supports any industry:
 class IndustryProvider(BaseDiscoveryProvider):
     def supported_industries(self) -> list[str]:
         return ["healthcare", "finance", "tech"]
-    
+
     def discover_companies(self, filters: dict) -> list[Company]:
         # Industry-specific discovery logic
         pass

@@ -6,26 +6,22 @@ from pathlib import Path
 
 import pytest
 
-from app.discovery import (
-    get_database_path,
-    get_discovery_config,
-    is_discovery_enabled,
-    update_discovery_config,
-)
+from app.discovery import get_database_path, get_discovery_config, is_discovery_enabled, update_discovery_config
 from app.discovery.base_provider import IndustryType
 
 
 @pytest.fixture
 def temp_config(monkeypatch):
     """Use temporary config file for tests."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         config_path = Path(f.name)
         json.dump({}, f)
-    
-    monkeypatch.setattr('app.config_manager.CONFIG_FILE', config_path)
-    monkeypatch.setattr('app.discovery.config.load_config', 
-                        lambda: json.loads(config_path.read_text()) if config_path.exists() else {})
-    
+
+    monkeypatch.setattr("app.config_manager.CONFIG_FILE", config_path)
+    monkeypatch.setattr(
+        "app.discovery.config.load_config", lambda: json.loads(config_path.read_text()) if config_path.exists() else {}
+    )
+
     yield config_path
     config_path.unlink()
 
@@ -33,7 +29,7 @@ def temp_config(monkeypatch):
 def test_get_default_config(temp_config):
     """Test default discovery configuration."""
     config = get_discovery_config()
-    
+
     assert config["enabled"] is False
     assert config["database_path"] == "data/companies.db"
     assert config["schedule"]["enabled"] is False
@@ -68,12 +64,8 @@ def test_update_database_path(temp_config):
 
 def test_update_schedule(temp_config):
     """Test updating schedule settings."""
-    update_discovery_config(
-        schedule_enabled=True,
-        run_time="14:30",
-        interval_hours=12
-    )
-    
+    update_discovery_config(schedule_enabled=True, run_time="14:30", interval_hours=12)
+
     config = get_discovery_config()
     assert config["schedule"]["enabled"] is True
     assert config["schedule"]["run_time"] == "14:30"
@@ -85,9 +77,9 @@ def test_update_filters(temp_config):
     update_discovery_config(
         industries=[IndustryType.TECH.value, IndustryType.HEALTHCARE.value],
         locations=["San Francisco", "Remote"],
-        tech_stack=["Python", "React"]
+        tech_stack=["Python", "React"],
     )
-    
+
     config = get_discovery_config()
     assert len(config["filters"]["industries"]) == 2
     assert "San Francisco" in config["filters"]["locations"]
@@ -98,7 +90,7 @@ def test_invalid_run_time(temp_config):
     """Test invalid time format raises error."""
     with pytest.raises(ValueError, match="HH:MM format"):
         update_discovery_config(run_time="25:00")
-    
+
     with pytest.raises(ValueError, match="HH:MM format"):
         update_discovery_config(run_time="invalid")
 
@@ -118,10 +110,10 @@ def test_invalid_industry(temp_config):
 def test_partial_update(temp_config):
     """Test partial config updates preserve other values."""
     update_discovery_config(enabled=True, database_path="test.db")
-    
+
     update_discovery_config(schedule_enabled=True)
     config2 = get_discovery_config()
-    
+
     assert config2["enabled"] is True
     assert config2["database_path"] == "test.db"
     assert config2["schedule"]["enabled"] is True
@@ -129,11 +121,8 @@ def test_partial_update(temp_config):
 
 def test_update_notifications(temp_config):
     """Test updating notification settings."""
-    update_discovery_config(
-        notifications_enabled=True,
-        min_new_companies=10
-    )
-    
+    update_discovery_config(notifications_enabled=True, min_new_companies=10)
+
     config = get_discovery_config()
     assert config["notifications"]["enabled"] is True
     assert config["notifications"]["min_new_companies"] == 10
@@ -141,12 +130,9 @@ def test_update_notifications(temp_config):
 
 def test_update_providers(temp_config):
     """Test updating provider settings."""
-    providers = {
-        "hackernews": {"enabled": True},
-        "ycombinator": {"enabled": False}
-    }
+    providers = {"hackernews": {"enabled": True}, "ycombinator": {"enabled": False}}
     update_discovery_config(provider_settings=providers)
-    
+
     config = get_discovery_config()
     assert config["providers"] == providers
 

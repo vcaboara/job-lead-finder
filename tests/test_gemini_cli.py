@@ -55,9 +55,7 @@ class TestGeminiCliMain:
                 mock_google = MagicMock()
                 mock_google.genai = mock_genai
 
-                with patch.dict(
-                    "sys.modules", {"google": mock_google, "google.genai": mock_genai}
-                ):
+                with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
                     from app import gemini_cli
 
                     # Reload to ensure the module picks up the mocked sys.modules
@@ -85,9 +83,7 @@ class TestGeminiCliMain:
             mock_google = MagicMock()
             mock_google.genai = mock_genai
 
-            with patch.dict(
-                "sys.modules", {"google": mock_google, "google.genai": mock_genai}
-            ):
+            with patch.dict("sys.modules", {"google": mock_google, "google.genai": mock_genai}):
                 import importlib
 
                 from app import gemini_cli
@@ -121,9 +117,7 @@ class TestGeminiCliMain:
                 mock_google.genai = mock_genai
 
                 # Patch sys.modules before calling main so the import uses our mock
-                with patch.dict(
-                    sys.modules, {"google": mock_google, "google.genai": mock_genai}
-                ):
+                with patch.dict(sys.modules, {"google": mock_google, "google.genai": mock_genai}):
                     from app import gemini_cli
 
                     gemini_cli.main()

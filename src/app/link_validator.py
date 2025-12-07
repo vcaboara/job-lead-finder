@@ -157,7 +157,7 @@ def validate_leads(
     for i, lead in enumerate(leads):
         url = lead.get("link", "")
         if verbose:
-            logger.info("[%d/%d] validating %s", i+1, len(leads), url)
+            logger.info("[%d/%d] validating %s", i + 1, len(leads), url)
 
         validation = validate_link(url, timeout=timeout, verbose=verbose)
 

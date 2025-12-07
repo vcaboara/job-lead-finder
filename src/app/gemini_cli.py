@@ -1,15 +1,16 @@
-"""Simple CLI to query Gemini and (if available) use Google Search tool.
+"""Simple CLI to query Gemini and use Google Search tool.
 
 Usage:
-  python -m app.gemini_cli --prompt "Find one recent remote Python job and return JSON" -m gemini-2.5-flash-preview-09-2025
+  python -m app.gemini_cli --prompt "Find remote Python job" \
+    -m gemini-2.5-flash-preview-09-2025
 
-The script prefers the legacy `google.genai` package when present and will
-attempt the `google.generativeai` chat path as a fallback.
+Prefers legacy `google.genai` package when present, falls back to
+`google.generativeai` chat path.
 """
 
 import argparse
-import os
 import json
+import os
 import sys
 
 
@@ -66,10 +67,14 @@ def main():
             if not args.no_tool:
                 if types_mod is not None:
                     try:
-                        # Some server/tool combos reject `response_mime_type='application/json'` when tools are used.
-                        # Omit the mime type and ask the model to return only JSON in the instruction.
+                        # Some server/tool combos reject
+                        # `response_mime_type='application/json'` when
+                        # tools are used. Omit mime type and ask model
+                        # to return only JSON in the instruction.
                         cfg = types_mod.GenerateContentConfig(
-                            system_instruction="Use the google_search tool and return a JSON array of results. Only return JSON.",
+                            system_instruction=(
+                                "Use the google_search tool and return " "a JSON array of results. Only JSON."
+                            ),
                             tools=[{"google_search": {}}],
                         )
                     except Exception:

@@ -149,7 +149,7 @@ def update_industry_profile(profile: str) -> bool:
 
 def get_industry_profile() -> str:
     """Get current industry profile.
-    
+
     Returns:
         str: The current industry profile name (default: 'tech').
     """
@@ -175,10 +175,10 @@ INJECTION_PATTERNS = [
 
 def scan_instructions(text: str) -> List[str]:
     """Scan system instructions for prompt injection attempts.
-    
+
     Args:
         text: The instruction text to scan.
-        
+
     Returns:
         List of pattern names that matched (empty if safe).
     """
@@ -193,10 +193,10 @@ def scan_instructions(text: str) -> List[str]:
 
 def scan_entity(entity: str) -> List[str]:
     """Scan a blocked entity (site/employer) for injection attempts.
-    
+
     Args:
         entity: The entity name/domain to scan.
-        
+
     Returns:
         List of issues found (empty if safe).
     """
@@ -215,10 +215,10 @@ def scan_entity(entity: str) -> List[str]:
 
 def validate_url(url: str) -> bool:
     """Basic URL validation for blocked sites.
-    
+
     Args:
         url: The URL or domain to validate.
-        
+
     Returns:
         True if the URL appears valid, False otherwise.
     """
@@ -227,4 +227,3 @@ def validate_url(url: str) -> bool:
     # Basic domain pattern check
     pattern = r"^[a-zA-Z0-9][a-zA-Z0-9-_.]*\.[a-zA-Z]{2,}$"
     return bool(re.match(pattern, url.strip()))
-

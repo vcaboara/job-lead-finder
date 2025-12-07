@@ -4,13 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 
-from app.discovery.base_provider import (
-    BaseDiscoveryProvider,
-    Company,
-    CompanySize,
-    DiscoveryResult,
-    IndustryType,
-)
+from app.discovery.base_provider import BaseDiscoveryProvider, Company, CompanySize, DiscoveryResult, IndustryType
 
 
 class MockProvider(BaseDiscoveryProvider):

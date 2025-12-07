@@ -77,13 +77,13 @@ def test_upload_pdf_too_large():
     client = TestClient(app)
     # Create a fake large PDF by creating a minimal PDF structure
     # and padding it to exceed 2MB
-    fake_pdf_header = b'%PDF-1.4\n'
-    padding = b'0' * (2 * 1024 * 1024 + 1000)  # Over 2MB of padding
+    fake_pdf_header = b"%PDF-1.4\n"
+    padding = b"0" * (2 * 1024 * 1024 + 1000)  # Over 2MB of padding
     fake_pdf = fake_pdf_header + padding
-    
+
     files = {"file": ("large.pdf", BytesIO(fake_pdf), "application/pdf")}
     resp = client.post("/api/upload/resume", files=files)
-    
+
     assert resp.status_code == 400
     detail = resp.json()["detail"]
     assert "too large" in detail.lower()
@@ -96,13 +96,19 @@ def test_upload_docx_too_large():
     client = TestClient(app)
     # Create a fake large DOCX by creating a minimal ZIP structure (DOCX is a ZIP)
     # and padding it to exceed 1MB
-    fake_docx_header = b'PK\x03\x04'  # ZIP header
-    padding = b'0' * (1 * 1024 * 1024 + 1000)  # Over 1MB of padding
+    fake_docx_header = b"PK\x03\x04"  # ZIP header
+    padding = b"0" * (1 * 1024 * 1024 + 1000)  # Over 1MB of padding
     fake_docx = fake_docx_header + padding
-    
-    files = {"file": ("large.docx", BytesIO(fake_docx), "application/vnd.openxmlformats-officedocument.wordprocessingml.document")}
+
+    files = {
+        "file": (
+            "large.docx",
+            BytesIO(fake_docx),
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        )
+    }
     resp = client.post("/api/upload/resume", files=files)
-    
+
     assert resp.status_code == 400
     detail = resp.json()["detail"]
     assert "too large" in detail.lower()
@@ -117,7 +123,7 @@ def test_upload_txt_under_size_limit():
     resume_content = "John Doe\nSenior Software Engineer\n\n"
     resume_content += "EXPERIENCE\n" + ("- Developed features for web applications\n" * 100)
     resume_content += "\nSKILLS\nPython, JavaScript, Docker, Kubernetes\n"
-    
+
     # Should be well under 1MB (around 5-10KB)
     files = {"file": ("resume.txt", BytesIO(resume_content.encode()), "text/plain")}
     resp = client.post("/api/upload/resume", files=files)
@@ -132,10 +138,10 @@ def test_upload_pdf_under_size_limit(create_test_pdf):
     # Create a small PDF with reasonable content
     text_content = "John Doe\nSoftware Engineer\nExperience with Python and Docker"
     pdf_content = create_test_pdf(text_content)
-    
+
     files = {"file": ("resume.pdf", BytesIO(pdf_content), "application/pdf")}
     resp = client.post("/api/upload/resume", files=files)
-    
+
     # Should succeed since well under 2MB
     assert resp.status_code == 200
 

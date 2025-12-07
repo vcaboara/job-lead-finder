@@ -13,8 +13,8 @@ import os
 from typing import Any, Dict, List
 
 from .gemini_provider import GeminiProvider
-from .ollama_provider import OllamaProvider
 from .main import fetch_jobs
+from .ollama_provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
 
@@ -34,12 +34,10 @@ def _get_evaluation_provider():
     try:
         provider = OllamaProvider()
         if provider.is_available():
-            logger.info(
-                "Using Ollama provider for evaluation (%s)", provider.model)
+            logger.info("Using Ollama provider for evaluation (%s)", provider.model)
             return provider
         else:
-            logger.info(
-                "Ollama not available (model not pulled), trying Gemini")
+            logger.info("Ollama not available (model not pulled), trying Gemini")
     except Exception as e:
         logger.debug("Ollama provider unavailable: %s", e)
 
@@ -93,8 +91,9 @@ def generate_job_leads(
             # Request 3x from each MCP to get more raw results for filtering
             count_per_mcp = int(os.getenv("JOBS_PER_MCP", str(count * 3)))
 
-            logger.info("Trying MCP providers (count=%d, per_provider=%d, location=%s)",
-                        count * 3, count_per_mcp, location)
+            logger.info(
+                "Trying MCP providers (count=%d, per_provider=%d, location=%s)", count * 3, count_per_mcp, location
+            )
             leads = generate_job_leads_via_mcp(
                 query=query, count=count * 3, count_per_provider=count_per_mcp, location=location
             )
@@ -108,21 +107,17 @@ def generate_job_leads(
                         if provider:
                             logger.info("Batch ranking %d jobs...", len(leads))
                             # Rank all leads, return top 'count' with scores
-                            leads = provider.rank_jobs_batch(
-                                leads, resume_text, top_n=count)
-                            logger.info(
-                                "Ranked and filtered to top %d jobs", len(leads))
+                            leads = provider.rank_jobs_batch(leads, resume_text, top_n=count)
+                            logger.info("Ranked and filtered to top %d jobs", len(leads))
                         else:
-                            logger.warning(
-                                "No AI provider available for ranking")
+                            logger.warning("No AI provider available for ranking")
                             for lead in leads[:count]:
                                 lead["score"] = 50
                                 lead["reasoning"] = "AI provider unavailable"
                             leads = leads[:count]
                     except Exception as e:
                         if verbose:
-                            print(
-                                f"job_finder: Batch ranking unavailable: {e}")
+                            print(f"job_finder: Batch ranking unavailable: {e}")
                         # Continue with unranked jobs
                         for lead in leads[:count]:
                             lead["score"] = 50
@@ -147,20 +142,17 @@ def generate_job_leads(
     except Exception as e:
         provider = None
         if verbose:
-            print(
-                f"job_finder: GeminiProvider unavailable ({e}); falling back to local search")
+            print(f"job_finder: GeminiProvider unavailable ({e}); falling back to local search")
 
     if provider:
         try:
-            leads = provider.generate_job_leads(
-                query, resume_text, count=count, model=model, verbose=verbose)
+            leads = provider.generate_job_leads(query, resume_text, count=count, model=model, verbose=verbose)
             print(f"job_finder: Gemini returned {len(leads)} leads")
             # If Gemini returned results, use them
             if leads:
                 # Evaluate each lead if requested
                 if evaluate:
-                    leads = _evaluate_leads(
-                        leads, resume_text, provider, verbose)
+                    leads = _evaluate_leads(leads, resume_text, provider, verbose)
                 return leads
             else:
                 print("job_finder: Gemini returned 0 leads, using local fallback")
@@ -227,8 +219,7 @@ def _evaluate_leads(
             lead["reasoning"] = evaluation.get("reasoning", "")
         except Exception as e:
             if verbose:
-                print(
-                    f"job_finder: evaluation failed for {lead.get('title', '?')}: {e}")
+                print(f"job_finder: evaluation failed for {lead.get('title', '?')}: {e}")
             # Default to neutral score if evaluation fails
             lead["score"] = 50
             lead["reasoning"] = "Evaluation unavailable."

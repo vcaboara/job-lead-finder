@@ -118,7 +118,7 @@ JobFlow is a job search application that helps users find relevant job postings 
 - Feature branches: `feature/<description>`
 - Fix branches: `fix/<description>`
 - Commits: Use conventional commits (feat:, fix:, chore:, docs:, refactor:)
-- PRs: 
+- PRs:
   * Merge to `main` via pull request
   * **Include screenshots for any UI changes**
   * Verify no visual regressions with before/after screenshots

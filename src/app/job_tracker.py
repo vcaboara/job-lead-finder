@@ -18,8 +18,7 @@ STATUS_REJECTED = "rejected"
 STATUS_OFFER = "offer"
 STATUS_HIDDEN = "hidden"
 
-VALID_STATUSES = {STATUS_NEW, STATUS_APPLIED, STATUS_INTERVIEWING,
-                  STATUS_REJECTED, STATUS_OFFER, STATUS_HIDDEN}
+VALID_STATUSES = {STATUS_NEW, STATUS_APPLIED, STATUS_INTERVIEWING, STATUS_REJECTED, STATUS_OFFER, STATUS_HIDDEN}
 
 # Persistence file - use absolute path in shared volume if available, else current dir
 _DATA_DIR = Path("/app/data") if Path("/app/data").exists() else Path(".")
@@ -69,8 +68,7 @@ class JobTracker:
     def save(self) -> None:
         """Save job tracking data to file."""
         try:
-            data = {"jobs": self.jobs, "last_updated": datetime.now(
-                timezone.utc).isoformat()}
+            data = {"jobs": self.jobs, "last_updated": datetime.now(timezone.utc).isoformat()}
             with open(self.tracking_file, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2)
         except Exception as e:
@@ -131,13 +129,11 @@ class JobTracker:
             return False
 
         self.jobs[job_id]["status"] = status
-        self.jobs[job_id]["last_updated"] = datetime.now(
-            timezone.utc).isoformat()
+        self.jobs[job_id]["last_updated"] = datetime.now(timezone.utc).isoformat()
 
         # Set applied_date when status changes to 'applied'
         if status == STATUS_APPLIED and not self.jobs[job_id].get("applied_date"):
-            self.jobs[job_id]["applied_date"] = datetime.now(
-                timezone.utc).isoformat()
+            self.jobs[job_id]["applied_date"] = datetime.now(timezone.utc).isoformat()
 
         # Update notes if provided
         if notes is not None:
@@ -156,8 +152,7 @@ class JobTracker:
             return False
 
         self.jobs[job_id]["notes"] = notes
-        self.jobs[job_id]["last_updated"] = datetime.now(
-            timezone.utc).isoformat()
+        self.jobs[job_id]["last_updated"] = datetime.now(timezone.utc).isoformat()
         self.save()
         return True
 
@@ -171,8 +166,7 @@ class JobTracker:
             return False
 
         self.jobs[job_id]["company_link"] = company_link
-        self.jobs[job_id]["last_updated"] = datetime.now(
-            timezone.utc).isoformat()
+        self.jobs[job_id]["last_updated"] = datetime.now(timezone.utc).isoformat()
         self.save()
         return True
 

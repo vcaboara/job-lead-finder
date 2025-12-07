@@ -27,12 +27,12 @@ try:
 except ImportError:
     BS4_AVAILABLE = False
 
-# Import modular providers from new structure
-from .providers.weworkremotely import WeWorkRemotelyMCP
-
 # Import base class from new modular structure
 # This ensures all providers use the same base class
 from .providers.base import MCPProvider
+
+# Import modular providers from new structure
+from .providers.weworkremotely import WeWorkRemotelyMCP
 
 
 class LinkedInMCP(MCPProvider):
@@ -492,7 +492,7 @@ class CompanyJobsMCP(MCPProvider):
             # Build search query targeting company career pages
             # Reduce scope for faster response - use top 15 companies instead of 30
             companies_str = ", ".join(companies_to_search[:15])  # Top 15 companies
-            
+
             # More focused prompt with explicit search constraints to reduce API calls
             search_prompt = (
                 f"Find {min(count, 50)} {query} jobs on company career pages. "
@@ -801,7 +801,7 @@ class MCPAggregator:
         # Strategy: Round-robin through providers to ensure mix of sources
         seen_links = set()
         unique_jobs = []
-        
+
         # Group jobs by provider
         jobs_by_provider = {}
         for job in all_jobs:
@@ -809,36 +809,36 @@ class MCPAggregator:
             if source not in jobs_by_provider:
                 jobs_by_provider[source] = []
             jobs_by_provider[source].append(job)
-        
+
         # Round-robin through providers to get diverse results
         provider_names = list(jobs_by_provider.keys())
         provider_indices = {name: 0 for name in provider_names}
-        
+
         while len(unique_jobs) < (total_count or len(all_jobs)):
             added_this_round = False
-            
+
             for provider_name in provider_names:
                 idx = provider_indices[provider_name]
                 provider_jobs = jobs_by_provider[provider_name]
-                
+
                 # Find next unique job from this provider
                 while idx < len(provider_jobs):
                     job = provider_jobs[idx]
                     idx += 1
                     link = job.get("link", "")
-                    
+
                     if link and link not in seen_links:
                         seen_links.add(link)
                         unique_jobs.append(job)
                         added_this_round = True
                         break
-                
+
                 provider_indices[provider_name] = idx
-                
+
                 # Stop if we've hit the limit
                 if total_count and len(unique_jobs) >= total_count:
                     break
-            
+
             # Exit if no providers added jobs this round
             if not added_this_round:
                 break

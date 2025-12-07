@@ -3,7 +3,6 @@
 Provides a wrapper for `google-generativeai` package.
 """
 
-import json
 import logging
 import os
 import time
@@ -11,12 +10,6 @@ import traceback
 from typing import Any, Dict
 
 logger = logging.getLogger(__name__)
-
-try:
-    import requests
-    REQUESTS_AVAILABLE = True
-except ImportError:
-    REQUESTS_AVAILABLE = False
 
 # Support either the newer `google.generativeai` package or the older
 # `google.genai` package (legacy). Try to import both and prefer the
@@ -57,14 +50,11 @@ class GeminiProvider:
             request_timeout: Request timeout in seconds (default: 90)
         """
         # Accept either GEMINI_API_KEY (preferred) or GOOGLE_API_KEY for backward compatibility
-        self.api_key = api_key or os.getenv(
-            "GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
-            raise RuntimeError(
-                "GOOGLE_API_KEY not set; Gemini provider requires a key")
+            raise RuntimeError("GOOGLE_API_KEY not set; Gemini provider requires a key")
         if genai is None:
-            raise RuntimeError(
-                "google-generativeai package not installed; install optional 'gemini' extras")
+            raise RuntimeError("google-generativeai package not installed; install optional 'gemini' extras")
 
         # Some SDK variants provide a module-level `configure`; call it only if present.
         try:
@@ -107,8 +97,7 @@ class GeminiProvider:
             # Try google.genai Client first (newer SDK)
             if genai_name == "google.genai" and hasattr(genai, "Client"):
                 client = genai.Client(api_key=self.api_key)
-                resp = client.models.generate_content(
-                    model=self.model, contents=prompt)
+                resp = client.models.generate_content(model=self.model, contents=prompt)
                 # Extract text from response
                 text = ""
                 try:
@@ -143,8 +132,7 @@ class GeminiProvider:
                             genai.configure(api_key=self.api_key)
                     except Exception:
                         pass
-                    out = genai.chat.create(model=self.model, messages=[
-                                            {"role": "user", "content": prompt}])
+                    out = genai.chat.create(model=self.model, messages=[{"role": "user", "content": prompt}])
                     text = ""
                     if hasattr(out, "candidates") and out.candidates:
                         text = out.candidates[0].content
@@ -162,7 +150,7 @@ class GeminiProvider:
             end = text.rfind("}")
             if start != -1 and end != -1 and end > start:
                 try:
-                    payload = json.loads(text[start: end + 1])
+                    payload = json.loads(text[start : end + 1])
                     return {"score": int(payload.get("score", 50)), "reasoning": payload.get("reasoning", "")}
                 except Exception:
                     pass
@@ -221,8 +209,7 @@ class GeminiProvider:
             text = ""
             if genai_name == "google.genai" and hasattr(genai, "Client"):
                 client = genai.Client(api_key=self.api_key)
-                resp = client.models.generate_content(
-                    model=self.model, contents=prompt)
+                resp = client.models.generate_content(model=self.model, contents=prompt)
                 if hasattr(resp, "text"):
                     text = resp.text
                 elif hasattr(resp, "candidates") and resp.candidates:
@@ -249,7 +236,7 @@ class GeminiProvider:
             start = text.find("[")
             end = text.rfind("]")
             if start != -1 and end != -1 and end > start:
-                rankings = json.loads(text[start: end + 1])
+                rankings = json.loads(text[start : end + 1])
 
                 # Apply rankings to jobs
                 ranked_jobs = []
@@ -296,20 +283,16 @@ class GeminiProvider:
             # Allow overriding the model per-call
             use_model = model or self.model
             if verbose:
-                logger.debug(
-                    f"gemini_provider: entering generate_job_leads (model={use_model})")
+                logger.debug(f"gemini_provider: entering generate_job_leads (model={use_model})")
                 try:
                     logger.debug("gemini_provider: detected genai_name=", genai_name)
-                    logger.debug("gemini_provider: genai attributes preview:",
-                          dir(genai)[:80])
-                    logger.debug("gemini_provider: has Client?",
-                          hasattr(genai, "Client"))
+                    logger.debug("gemini_provider: genai attributes preview:", dir(genai)[:80])
+                    logger.debug("gemini_provider: has Client?", hasattr(genai, "Client"))
                     logger.debug("gemini_provider: has chat?", hasattr(genai, "chat"))
                     chat_obj = getattr(genai, "chat", None)
                     logger.debug(
                         "gemini_provider: chat.create exists? %s",
-                        hasattr(
-                            chat_obj, "create") if chat_obj is not None else False,
+                        hasattr(chat_obj, "create") if chat_obj is not None else False,
                     )
                     # Also write a full dir() and repr() to a timestamped file for deeper inspection
                     try:
@@ -329,11 +312,9 @@ class GeminiProvider:
                                     fh.write("\n".join(sorted(dir(genai))))
                                 except Exception:
                                     fh.write("<failed to list dir(genai)>\n")
-                            logger.debug(
-                                f"gemini_provider: wrote genai dir/repr to {fname_dir}")
+                            logger.debug(f"gemini_provider: wrote genai dir/repr to {fname_dir}")
                         except Exception as _e:
-                            logger.warning(
-                                "gemini_provider: failed to write genai dir file: %s", _e)
+                            logger.warning("gemini_provider: failed to write genai dir file: %s", _e)
                     except Exception:
                         pass
                 except Exception:
@@ -348,26 +329,28 @@ class GeminiProvider:
                 try:
                     # Configure httpx client with timeout
                     import httpx
+
                     http_options = httpx.Timeout(timeout=self.request_timeout)
-                    client = genai.Client(api_key=self.api_key, http_options={
-                                          "timeout": http_options})
+                    client = genai.Client(api_key=self.api_key, http_options={"timeout": http_options})
                     # Note: google_search tool disabled due to MALFORMED_FUNCTION_CALL errors
                     # and redirect URLs instead of direct links. Simple prompting works better.
                     if verbose:
                         logger.debug(
-                            f"gemini_provider: calling generate_content on {use_model} (timeout={self.request_timeout}s)")
+                            f"gemini_provider: calling generate_content "
+                            f"on {use_model} "
+                            f"(timeout={self.request_timeout}s)"
+                        )
                     try:
-                        resp = client.models.generate_content(
-                            model=use_model, contents=prompt)
+                        resp = client.models.generate_content(model=use_model, contents=prompt)
                         if verbose:
-                            logger.debug(
-                                f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
+                            logger.debug(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
                     except Exception as api_err:
                         logger.error(f"ERROR calling Gemini API: {api_err}")
                         traceback.print_exc()
                         return []
 
-                    # Robustly extract text from various response shapes returned by the
+                    # Robustly extract text from various response shapes
+                    # returned by the
                     # legacy client. The response may contain `candidates` with
                     # `.content.parts[*].text` or a `text` attribute or a `message`.
                     text = ""
@@ -417,8 +400,7 @@ class GeminiProvider:
                                             and hasattr(cand.content, "parts")
                                             and cand.content.parts
                                         ):
-                                            part_text = getattr(
-                                                cand.content.parts[0], "text", "")
+                                            part_text = getattr(cand.content.parts[0], "text", "")
                                             stream_text += part_text
                                         else:
                                             stream_text += str(cand)
@@ -439,12 +421,10 @@ class GeminiProvider:
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname = f"logs/last_gemini_response_{ts}.txt"
-                        logger.debug(
-                            "gemini_provider: used legacy genai.Client; model=%s", use_model)
+                        logger.debug("gemini_provider: used legacy genai.Client; model=%s", use_model)
                         # print a short preview to the console
                         try:
-                            preview = raw_response[:4000] + "\n...\n" if len(
-                                raw_response) > 4000 else raw_response
+                            preview = raw_response[:4000] + "\n...\n" if len(raw_response) > 4000 else raw_response
                         except Exception:
                             preview = repr(raw_response)[:4000]
                         logger.debug("gemini_provider: raw response preview:\n", preview)
@@ -452,8 +432,7 @@ class GeminiProvider:
                         try:
                             logger.debug("gemini_provider: resp type:", type(resp))
                             try:
-                                logger.debug("gemini_provider: resp dir preview:",
-                                      dir(resp)[:50])
+                                logger.debug("gemini_provider: resp dir preview:", dir(resp)[:50])
                             except Exception:
                                 pass
                             # Try to access common attributes
@@ -466,8 +445,7 @@ class GeminiProvider:
                                             repr(val)[:200],
                                         )
                                     else:
-                                        logger.debug(
-                                            f"gemini_provider: resp has no attribute {attr}")
+                                        logger.debug(f"gemini_provider: resp has no attribute {attr}")
                                 except Exception:
                                     traceback.print_exc()
                         except Exception:
@@ -476,18 +454,15 @@ class GeminiProvider:
                         try:
                             with open(fname, "w", encoding="utf-8") as fh:
                                 fh.write(repr(resp))
-                            logger.debug(
-                                f"gemini_provider: wrote raw repr to {fname}")
+                            logger.debug(f"gemini_provider: wrote raw repr to {fname}")
                         except Exception as e:
-                            logger.warning(
-                                "gemini_provider: failed to write raw repr file: %s", e)
+                            logger.warning("gemini_provider: failed to write raw repr file: %s", e)
                 except Exception:
                     text = ""
 
             # Case B: `google.generativeai` chat-style API
             elif hasattr(genai, "chat") and hasattr(genai.chat, "create"):
-                out = genai.chat.create(model=self.model, messages=[
-                                        {"role": "user", "content": prompt}])
+                out = genai.chat.create(model=self.model, messages=[{"role": "user", "content": prompt}])
                 text = ""
                 if hasattr(out, "candidates") and out.candidates:
                     text = out.candidates[0].content
@@ -506,31 +481,28 @@ class GeminiProvider:
                     fname = f"logs/gemini_response_{ts}.txt"
                     logger.debug("gemini_provider: used chat.create; model=%s", use_model)
                     try:
-                        preview = raw_response[:4000] + "\n...\n" if len(
-                            raw_response) > 4000 else raw_response
+                        preview = raw_response[:4000] + "\n...\n" if len(raw_response) > 4000 else raw_response
                     except Exception:
                         preview = repr(raw_response)[:4000]
                     logger.debug("gemini_provider: raw response preview:\n", preview)
                     try:
                         logger.debug("gemini_provider: out type:", type(out))
                         try:
-                            logger.debug("gemini_provider: out dir preview:",
-                                  dir(out)[:50])
+                            logger.debug("gemini_provider: out dir preview:", dir(out)[:50])
                         except Exception:
                             pass
                         # Try to print candidate/text structure
                         try:
                             if hasattr(out, "candidates"):
-                                logger.debug("gemini_provider: out.candidates type:", type(
-                                    out.candidates))
+                                logger.debug("gemini_provider: out.candidates type:", type(out.candidates))
                                 try:
-                                    logger.debug("gemini_provider: out.candidates[0] repr:", repr(
-                                        out.candidates[0])[:400])
+                                    logger.debug(
+                                        "gemini_provider: out.candidates[0] repr:", repr(out.candidates[0])[:400]
+                                    )
                                 except Exception:
                                     pass
                             if hasattr(out, "message"):
-                                logger.debug("gemini_provider: out.message repr:",
-                                      repr(getattr(out, "message"))[:400])
+                                logger.debug("gemini_provider: out.message repr:", repr(getattr(out, "message"))[:400])
                         except Exception:
                             traceback.print_exc()
                     except Exception:
@@ -546,8 +518,7 @@ class GeminiProvider:
             elif genai_name == "google.generativeai" and hasattr(genai, "GenerativeModel"):
                 try:
                     if verbose:
-                        logger.debug(
-                            "gemini_provider: using google.generativeai.GenerativeModel with google_search")
+                        logger.debug("gemini_provider: using google.generativeai.GenerativeModel with google_search")
 
                     # Configure google_search tool as a dictionary
                     # Note: google.generativeai SDK doesn't support google_search tool yet
@@ -561,35 +532,29 @@ class GeminiProvider:
                         )
 
                     response = model.generate_content(prompt)
-                    text = response.text if hasattr(
-                        response, "text") else str(response)
+                    text = response.text if hasattr(response, "text") else str(response)
                     raw_response = str(response)
 
                     if verbose:
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname = f"logs/generativemodel_response_{ts}.txt"
-                        logger.debug(
-                            "gemini_provider: used GenerativeModel; model=%s", use_model)
+                        logger.debug("gemini_provider: used GenerativeModel; model=%s", use_model)
                         try:
-                            preview = raw_response[:4000] + "\n...\n" if len(
-                                raw_response) > 4000 else raw_response
+                            preview = raw_response[:4000] + "\n...\n" if len(raw_response) > 4000 else raw_response
                         except Exception:
                             preview = repr(raw_response)[:4000]
                         logger.debug("gemini_provider: raw response preview:\n", preview)
                         try:
                             with open(fname, "w", encoding="utf-8") as fh:
                                 fh.write(repr(response))
-                            logger.debug(
-                                f"gemini_provider: wrote raw repr to {fname}")
+                            logger.debug(f"gemini_provider: wrote raw repr to {fname}")
                         except Exception as e:
-                            logger.warning(
-                                "gemini_provider: failed to write raw repr file: %s", e)
+                            logger.warning("gemini_provider: failed to write raw repr file: %s", e)
 
                 except Exception as gm_err:
                     if verbose:
-                        logger.error(
-                            f"gemini_provider: GenerativeModel call failed: {gm_err}")
+                        logger.error(f"gemini_provider: GenerativeModel call failed: {gm_err}")
 
                         traceback.print_exc()
                     text = ""
@@ -618,7 +583,7 @@ class GeminiProvider:
             jobs = []
             if start != -1 and end != -1 and end > start:
                 try:
-                    payload = json.loads(text[start: end + 1])
+                    payload = json.loads(text[start : end + 1])
                     if isinstance(payload, list):
                         jobs = payload
                 except Exception:
@@ -627,8 +592,7 @@ class GeminiProvider:
             # Fallback: if tool-enabled call returned 0 jobs, retry without tools
             if not jobs and hasattr(genai, "Client"):
                 if verbose:
-                    logger.debug(
-                        "gemini_provider: tool call returned 0 jobs; retrying without tools")
+                    logger.debug("gemini_provider: tool call returned 0 jobs; retrying without tools")
                 try:
                     simple_prompt = (
                         "Generate a JSON array of job postings based on this profile and query.\n"
@@ -638,22 +602,20 @@ class GeminiProvider:
                         "Return ONLY the JSON array, no markdown or other text."
                     )
                     client = genai.Client(api_key=self.api_key)
-                    resp = client.models.generate_content(
-                        model=use_model, contents=simple_prompt)
+                    resp = client.models.generate_content(model=use_model, contents=simple_prompt)
                     text2 = getattr(resp, "text", str(resp))
                     start = text2.find("[")
                     end = text2.rfind("]")
                     if start != -1 and end != -1 and end > start:
                         try:
-                            payload = json.loads(text2[start: end + 1])
+                            payload = json.loads(text2[start : end + 1])
                             if isinstance(payload, list):
                                 jobs = payload
                         except Exception:
                             pass
                 except Exception as fallback_err:
                     if verbose:
-                        logger.error(
-                            f"gemini_provider: fallback failed: {fallback_err}")
+                        logger.error(f"gemini_provider: fallback failed: {fallback_err}")
 
             return jobs
         except Exception as e:
@@ -679,15 +641,12 @@ def simple_gemini_query(
     """
     key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not key:
-        raise RuntimeError(
-            "No GEMINI_API_KEY/GOOGLE_API_KEY found in environment; cannot call Gemini")
+        raise RuntimeError("No GEMINI_API_KEY/GOOGLE_API_KEY found in environment; cannot call Gemini")
 
     if genai is None:
-        raise RuntimeError(
-            "No supported Gemini SDK (google.genai or google.generativeai) is installed")
+        raise RuntimeError("No supported Gemini SDK (google.genai or google.generativeai) is installed")
 
-    use_model = model or os.getenv(
-        "GEMINI_MODEL") or "gemini-2.5-flash-preview-09-2025"
+    use_model = model or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash-preview-09-2025"
 
     # Try legacy client call first if present
     if hasattr(genai, "Client"):
@@ -695,12 +654,10 @@ def simple_gemini_query(
             client = genai.Client(api_key=key)
             # best-effort: call with or without types/config
             try:
-                resp = client.models.generate_content(
-                    model=use_model, contents=prompt)
+                resp = client.models.generate_content(model=use_model, contents=prompt)
             except Exception:
                 # fallback with minimal args
-                resp = client.models.generate_content(
-                    model=use_model, contents=prompt)
+                resp = client.models.generate_content(model=use_model, contents=prompt)
             # Try to extract text attribute
             text = getattr(resp, "text", None)
             if text is None:
@@ -720,8 +677,7 @@ def simple_gemini_query(
                     genai.configure(api_key=key)
             except Exception:
                 pass
-            out = genai.chat.create(model=use_model, messages=[
-                                    {"role": "user", "content": prompt}])
+            out = genai.chat.create(model=use_model, messages=[{"role": "user", "content": prompt}])
             # best-effort to extract text
             if hasattr(out, "candidates") and out.candidates:
                 return out.candidates[0].content
@@ -755,14 +711,12 @@ def simple_gemini_query(
                     try:
                         resp = fn(**kwargs)
                         if verbose:
-                            logger.debug(
-                                f"simple_gemini_query: used genai.{fn_name} with kwargs={kwargs}")
+                            logger.debug(f"simple_gemini_query: used genai.{fn_name} with kwargs={kwargs}")
                         text = getattr(resp, "text", None) or str(resp)
                         return text
                     except Exception as e:
                         if verbose:
-                            logger.debug(
-                                f"simple_gemini_query: attempt genai.{fn_name} with {kwargs} failed: {e}")
+                            logger.debug(f"simple_gemini_query: attempt genai.{fn_name} with {kwargs} failed: {e}")
             except Exception:
                 pass
 
@@ -780,8 +734,7 @@ def simple_gemini_query(
                     return text
                 except Exception as e:
                     if verbose:
-                        logger.debug(
-                            f"simple_gemini_query: genai.models.{attr} failed: {e}")
+                        logger.debug(f"simple_gemini_query: genai.models.{attr} failed: {e}")
 
     # Try get_model(...).generate style
     if hasattr(genai, "get_model"):
@@ -791,8 +744,7 @@ def simple_gemini_query(
                 try:
                     resp = m.generate(contents=prompt)
                     if verbose:
-                        logger.debug(
-                            "simple_gemini_query: used genai.get_model(...).generate")
+                        logger.debug("simple_gemini_query: used genai.get_model(...).generate")
                     text = getattr(resp, "text", None) or str(resp)
                     return text
                 except Exception as e:
@@ -802,5 +754,4 @@ def simple_gemini_query(
             pass
 
     # If nothing worked, raise for the caller to inspect environment
-    raise RuntimeError(
-        f"Gemini SDK present but no supported call pattern succeeded. Tried: {tried}")
+    raise RuntimeError(f"Gemini SDK present but no supported call pattern succeeded. Tried: {tried}")

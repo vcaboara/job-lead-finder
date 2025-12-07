@@ -11,12 +11,14 @@ from typing import Any, Dict, List, Optional
 # exported by __init__.py and used by provider implementations
 try:
     import httpx  # noqa: F401
+
     HTTPX_AVAILABLE = True
 except ImportError:
     HTTPX_AVAILABLE = False
 
 try:
     from bs4 import BeautifulSoup  # noqa: F401
+
     BS4_AVAILABLE = True
 except ImportError:
     BS4_AVAILABLE = False
@@ -24,7 +26,7 @@ except ImportError:
 
 class MCPProvider(ABC):
     """Base class for MCP providers.
-    
+
     To add a new provider:
     1. Create a new file in app/providers/ (e.g., remote_ok.py)
     2. Subclass MCPProvider
@@ -34,7 +36,7 @@ class MCPProvider(ABC):
 
     def __init__(self, name: str, enabled: bool = True):
         """Initialize provider.
-        
+
         Args:
             name: Provider name (e.g., "RemoteOK")
             enabled: Whether provider is enabled by default
@@ -43,13 +45,7 @@ class MCPProvider(ABC):
         self.enabled = enabled
 
     @abstractmethod
-    def search_jobs(
-        self, 
-        query: str, 
-        count: int = 5, 
-        location: Optional[str] = None, 
-        **kwargs
-    ) -> List[Dict[str, Any]]:
+    def search_jobs(self, query: str, count: int = 5, location: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
         """Search for jobs using this provider.
 
         Args:
@@ -72,7 +68,7 @@ class MCPProvider(ABC):
     @abstractmethod
     def is_available(self) -> bool:
         """Check if this provider is available and configured.
-        
+
         Returns:
             True if provider can be used, False otherwise
         """

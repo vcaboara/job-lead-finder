@@ -137,16 +137,16 @@ JobFlow will auto-fallback to Gemini.
 
 ## FAQ
 
-**Q: Can I use both Ollama and Gemini?**  
+**Q: Can I use both Ollama and Gemini?**
 A: Yes! JobFlow tries Ollama first, falls back to Gemini if unavailable.
 
-**Q: Which model should I use?**  
+**Q: Which model should I use?**
 A: Start with `llama3.2:3b`. If you want better quality and don't mind slower speed, try `qwen2.5:7b`.
 
-**Q: Does this work with LM Studio?**  
+**Q: Does this work with LM Studio?**
 A: Not yet, but you can add an `LMStudioProvider` following the same pattern as `OllamaProvider`.
 
-**Q: How much slower is local inference?**  
+**Q: How much slower is local inference?**
 A: Ollama (local): ~2-5s/job. Gemini (API): ~1-2s/job. Worth it for unlimited usage!
 
 ## Next Steps

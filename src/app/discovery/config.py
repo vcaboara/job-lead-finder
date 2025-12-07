@@ -19,7 +19,7 @@ _DEFAULTS = {
 
 def get_discovery_config() -> dict:
     """Get discovery configuration with defaults.
-    
+
     Returns a deep copy merged with defaults to prevent mutations
     and ensure all default keys are present.
     """
@@ -32,18 +32,18 @@ def get_discovery_config() -> dict:
 
 def update_discovery_config(**kwargs) -> bool:
     """Update discovery configuration.
-    
+
     Supported kwargs:
-        enabled, database_path, schedule_enabled, run_time, 
+        enabled, database_path, schedule_enabled, run_time,
         interval_hours, industries, locations, tech_stack,
         notifications_enabled, min_new_companies, provider_settings
-    
+
     Returns:
         True if configuration was successfully saved, False otherwise
     """
     config = load_config()
     discovery = get_discovery_config()
-    
+
     # Validate and apply updates
     if "run_time" in kwargs:
         try:
@@ -52,28 +52,28 @@ def update_discovery_config(**kwargs) -> bool:
             discovery["schedule"]["run_time"] = kwargs["run_time"]
         except (ValueError, AttributeError):
             raise ValueError("run_time must be in HH:MM format")
-    
+
     if "interval_hours" in kwargs:
         if kwargs["interval_hours"] < 1:
             raise ValueError("interval_hours must be at least 1")
         discovery["schedule"]["interval_hours"] = kwargs["interval_hours"]
-    
+
     if "industries" in kwargs:
         # Validate each industry is a valid enum value (raises ValueError if not)
         for ind in kwargs["industries"]:
             IndustryType(ind)
         discovery["filters"]["industries"] = kwargs["industries"]
-    
+
     if "min_new_companies" in kwargs:
         if kwargs["min_new_companies"] < 1:
             raise ValueError("min_new_companies must be at least 1")
         discovery["notifications"]["min_new_companies"] = kwargs["min_new_companies"]
-    
+
     if "provider_settings" in kwargs:
         if not isinstance(kwargs["provider_settings"], dict):
             raise ValueError("provider_settings must be a dictionary")
         discovery["providers"] = kwargs["provider_settings"]
-    
+
     # Simple assignments
     if "enabled" in kwargs:
         discovery["enabled"] = kwargs["enabled"]
@@ -87,7 +87,7 @@ def update_discovery_config(**kwargs) -> bool:
         discovery["filters"]["tech_stack"] = kwargs["tech_stack"]
     if "notifications_enabled" in kwargs:
         discovery["notifications"]["enabled"] = kwargs["notifications_enabled"]
-    
+
     config["discovery"] = discovery
     return save_config(config)
 
