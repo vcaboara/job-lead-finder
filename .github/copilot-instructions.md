@@ -106,7 +106,7 @@ JobFlow is a job search application that helps users find relevant job postings 
 - Add to `pyproject.toml` under appropriate section
 - Use `uv pip install <package>` or `uv pip sync` in container
 - Rebuild Docker image after pyproject.toml changes
-- Pin versions for stability (e.g., `>=3.10.0`)
+- Pin versions for stability (e.g., `>=3.11.0`)
 
 ## Git Workflow
 - Feature branches: `feature/<description>`
