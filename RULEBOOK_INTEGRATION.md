@@ -231,12 +231,30 @@ Run `python -m rulebook_ai project sync` after:
 - **Use `--profile cicd`** when updating GitHub Actions, pre-commit hooks
 - **Use default (all packs)** for general development or refactoring
 
+## Installation
+
+### Using uv (Recommended)
+Install rulebook-ai as an optional dependency:
+```bash
+uv sync --extra rulebook
+```
+
+Or install directly:
+```bash
+uv pip install git+https://github.com/botingw/rulebook-ai.git
+```
+
+### Using pip
+```bash
+pip install -e ".[rulebook]"
+```
+
 ## Troubleshooting
 
 ### "No module named 'rulebook_ai'"
-Install rulebook-ai:
+Install with uv:
 ```bash
-pip install git+https://github.com/botingw/rulebook-ai.git
+uv sync --extra rulebook
 ```
 
 ### Copilot instructions not updating
