@@ -28,6 +28,16 @@ test = ["pytest>=7.0", "pytest-cov>=5.0", "pytest-asyncio>=0.21.0", "reportlab"]
 gemini = ["google-genai>=0.1.0"]
 # Rulebook-AI context management
 rulebook = ["rulebook-ai @ git+https://github.com/botingw/rulebook-ai.git"]
+# Tools utilities (web scraping, search, LLM integration)
+tools = [
+    "playwright>=1.41.0",
+    "html5lib>=1.1",
+    "duckduckgo-search>=7.2.1",
+    "openai>=1.59.8",
+    "anthropic>=0.42.0",
+    "google-generativeai",
+    "grpcio==1.71.0"
+]
 
 [project.scripts]
 job-starter = "app.main:main"

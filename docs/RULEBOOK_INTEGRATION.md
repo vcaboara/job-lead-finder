@@ -144,7 +144,11 @@ FOCUS = DEBUGGING: Fix the memory leak in the job fetcher
 
 ## Tools Integration
 
-The `tools/` directory contains reusable utilities:
+The `tools/` directory contains reusable utilities. Install with:
+
+```bash
+uv sync --extra tools
+```
 
 ### llm_api.py
 Multi-provider LLM client supporting:
