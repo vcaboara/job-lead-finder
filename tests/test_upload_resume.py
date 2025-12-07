@@ -318,37 +318,27 @@ def test_upload_very_long_line():
     assert "security concerns" in data["detail"]["error"].lower()
 
 
-def test_get_resume_exists():
+def test_get_resume_exists(mock_resume_file):
     """Test getting existing resume."""
-    from pathlib import Path
-
     client = TestClient(app)
-    resume_path = Path("resume.txt")
-
-    # Create a resume file
     resume_text = "My resume content"
-    resume_path.write_text(resume_text, encoding="utf-8")
 
-    try:
-        resp = client.get("/api/resume")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["resume"] == resume_text
-    finally:
-        if resume_path.exists():
-            resume_path.unlink()
+    # Configure mock to simulate existing file
+    mock_resume_file.exists.return_value = True
+    mock_resume_file.read_text.return_value = resume_text
+
+    resp = client.get("/api/resume")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["resume"] == resume_text
 
 
-def test_get_resume_not_exists():
+def test_get_resume_not_exists(mock_resume_file):
     """Test getting resume when file doesn't exist."""
-    from pathlib import Path
-
     client = TestClient(app)
-    resume_path = Path("resume.txt")
 
-    # Ensure resume doesn't exist
-    if resume_path.exists():
-        resume_path.unlink()
+    # Configure mock to simulate file not existing
+    mock_resume_file.exists.return_value = False
 
     resp = client.get("/api/resume")
     assert resp.status_code == 200
@@ -356,62 +346,51 @@ def test_get_resume_not_exists():
     assert data["resume"] is None
 
 
-def test_delete_resume():
+def test_delete_resume(mock_resume_file):
     """Test deleting existing resume."""
-    from pathlib import Path
-
     client = TestClient(app)
-    resume_path = Path("resume.txt")
 
-    # Create a resume file
-    resume_path.write_text("My resume", encoding="utf-8")
-    assert resume_path.exists()
+    # Configure mock to simulate existing file
+    mock_resume_file.exists.return_value = True
 
     resp = client.delete("/api/resume")
     assert resp.status_code == 200
     data = resp.json()
     assert data["message"] == "Resume deleted"
-    assert not resume_path.exists()
+    mock_resume_file.unlink.assert_called_once()
 
 
-def test_delete_resume_not_exists():
+def test_delete_resume_not_exists(mock_resume_file):
     """Test deleting resume when file doesn't exist."""
-    from pathlib import Path
-
     client = TestClient(app)
-    resume_path = Path("resume.txt")
 
-    # Ensure resume doesn't exist
-    if resume_path.exists():
-        resume_path.unlink()
+    # Configure mock to simulate file not existing
+    mock_resume_file.exists.return_value = False
 
     resp = client.delete("/api/resume")
     assert resp.status_code == 404
     assert "not found" in resp.json()["detail"].lower()
 
 
-def test_upload_overwrites_existing():
+def test_upload_overwrites_existing(mock_resume_file):
     """Test that uploading overwrites existing resume."""
-    from pathlib import Path
-
     client = TestClient(app)
-    resume_path = Path("resume.txt")
 
-    # Create initial resume
-    resume_path.write_text("Old resume", encoding="utf-8")
+    # Configure mock to simulate existing file
+    new_resume = "New resume content"
+    mock_resume_file.exists.return_value = True
+    mock_resume_file.read_text.return_value = new_resume
 
-    try:
-        # Upload new resume
-        new_resume = "New resume content"
-        files = {"file": ("resume.txt", BytesIO(new_resume.encode()), "text/plain")}
-        resp = client.post("/api/upload/resume", files=files)
+    # Upload new resume
+    files = {"file": ("resume.txt", BytesIO(new_resume.encode()), "text/plain")}
+    resp = client.post("/api/upload/resume", files=files)
 
-        assert resp.status_code == 200
+    assert resp.status_code == 200
 
-        # Verify it was overwritten
-        resp = client.get("/api/resume")
-        assert resp.status_code == 200
-        assert resp.json()["resume"] == new_resume
-    finally:
-        if resume_path.exists():
-            resume_path.unlink()
+    # Verify write_text was called
+    mock_resume_file.write_text.assert_called_once()
+
+    # Verify it was overwritten
+    resp = client.get("/api/resume")
+    assert resp.status_code == 200
+    assert resp.json()["resume"] == new_resume

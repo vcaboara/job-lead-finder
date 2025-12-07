@@ -164,4 +164,19 @@ def cleanup_test_files():
     yield
     for file in [Path("resume.txt"), Path("leads.json")]:
         if file.exists():
-            file.unlink()
+            try:
+                file.unlink()
+            except FileNotFoundError:
+                pass  # File already deleted or never created
+
+
+@pytest.fixture
+def mock_resume_file(mocker):
+    """Create a mock RESUME_FILE for testing.
+
+    Returns:
+        MagicMock: Mock Path object that can be configured per test
+    """
+    mock_file = mocker.MagicMock()
+    mocker.patch("app.ui_server.RESUME_FILE", mock_file)
+    return mock_file
