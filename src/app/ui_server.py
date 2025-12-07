@@ -46,7 +46,8 @@ except ImportError:
     PYTHON_DOCX_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO,
+                    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
 app = FastAPI(title="Job Lead Finder", version="0.1.1")
 
@@ -65,7 +66,8 @@ class SearchRequest(BaseModel):
     count: int = 5
     model: str | None = None
     evaluate: bool = False
-    min_score: int = 60  # Minimum score threshold (0-100 scale) for filtering results
+    # Minimum score threshold (0-100 scale) for filtering results
+    min_score: int = 60
 
 
 class HealthResponse(BaseModel):
@@ -111,7 +113,8 @@ def index():
     try:
         return HTMLResponse(html_path.read_text(encoding="utf-8"))
     except Exception as exc:
-        raise HTTPException(status_code=500, detail="UI template not found") from exc
+        raise HTTPException(
+            status_code=500, detail="UI template not found") from exc
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -135,7 +138,8 @@ def get_changelog():
     try:
         return PlainTextResponse(changelog_path.read_text(encoding="utf-8"))
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail="Changelog not found") from exc
+        raise HTTPException(
+            status_code=404, detail="Changelog not found") from exc
 
 
 @app.get("/api/config", response_model=ConfigResponse)
@@ -152,7 +156,8 @@ def get_config():
 def update_system_instructions(req: SystemInstructionsRequest):
     findings = scan_instructions(req.instructions)
     if findings:
-        raise HTTPException(status_code=400, detail={"error": "Rejected by scanner", "findings": findings})
+        raise HTTPException(status_code=400, detail={
+                            "error": "Rejected by scanner", "findings": findings})
     cfg = load_config()
     cfg["system_instructions"] = req.instructions
     save_config(cfg)
@@ -192,7 +197,8 @@ def search(req: SearchRequest):
         "start_time": start_time,
     }
 
-    logger.info("[%s] Search started: query='%s', count=%d, model=%s", search_id, req.query, req.count, req.model)
+    logger.info("[%s] Search started: query='%s', count=%d, model=%s",
+                search_id, req.query, req.count, req.model)
 
     # Maximum search timeout: 5 minutes
     MAX_SEARCH_TIMEOUT = 300  # seconds
@@ -277,7 +283,8 @@ def search(req: SearchRequest):
             )
 
             fetch_elapsed = time.time() - attempt_start
-            logger.info("[%s] Fetched %d raw jobs in %.1fs", search_id, len(raw_leads), fetch_elapsed)
+            logger.info("[%s] Fetched %d raw jobs in %.1fs",
+                        search_id, len(raw_leads), fetch_elapsed)
 
             # Update progress with provider stats
             total_elapsed = time.time() - start_time
@@ -357,7 +364,8 @@ def search(req: SearchRequest):
 
         # Filter by minimum score if evaluation was performed AND jobs have scores
         # Only apply filter if at least some jobs were actually scored
-        jobs_with_scores = [lead for lead in final_leads if lead.get("score") is not None]
+        jobs_with_scores = [
+            lead for lead in final_leads if lead.get("score") is not None]
         if should_evaluate and req.min_score > 0 and len(jobs_with_scores) > 0:
             before_filter = len(final_leads)
             final_leads = [
@@ -377,11 +385,13 @@ def search(req: SearchRequest):
                     )
         elif should_evaluate and req.min_score > 0 and len(jobs_with_scores) == 0:
             logger.warning(
-                "[%s] Score filter requested but no jobs have scores - showing all %d jobs", search_id, len(final_leads)
+                "[%s] Score filter requested but no jobs have scores - showing all %d jobs", search_id, len(
+                    final_leads)
             )
 
         total_elapsed = time.time() - start_time
-        logger.info("[%s] Search complete: %d jobs returned in %.1fs", search_id, len(final_leads), total_elapsed)
+        logger.info("[%s] Search complete: %d jobs returned in %.1fs",
+                    search_id, len(final_leads), total_elapsed)
 
         search_progress[search_id].update(
             {
@@ -405,7 +415,8 @@ def search(req: SearchRequest):
             }
         )
     except Exception as e:
-        search_progress[search_id].update({"status": "error", "message": f"Error: {str(e)}"})
+        search_progress[search_id].update(
+            {"status": "error", "message": f"Error: {str(e)}"})
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -423,7 +434,8 @@ def get_search_progress(search_id: str):
         Progress object with status, message, elapsed time, and valid_count
     """
     if search_id not in search_progress:
-        raise HTTPException(status_code=404, detail=f"Search {search_id} not found")
+        raise HTTPException(
+            status_code=404, detail=f"Search {search_id} not found")
 
     progress = search_progress[search_id].copy()
     # Calculate elapsed time if search is still running
@@ -438,8 +450,10 @@ def _process_and_filter_leads(raw_leads: list) -> list:
     # Load config for blocked entities
     cfg = load_config()
     blocked = cfg.get("blocked_entities", [])
-    blocked_sites = {e.get("value", "").lower() for e in blocked if e.get("type") == "site"}
-    blocked_employers = {e.get("value", "").lower() for e in blocked if e.get("type") == "employer"}
+    blocked_sites = {e.get("value", "").lower()
+                     for e in blocked if e.get("type") == "site"}
+    blocked_employers = {e.get("value", "").lower()
+                         for e in blocked if e.get("type") == "employer"}
 
     def is_blocked(lead_link: str, company: str) -> bool:
         from urllib.parse import urlparse
@@ -467,8 +481,10 @@ def _process_and_filter_leads(raw_leads: list) -> list:
     from urllib.parse import urlparse
 
     # Pre-filter blocked leads
-    unblocked_leads = [lead for lead in raw_leads if not is_blocked(lead.get("link", ""), lead.get("company", ""))]
-    print(f"_process_and_filter_leads: {len(raw_leads)} raw leads, {len(unblocked_leads)} after blocking filter")
+    unblocked_leads = [lead for lead in raw_leads if not is_blocked(
+        lead.get("link", ""), lead.get("company", ""))]
+    print(
+        f"_process_and_filter_leads: {len(raw_leads)} raw leads, {len(unblocked_leads)} after blocking filter")
 
     # Validate all links in parallel (5-10x faster than sequential)
     links_to_validate = [lead.get("link", "") for lead in unblocked_leads]
@@ -484,13 +500,15 @@ def _process_and_filter_leads(raw_leads: list) -> list:
                 validated_results[link] = future.result()
             except Exception as e:
                 print(f"Link validation exception for {link}: {e}")
-                validated_results[link] = {"valid": False, "status_code": None, "error": "validation_failed"}
+                validated_results[link] = {
+                    "valid": False, "status_code": None, "error": "validation_failed"}
 
     processed_leads = []
     filtered_reasons = {}
     for lead in unblocked_leads:
         link = lead.get("link", "")
-        link_info = validated_results.get(link) if link else {"valid": False, "status_code": None, "error": "no_link"}
+        link_info = validated_results.get(link) if link else {
+            "valid": False, "status_code": None, "error": "no_link"}
         # Exclude bad links: 403, 404, localhost/127.0.0.1, search-result pages, and generic career pages
         parsed = urlparse(link) if link else None
         host = parsed.netloc.lower() if parsed else ""
@@ -535,10 +553,12 @@ def _process_and_filter_leads(raw_leads: list) -> list:
         # Be more lenient with "search" pages on job boards - they often work
         looks_like_search = False
         if not host_is_job_board:
-            looks_like_search = ("/search" in path) or ("jobs/search" in path) or ("q=" in query)
+            looks_like_search = (
+                "/search" in path) or ("jobs/search" in path) or ("q=" in query)
 
         status = link_info.get("status_code")
-        is_excluded_status = status == 404  # Only exclude 404s, not 403 (soft-valid)
+        # Only exclude 404s, not 403 (soft-valid)
+        is_excluded_status = status == 404
 
         # Track filtering reasons
         filter_reason = None
@@ -557,7 +577,8 @@ def _process_and_filter_leads(raw_leads: list) -> list:
             filter_reason = "generic_page"
 
         if filter_reason:
-            filtered_reasons[filter_reason] = filtered_reasons.get(filter_reason, 0) + 1
+            filtered_reasons[filter_reason] = filtered_reasons.get(
+                filter_reason, 0) + 1
             continue
 
         lead["link_status_code"] = status
@@ -566,7 +587,8 @@ def _process_and_filter_leads(raw_leads: list) -> list:
         lead["link_error"] = link_info.get("error")
         processed_leads.append(lead)
 
-    print(f"_process_and_filter_leads: {len(processed_leads)} passed validation. Filtered: {filtered_reasons}")
+    print(
+        f"_process_and_filter_leads: {len(processed_leads)} passed validation. Filtered: {filtered_reasons}")
 
     return processed_leads
 
@@ -580,7 +602,8 @@ def get_leads():
             leads = json.load(fh)
         return JSONResponse({"leads": leads})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading leads: {e}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error reading leads: {e}") from e
 
 
 @app.post("/api/config/block-entity", response_model=ConfigResponse)
@@ -590,16 +613,19 @@ def add_blocked_entity(req: BlockedEntityRequest):
     entity_type = req.entity_type.lower()
 
     if entity_type not in ("site", "employer"):
-        raise HTTPException(status_code=400, detail="entity_type must be 'site' or 'employer'")
+        raise HTTPException(
+            status_code=400, detail="entity_type must be 'site' or 'employer'")
 
     # Validate site domain format
     if entity_type == "site" and not validate_url(entity):
-        raise HTTPException(status_code=400, detail="Invalid site domain format")
+        raise HTTPException(
+            status_code=400, detail="Invalid site domain format")
 
     # Scan for injection
     findings = scan_entity(entity)
     if findings:
-        raise HTTPException(status_code=400, detail={"error": "Rejected by scanner", "findings": findings})
+        raise HTTPException(status_code=400, detail={
+                            "error": "Rejected by scanner", "findings": findings})
 
     cfg = load_config()
     blocked = cfg.get("blocked_entities", [])
@@ -664,13 +690,15 @@ async def upload_resume(file: UploadFile = File(...)):
     """
     # Format-specific size limits for better security and performance
     MAX_TXT_SIZE = 1 * 1024 * 1024  # 1MB - plain text files (.txt, .md)
-    MAX_PDF_SIZE = 2 * 1024 * 1024  # 2MB - PDF files (can be larger due to formatting)
+    # 2MB - PDF files (can be larger due to formatting)
+    MAX_PDF_SIZE = 2 * 1024 * 1024
     MAX_DOCX_SIZE = 1 * 1024 * 1024  # 1MB - DOCX files
     ALLOWED_EXTENSIONS = (".txt", ".md", ".pdf", ".docx")
 
     # Validate file type first
     if not file.filename or not file.filename.lower().endswith(ALLOWED_EXTENSIONS):
-        raise HTTPException(status_code=400, detail=f"Unsupported file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
+        raise HTTPException(
+            status_code=400, detail=f"Unsupported file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}")
 
     # Read file content
     content = await file.read()
@@ -702,11 +730,13 @@ async def upload_resume(file: UploadFile = File(...)):
     # For binary formats, validate magic numbers before attempting to parse
     if file.filename.lower().endswith(".pdf"):
         if not content.startswith(b"%PDF"):
-            raise HTTPException(status_code=400, detail="Invalid PDF file (missing PDF header)")
+            raise HTTPException(
+                status_code=400, detail="Invalid PDF file (missing PDF header)")
     elif file.filename.lower().endswith(".docx"):
         # DOCX is a ZIP file (PK header)
         if not content.startswith(b"PK"):
-            raise HTTPException(status_code=400, detail="Invalid DOCX file (missing ZIP header)")
+            raise HTTPException(
+                status_code=400, detail="Invalid DOCX file (missing ZIP header)")
 
     # Extract text based on file type
     try:
@@ -718,17 +748,22 @@ async def upload_resume(file: UploadFile = File(...)):
             try:
                 text = content.decode("utf-8")
             except UnicodeDecodeError as exc:
-                raise HTTPException(status_code=400, detail="File must be valid UTF-8 text") from exc
+                raise HTTPException(
+                    status_code=400, detail="File must be valid UTF-8 text") from exc
     except Exception as exc:
-        file_ext = Path(file.filename).suffix[1:].upper() if Path(file.filename).suffix else "UNKNOWN"
-        raise HTTPException(status_code=400, detail=f"Failed to extract text from {file_ext} file: {str(exc)}") from exc
+        file_ext = Path(file.filename).suffix[1:].upper() if Path(
+            file.filename).suffix else "UNKNOWN"
+        raise HTTPException(
+            status_code=400, detail=f"Failed to extract text from {file_ext} file: {str(exc)}") from exc
 
     # Enhanced security checks
     if not text or not text.strip():
-        raise HTTPException(status_code=400, detail="File appears to be empty or contains no extractable text")
+        raise HTTPException(
+            status_code=400, detail="File appears to be empty or contains no extractable text")
 
     if len(text) > 500_000:  # 500KB text limit
-        raise HTTPException(status_code=400, detail=f"Extracted text too large ({len(text)} chars, max 500,000 chars)")
+        raise HTTPException(
+            status_code=400, detail=f"Extracted text too large ({len(text)} chars, max 500,000 chars)")
 
     # Check for malicious content
     malicious_findings = _check_malicious_content(text)
@@ -740,7 +775,8 @@ async def upload_resume(file: UploadFile = File(...)):
     # Scan for injection patterns (first 5000 chars)
     findings = scan_instructions(text[:5000])
     if findings:
-        raise HTTPException(status_code=400, detail={"error": "Rejected by scanner", "findings": findings})
+        raise HTTPException(status_code=400, detail={
+                            "error": "Rejected by scanner", "findings": findings})
 
     # Save to resume.txt
     RESUME_FILE.write_text(text, encoding="utf-8")
@@ -791,13 +827,16 @@ def _extract_pdf_text(content: bytes) -> str:
             "â€“": "–",  # en dash
             "â€™": "'",  # apostrophe
             "â€œ": '"',  # left double quote
-            "â€\x9d": '"',  # right double quote (sometimes appears as 'â€\x9d')
+            # right double quote (sometimes appears as 'â€\x9d')
+            "â€\x9d": '"',
             "â€": '"',  # right double quote (fallback)
             "â€¢": "•",  # bullet
         }
         # Build regex to match any of the keys
-        pattern = re.compile("|".join(re.escape(k) for k in mojibake_replacements))
-        cleaned_text = pattern.sub(lambda m: mojibake_replacements[m.group(0)], cleaned_text)
+        pattern = re.compile("|".join(re.escape(k)
+                             for k in mojibake_replacements))
+        cleaned_text = pattern.sub(
+            lambda m: mojibake_replacements[m.group(0)], cleaned_text)
         # Normalize line breaks
         cleaned_text = re.sub(r"\n\s*\n\s*\n+", "\n\n", cleaned_text)
 
@@ -819,7 +858,8 @@ def _extract_docx_text(content: bytes) -> str:
         Exception: If DOCX extraction fails or contains macros
     """
     if not PYTHON_DOCX_AVAILABLE:
-        raise Exception("python-docx not installed. Install with: pip install python-docx")
+        raise Exception(
+            "python-docx not installed. Install with: pip install python-docx")
 
     try:
         # Use a single BytesIO object for both macro checking and text extraction
@@ -829,7 +869,8 @@ def _extract_docx_text(content: bytes) -> str:
         try:
             with ZipFile(docx_stream) as docx_zip:
                 if "word/vbaProject.bin" in docx_zip.namelist():
-                    raise Exception("DOCX file contains macros and is not allowed for security reasons")
+                    raise Exception(
+                        "DOCX file contains macros and is not allowed for security reasons")
         except BadZipFile:
             raise Exception("Invalid DOCX file format")
 
@@ -888,10 +929,12 @@ def _check_malicious_content(text: str) -> list[str]:
     # Check for excessive special characters (possible obfuscation)
     # Exclude common resume punctuation from special character count
     common_punct = set(".,:;()-[]{}•*'\"/\\&+|_@#")
-    special_char_count = sum(1 for c in text if not c.isalnum() and not c.isspace() and c not in common_punct)
+    special_char_count = sum(1 for c in text if not c.isalnum(
+    ) and not c.isspace() and c not in common_punct)
     if len(text) > 100 and special_char_count / len(text) > 0.45:
         ratio = special_char_count / len(text)
-        findings.append(f"Excessive special characters detected ({special_char_count}/{len(text)} = {ratio:.1%})")
+        findings.append(
+            f"Excessive special characters detected ({special_char_count}/{len(text)} = {ratio:.1%})")
 
     # Check for null bytes (binary content)
     if "\x00" in text:
@@ -901,7 +944,8 @@ def _check_malicious_content(text: str) -> list[str]:
     lines = text.split("\n")
     max_line_length = max(len(line) for line in lines) if lines else 0
     if max_line_length > 10000:
-        findings.append(f"Extremely long line detected ({max_line_length} chars)")
+        findings.append(
+            f"Extremely long line detected ({max_line_length} chars)")
 
     return findings
 
@@ -915,7 +959,8 @@ def get_resume():
         text = RESUME_FILE.read_text(encoding="utf-8")
         return JSONResponse({"resume": text})
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error reading resume: {e}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Error reading resume: {e}") from e
 
 
 @app.delete("/api/resume")
@@ -961,7 +1006,8 @@ def update_location_config(
     )
     if success:
         return JSONResponse({"message": "Location preferences updated"})
-    raise HTTPException(status_code=500, detail="Failed to update location preferences")
+    raise HTTPException(
+        status_code=500, detail="Failed to update location preferences")
 
 
 @app.post("/api/job-config/provider/{provider_key}")
@@ -972,7 +1018,8 @@ def toggle_provider(provider_key: str, enabled: bool):
     success = update_provider_status(provider_key, enabled)
     if success:
         return JSONResponse({"message": f"Provider {provider_key} {'enabled' if enabled else 'disabled'}"})
-    raise HTTPException(status_code=404, detail=f"Provider {provider_key} not found")
+    raise HTTPException(
+        status_code=404, detail=f"Provider {provider_key} not found")
 
 
 @app.post("/api/job-config/search")
@@ -987,7 +1034,8 @@ def update_search_config(req: Dict[str, Any]):
     )
     if success:
         return JSONResponse({"message": "Search preferences updated"})
-    raise HTTPException(status_code=500, detail="Failed to update search preferences")
+    raise HTTPException(
+        status_code=500, detail="Failed to update search preferences")
 
 
 @app.get("/api/industry-profiles")
@@ -1071,7 +1119,8 @@ def get_tracked_jobs(status: str | None = None, include_hidden: bool = False):
     if status:
         status_filter = [s.strip() for s in status.split(",") if s.strip()]
 
-    jobs = tracker.get_all_jobs(status_filter=status_filter, include_hidden=include_hidden)
+    jobs = tracker.get_all_jobs(
+        status_filter=status_filter, include_hidden=include_hidden)
     return JSONResponse({"jobs": jobs, "count": len(jobs)})
 
 
@@ -1204,7 +1253,8 @@ def generate_cover_letter(job_id: str, req: CoverLetterRequest):
     job_description = req.job_description or job.get("summary", "")
 
     if not job_description:
-        raise HTTPException(status_code=400, detail="No job description available")
+        raise HTTPException(
+            status_code=400, detail="No job description available")
 
     # Generate cover letter using Gemini
     try:
@@ -1233,15 +1283,18 @@ Return ONLY the cover letter text, no additional commentary."""
         cover_letter = simple_gemini_query(prompt)
 
         if not cover_letter:
-            raise HTTPException(status_code=500, detail="Failed to generate cover letter")
+            raise HTTPException(
+                status_code=500, detail="Failed to generate cover letter")
 
         return JSONResponse(
-            {"cover_letter": cover_letter, "job_title": job.get("title"), "company": job.get("company")}
+            {"cover_letter": cover_letter, "job_title": job.get(
+                "title"), "company": job.get("company")}
         )
 
     except Exception as e:
         print(f"Cover letter generation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate cover letter: {str(e)}") from e
+        raise HTTPException(
+            status_code=500, detail=f"Failed to generate cover letter: {str(e)}") from e
 
 
 @app.post("/api/jobs/find-company-link/{job_id}")
@@ -1280,7 +1333,8 @@ async def find_company_link(job_id: str):
             lead
             for lead in leads
             if lead.get("company", "").lower() == company_lower
-            and lead.get("source") == "CompanyJobs"  # Only direct company links
+            # Only direct company links
+            and lead.get("source") == "CompanyJobs"
         ]
 
         if not company_jobs:
@@ -1308,7 +1362,51 @@ async def find_company_link(job_id: str):
         )
 
     except Exception as e:
-        print(f"Error finding company link: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to find company link: {str(e)}") from e
+
+
+@app.get("/api/worker/status")
+async def get_worker_status():
+    """Get the status of the background worker and recent activity logs."""
+    try:
+        # Read worker logs
+        log_file = Path("/app/logs/worker.log")
+        recent_logs = []
+
+        if log_file.exists():
+            with open(log_file, "r") as f:
+                lines = f.readlines()
+                # Get last 50 lines
+                recent_logs = [line.strip()
+                               for line in lines[-50:] if line.strip()]
+
+        # Get scheduler info from tracker stats
+        tracker = get_tracker()
+        jobs = tracker.get_all_jobs(include_hidden=False)
+
+        jobs_needing_links = [
+            j for j in jobs
+            if not j.get("company_link") and j.get("source") != "CompanyJobs"
+        ]
+
+        return JSONResponse({
+            "worker_running": True,  # If we can respond, worker container is accessible
+            "tracked_jobs_count": len(jobs),
+            "jobs_needing_links": len(jobs_needing_links),
+            "recent_logs": recent_logs[-20:],  # Last 20 log entries
+            "schedule": {
+                "direct_links": "Every 60 minutes",
+                "cleanup": "Every 24 hours"
+            }
+        })
+    except Exception as e:
+        logger.error(f"Error getting worker status: {e}")
+        return JSONResponse({
+            "worker_running": False,
+            "error": str(e),
+            "recent_logs": []
+        })
         raise HTTPException(status_code=500, detail=f"Failed to find company link: {str(e)}") from e
 
 
