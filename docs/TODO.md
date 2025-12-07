@@ -48,6 +48,32 @@ cleaned_text = pattern.sub(lambda m: mojibake_map[m.group(0)], cleaned_text)
 
 ---
 
+## Rulebook-AI Post-Merge Tasks
+
+After PR #47 merges, complete the Memory Bank documentation:
+
+### 1. Architecture Documentation
+**File**: `memory/docs/architecture.md`
+**Action**: Document system components, data flow, provider architecture
+**Priority**: P0 - Required for AI context
+
+### 2. Technical Documentation
+**File**: `memory/docs/technical.md`
+**Action**: Document dev environment (uv, Docker, pre-commit), tech stack, setup
+**Priority**: P0 - Required for AI context
+
+### 3. Task Planning
+**File**: `memory/tasks/tasks_plan.md`
+**Action**: Document current roadmap, in-progress work, known issues
+**Priority**: P0 - Required for AI context
+
+### 4. Resync AI Instructions
+**Command**: `python -m rulebook_ai project sync`
+**Action**: Regenerate GitHub Copilot instructions with populated context
+**Priority**: P0 - Apply updated context
+
+---
+
 ## Future Enhancements (Not for this PR)
 
 ### Resume Format Support

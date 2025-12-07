@@ -2,25 +2,28 @@
 
 AI-powered job search tool aggregating jobs from multiple providers including WeWorkRemotely, RemoteOK, Remotive, and direct company career pages.
 
+## Quick Links
+
+📚 **Documentation**
+- [Personal Configuration Guide](docs/PERSONAL_CONFIG_GUIDE.md) - API keys and environment setup
+- [Company Discovery Guide](docs/AGGREGATOR_TO_COMPANY_GUIDE.md) - Using the JSearch integration
+- [Provider Architecture](docs/PROVIDERS.md) - How job providers work
+- [Rulebook-AI Integration](docs/RULEBOOK_INTEGRATION.md) - AI assistant context management
+- [GitHub Integration](docs/GITHUB_RULEBOOK_INTEGRATION.md) - GitHub Actions and Copilot setup
+
+🔧 **Technical Docs**
+- [JSearch Provider](docs/JSEARCH_PROVIDER.md) - Company discovery implementation
+- [Discovery CLI](docs/DISCOVERY_CLI.md) - Command-line interface for company discovery
+- [TODO & Technical Debt](docs/TODO.md) - Known issues and future improvements
+
 ## Features
 
 - **Job Aggregation**: WeWorkRemotely + RemoteOK + Remotive + CompanyJobs (Gemini-powered company career page search)
-  - Round-robin distribution ensures diversity across all providers
 - **Company Discovery**: Passive job discovery via JSearch API (RapidAPI)
-  - Real-time job aggregation from Indeed, LinkedIn, Glassdoor, etc.
-  - Automated company extraction and tech stack detection
-  - SQLite database for discovered companies
-- **Job Tracking**: Track application status (new, applied, interviewing, rejected, offer, hidden)
-- **Web UI**: FastAPI dashboard at http://localhost:8000 with search, upload, configuration
-- **Enhanced Resume Upload**: Upload resumes in multiple formats (.txt, .md, .pdf, .docx)
-  - 5MB file size limit with clear error messages
-  - Comprehensive security scanning (script detection, macro detection, malicious content filtering)
-  - PDF text extraction with pypdf
-  - DOCX text extraction with python-docx (includes table content)
+- **Job Tracking**: Track application status through the entire hiring funnel
+- **Web UI**: FastAPI dashboard at http://localhost:8000
+- **Enhanced Resume Upload**: Multi-format support (.txt, .md, .pdf, .docx) with security scanning
 - **AI Features**: Job evaluation, custom cover letter generation
-- **Link Discovery**: Find direct company career pages from aggregator listings
-- **Industry Profiles**: Tech, Finance, Healthcare, Gaming, Ecommerce, Automotive, Aerospace, ESG
-- **Link Validation**: Detect 404s, soft-404s, and invalid URLs
 - **Docker**: Fully containerized
 
 ## Quick Start
