@@ -14,6 +14,7 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 🔧 **Technical Docs**
 - [JSearch Provider](docs/JSEARCH_PROVIDER.md) - Company discovery implementation
 - [Discovery CLI](docs/DISCOVERY_CLI.md) - Command-line interface for company discovery
+- [TODO & Technical Debt](docs/TODO.md) - Known issues and future improvements
 
 ## Features
 
