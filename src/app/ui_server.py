@@ -1362,7 +1362,6 @@ async def find_company_link(job_id: str):
         )
 
     except Exception as e:
-        print(f"Error finding company link: {e}")
         raise HTTPException(
             status_code=500, detail=f"Failed to find company link: {str(e)}") from e
 
@@ -1408,3 +1407,105 @@ async def get_worker_status():
             "error": str(e),
             "recent_logs": []
         })
+        raise HTTPException(status_code=500, detail=f"Failed to find company link: {str(e)}") from e
+
+
+@app.post("/api/auto-discover/trigger")
+async def trigger_auto_discover():
+    """Manually trigger automated job discovery from resume.
+
+    This endpoint triggers the background worker to immediately search for jobs
+    based on the user's resume, without waiting for the scheduled interval.
+    """
+    try:
+        if not RESUME_FILE.exists():
+            raise HTTPException(status_code=400, detail="No resume uploaded. Please upload a resume first.")
+
+        # Import and trigger the scheduler
+        from app.background_scheduler import get_scheduler
+
+        scheduler = get_scheduler()
+
+        # Check if scheduler is running (worker must be active)
+        if not scheduler.is_running:
+            raise HTTPException(
+                status_code=503,
+                detail="Background worker is not running. Start the worker container to enable auto-discovery.",
+            )
+
+        # Trigger the auto-discovery job immediately
+        scheduler.run_now("auto_discover_jobs")
+
+        return JSONResponse(
+            {
+                "status": "triggered",
+                "message": "Auto-discovery job triggered. Check logs for progress.",
+                "note": "This process runs in the background and may take 5-10 minutes.",
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error triggering auto-discovery: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to trigger auto-discovery: {str(e)}") from e
+
+
+@app.get("/api/auto-discover/status")
+async def get_auto_discover_status():
+    """Get the status of automated job discovery.
+
+    Returns information about:
+    - Whether a resume is uploaded
+    - Whether the background worker is running
+    - Next scheduled discovery time
+    - Recent discovery statistics
+    """
+    try:
+        from app.background_scheduler import get_scheduler
+
+        scheduler = get_scheduler()
+
+        # Check resume
+        has_resume = RESUME_FILE.exists()
+        resume_size = RESUME_FILE.stat().st_size if has_resume else 0
+
+        # Check worker status
+        worker_running = scheduler.is_running
+
+        # Get next run time
+        next_run = None
+        if worker_running:
+            job = scheduler.scheduler.get_job("auto_discover_jobs")
+            if job and job.next_run_time:
+                next_run = job.next_run_time.isoformat()
+
+        # Get recent stats from job tracker
+        from app.job_tracker import JobTracker
+
+        tracker = JobTracker()
+        tracked_jobs = tracker.get_all_jobs(include_hidden=False)
+
+        # Count jobs added in last 24 hours
+        from datetime import datetime, timedelta, timezone
+
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
+        recent_jobs = [
+            job for job in tracked_jobs if job.get("added_at") and datetime.fromisoformat(job["added_at"]) > cutoff
+        ]
+
+        return JSONResponse(
+            {
+                "resume_uploaded": has_resume,
+                "resume_size_bytes": resume_size,
+                "worker_running": worker_running,
+                "next_discovery_time": next_run,
+                "total_tracked_jobs": len(tracked_jobs),
+                "jobs_added_last_24h": len(recent_jobs),
+                "auto_discovery_enabled": has_resume and worker_running,
+            }
+        )
+
+    except Exception as e:
+        logger.error(f"Error getting auto-discovery status: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get status: {str(e)}") from e

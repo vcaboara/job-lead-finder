@@ -51,15 +51,15 @@ python -m app.main discover -q "Cloud engineer" -l "Austin, TX" -t AWS Docker Ku
 
 ## Command Options
 
-| Option | Short | Description | Default |
-|--------|-------|-------------|---------|
-| `--query` | `-q` | Job search query | "Software Engineer" |
-| `--location` | `-l` | Location filter | None (all locations) |
-| `--industry` | `-i` | Industry filter (tech, finance, etc.) | None |
-| `--tech-stack` | `-t` | Tech stack filter (space-separated) | None |
-| `--max-results` | `-n` | Maximum results to fetch | 20 |
-| `--save` | `-s` | Save results to database | False |
-| `--verbose` | `-v` | Show detailed output | False |
+| Option          | Short | Description                           | Default              |
+| --------------- | ----- | ------------------------------------- | -------------------- |
+| `--query`       | `-q`  | Job search query                      | "Software Engineer"  |
+| `--location`    | `-l`  | Location filter                       | None (all locations) |
+| `--industry`    | `-i`  | Industry filter (tech, finance, etc.) | None                 |
+| `--tech-stack`  | `-t`  | Tech stack filter (space-separated)   | None                 |
+| `--max-results` | `-n`  | Maximum results to fetch              | 20                   |
+| `--save`        | `-s`  | Save results to database              | False                |
+| `--verbose`     | `-v`  | Show detailed output                  | False                |
 
 ## Output Format
 

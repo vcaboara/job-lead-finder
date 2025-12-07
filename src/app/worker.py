@@ -3,6 +3,7 @@
 This worker runs independently from the UI server, performing:
 - Direct link discovery from aggregator job postings
 - Automated job discovery via configured providers
+- Automated job discovery based on user's resume (NEW)
 - Cleanup of old hidden jobs
 - Other background maintenance tasks
 
@@ -12,6 +13,7 @@ with the UI server but operating independently.
 
 import asyncio
 import logging
+import os
 import signal
 import sys
 from pathlib import Path
@@ -55,10 +57,19 @@ async def main():
     # Get the scheduler singleton and start it
     scheduler = get_scheduler()
 
-    # Configure intervals
-    # - Link discovery: every 60 minutes
-    # - Job cleanup: every 24 hours
-    scheduler.start(find_links_interval_minutes=60, cleanup_interval_hours=24)
+    # Configure intervals from environment variables or use defaults
+    # - Link discovery: every 60 minutes (configurable via LINK_DISCOVERY_INTERVAL_MINUTES)
+    # - Job cleanup: every 24 hours (configurable via CLEANUP_INTERVAL_HOURS)
+    # - Auto job discovery: every 6 hours (configurable via AUTO_DISCOVERY_INTERVAL_HOURS)
+    link_interval = int(os.getenv("LINK_DISCOVERY_INTERVAL_MINUTES", "60"))
+    cleanup_interval = int(os.getenv("CLEANUP_INTERVAL_HOURS", "24"))
+    auto_discovery_interval = int(os.getenv("AUTO_DISCOVERY_INTERVAL_HOURS", "6"))
+
+    scheduler.start(
+        find_links_interval_minutes=link_interval,
+        cleanup_interval_hours=cleanup_interval,
+        auto_discover_interval_hours=auto_discovery_interval,
+    )
     logger.info("Background scheduler started successfully")
 
     # Keep the worker running until shutdown is requested

@@ -37,11 +37,12 @@ class TestBackgroundScheduler:
 
         # Check that jobs were scheduled
         jobs = scheduler.scheduler.get_jobs()
-        assert len(jobs) == 2
+        assert len(jobs) == 3  # find_direct_links, cleanup_hidden_jobs, auto_discover_jobs
 
         job_ids = [job.id for job in jobs]
         assert "find_direct_links" in job_ids
         assert "cleanup_hidden_jobs" in job_ids
+        assert "auto_discover_jobs" in job_ids
 
         # Clean up
         scheduler.stop()
