@@ -47,6 +47,7 @@ Thumbs.db
 
 # Generated debug files
 logs/*.txt
+logs/*.log
 !logs/.gitkeep
 
 # Test generated files

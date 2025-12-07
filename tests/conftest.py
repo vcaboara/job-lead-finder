@@ -36,15 +36,22 @@ from app.ui_server import app  # noqa: E402
 @pytest.fixture(autouse=True)
 def clean_tracker():
     """Clean tracker state before and after each test."""
-    tracking_file = Path("job_tracking.json")
-    if tracking_file.exists():
-        os.remove(tracking_file)
+    # Check both old and new locations to support tests
+    tracking_files = [
+        Path("job_tracking.json"),  # Old location (tests)
+        Path("/app/data/job_tracking.json"),  # New production location
+    ]
+
+    for tracking_file in tracking_files:
+        if tracking_file.exists():
+            os.remove(tracking_file)
     job_tracker_module._tracker = None
 
     yield
 
-    if tracking_file.exists():
-        os.remove(tracking_file)
+    for tracking_file in tracking_files:
+        if tracking_file.exists():
+            os.remove(tracking_file)
     job_tracker_module._tracker = None
 
 
@@ -68,7 +75,8 @@ def mock_search_response():
                     "company": "Tech Corp",
                     "location": "Remote",
                     "summary": f"Great opportunity for {query}",
-                    "link": f"https://github.com/jobs/{job_id}",  # Use real domain to pass validation
+                    # Use real domain to pass validation
+                    "link": f"https://github.com/jobs/{job_id}",
                     "source": "TestSource",
                     "status": "new",
                     "notes": "",
