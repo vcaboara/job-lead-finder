@@ -318,16 +318,14 @@ def test_upload_very_long_line():
     assert "security concerns" in data["detail"]["error"].lower()
 
 
-def test_get_resume_exists(mocker):
+def test_get_resume_exists(mock_resume_file):
     """Test getting existing resume."""
     client = TestClient(app)
     resume_text = "My resume content"
 
-    # Mock the RESUME_FILE Path object
-    mock_resume_file = mocker.MagicMock()
+    # Configure mock to simulate existing file
     mock_resume_file.exists.return_value = True
     mock_resume_file.read_text.return_value = resume_text
-    mocker.patch("app.ui_server.RESUME_FILE", mock_resume_file)
 
     resp = client.get("/api/resume")
     assert resp.status_code == 200
@@ -335,14 +333,12 @@ def test_get_resume_exists(mocker):
     assert data["resume"] == resume_text
 
 
-def test_get_resume_not_exists(mocker):
+def test_get_resume_not_exists(mock_resume_file):
     """Test getting resume when file doesn't exist."""
     client = TestClient(app)
 
-    # Mock the RESUME_FILE Path object
-    mock_resume_file = mocker.MagicMock()
+    # Configure mock to simulate file not existing
     mock_resume_file.exists.return_value = False
-    mocker.patch("app.ui_server.RESUME_FILE", mock_resume_file)
 
     resp = client.get("/api/resume")
     assert resp.status_code == 200
@@ -350,14 +346,12 @@ def test_get_resume_not_exists(mocker):
     assert data["resume"] is None
 
 
-def test_delete_resume(mocker):
+def test_delete_resume(mock_resume_file):
     """Test deleting existing resume."""
     client = TestClient(app)
 
-    # Mock the RESUME_FILE Path object
-    mock_resume_file = mocker.MagicMock()
+    # Configure mock to simulate existing file
     mock_resume_file.exists.return_value = True
-    mocker.patch("app.ui_server.RESUME_FILE", mock_resume_file)
 
     resp = client.delete("/api/resume")
     assert resp.status_code == 200
@@ -366,30 +360,26 @@ def test_delete_resume(mocker):
     mock_resume_file.unlink.assert_called_once()
 
 
-def test_delete_resume_not_exists(mocker):
+def test_delete_resume_not_exists(mock_resume_file):
     """Test deleting resume when file doesn't exist."""
     client = TestClient(app)
 
-    # Mock the RESUME_FILE Path object
-    mock_resume_file = mocker.MagicMock()
+    # Configure mock to simulate file not existing
     mock_resume_file.exists.return_value = False
-    mocker.patch("app.ui_server.RESUME_FILE", mock_resume_file)
 
     resp = client.delete("/api/resume")
     assert resp.status_code == 404
     assert "not found" in resp.json()["detail"].lower()
 
 
-def test_upload_overwrites_existing(mocker):
+def test_upload_overwrites_existing(mock_resume_file):
     """Test that uploading overwrites existing resume."""
     client = TestClient(app)
 
-    # Mock the RESUME_FILE Path object
+    # Configure mock to simulate existing file
     new_resume = "New resume content"
-    mock_resume_file = mocker.MagicMock()
     mock_resume_file.exists.return_value = True
     mock_resume_file.read_text.return_value = new_resume
-    mocker.patch("app.ui_server.RESUME_FILE", mock_resume_file)
 
     # Upload new resume
     files = {"file": ("resume.txt", BytesIO(new_resume.encode()), "text/plain")}
