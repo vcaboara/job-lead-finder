@@ -534,6 +534,179 @@ Features: AI Job Discovery, Application Tracking, Resume Management
             display: none !important;
         }
 
+        /* === Modal === */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: hsl(var(--foreground) / 0.5);
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            position: relative;
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: var(--radius);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            z-index: 101;
+        }
+
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.5rem;
+            border-bottom: 1px solid hsl(var(--border));
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: calc(80vh - 80px);
+        }
+
+        /* === Settings Tabs === */
+        .settings-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid hsl(var(--border));
+        }
+
+        .settings-tab {
+            padding: 0.5rem 1rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            color: hsl(var(--muted-foreground));
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .settings-tab:hover {
+            color: hsl(var(--foreground));
+        }
+
+        .settings-tab.active {
+            color: hsl(var(--primary));
+            border-bottom-color: hsl(var(--primary));
+        }
+
+        .settings-panel {
+            display: none;
+        }
+
+        .settings-panel.active {
+            display: block;
+        }
+
+        /* === Provider Toggle === */
+        .provider-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: hsl(var(--muted));
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: hsl(var(--muted-foreground));
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+
+        .toggle-switch input:checked+.toggle-slider {
+            background: hsl(var(--primary));
+        }
+
+        .toggle-switch input:checked+.toggle-slider:before {
+            transform: translateX(20px);
+        }
+
+        /* === Blocked List === */
+        .blocked-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .blocked-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: hsl(var(--muted));
+            border-radius: 0.5rem;
+        }
+
+        /* === Checkbox Label === */
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            cursor: pointer;
+        }
+
         /* === Specific Components === */
         .job-card {
             margin-bottom: 1rem;
@@ -703,9 +876,103 @@ Features: AI Job Discovery, Application Tracking, Resume Management
                         <span>Worker</span>
                     </button>
                 </nav>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <button id="themeToggle" class="btn btn-ghost" style="padding: 0.5rem;" title="Toggle theme">
+                        <svg id="themeIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="5" />
+                            <line x1="12" y1="1" x2="12" y2="3" />
+                            <line x1="12" y1="21" x2="12" y2="23" />
+                            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                            <line x1="1" y1="12" x2="3" y2="12" />
+                            <line x1="21" y1="12" x2="23" y2="12" />
+                            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+                        </svg>
+                    </button>
+                    <button id="settingsBtn" class="btn btn-ghost" style="padding: 0.5rem;" title="Settings">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="3" />
+                            <path
+                                d="M12 1v6m0 6v6m-6-6h6m6 0h-6m-3.64-3.64l4.24 4.24m0-4.24l-4.24 4.24M1 12h6m6 0h6" />
+                            <path
+                                d="M19.07 4.93A10 10 0 1 0 4.93 19.07 10 10 0 0 0 19.07 4.93z" />
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-overlay" onclick="document.getElementById('settingsModal').classList.add('hidden')"></div>
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="text-xl font-bold">Settings</h2>
+                <button onclick="document.getElementById('settingsModal').classList.add('hidden')" class="btn btn-ghost"
+                    style="padding: 0.5rem;">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Settings Tabs -->
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-tab="providers">Providers</button>
+                    <button class="settings-tab" data-tab="location">Location</button>
+                    <button class="settings-tab" data-tab="blocked">Blocked</button>
+                </div>
+
+                <!-- Providers Tab -->
+                <div id="settings-panel-providers" class="settings-panel active">
+                    <div id="providersList"></div>
+                </div>
+
+                <!-- Location Tab -->
+                <div id="settings-panel-location" class="settings-panel">
+                    <div class="form-group">
+                        <label for="defaultLocation">Default Location</label>
+                        <input type="text" id="defaultLocation" class="input" placeholder="e.g., United States">
+                    </div>
+                    <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="preferRemote">
+                            <span>Prefer Remote</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="allowHybrid">
+                            <span>Allow Hybrid</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="allowOnsite">
+                            <span>Allow On-site</span>
+                        </label>
+                    </div>
+                    <button id="saveLocationBtn" class="btn btn-primary">Save Location Preferences</button>
+                </div>
+
+                <!-- Blocked Tab -->
+                <div id="settings-panel-blocked" class="settings-panel">
+                    <div class="form-group">
+                        <label for="blockedEntity">Block Site or Employer</label>
+                        <input type="text" id="blockedEntity" class="input" placeholder="domain.com or Company Name">
+                    </div>
+                    <div class="form-group">
+                        <label for="blockedType">Type</label>
+                        <select id="blockedType" class="input">
+                            <option value="site">Site/Domain</option>
+                            <option value="employer">Employer</option>
+                        </select>
+                    </div>
+                    <button id="addBlockedBtn" class="btn btn-primary" style="margin-bottom: 1.5rem;">Add to Block
+                        List</button>
+                    <h3 class="font-semibold mb-2">Blocked Entities</h3>
+                    <ul id="blockedList" class="blocked-list"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Main Content -->
     <main>
@@ -729,7 +996,8 @@ Features: AI Job Discovery, Application Tracking, Resume Management
                     <div class="form-group">
                         <label for="query">Job Title or Keywords</label>
                         <input type="text" id="query" class="input"
-                            placeholder="e.g., Senior Software Engineer, Data Scientist">
+                            placeholder="e.g., Senior Software Engineer, Data Scientist"
+                            onkeypress="if(event.key === 'Enter') document.getElementById('searchBtn').click()">
                     </div>
 
                     <div class="grid grid-cols-3 gap-4 mb-4">
@@ -739,7 +1007,7 @@ Features: AI Job Discovery, Application Tracking, Resume Management
                         </div>
                         <div class="form-group">
                             <label for="minScore">Min Score</label>
-                            <input type="number" id="minScore" class="input" placeholder="60" min="0" max="100">
+                            <input type="number" id="minScore" class="input" placeholder="0" min="0" max="100">
                         </div>
                         <div class="form-group">
                             <label for="oversampleMultiplier">Oversample</label>
@@ -870,7 +1138,7 @@ Features: AI Job Discovery, Application Tracking, Resume Management
             }
 
             const count = parseInt(document.getElementById('count').value) || 10;
-            const minScore = parseInt(document.getElementById('minScore').value) || 60;
+            const minScore = parseInt(document.getElementById('minScore').value) || 0;
             const oversample = parseInt(document.getElementById('oversampleMultiplier').value) || 10;
 
             showStatus('Searching for jobs...', 'loading');
@@ -1083,8 +1351,9 @@ Features: AI Job Discovery, Application Tracking, Resume Management
 
         // === Utility Functions ===
         function escapeHtml(text) {
+            if (text == null) return '';
             const div = document.createElement('div');
-            div.textContent = text;
+            div.textContent = String(text);
             return div.innerHTML;
         }
 
@@ -1100,6 +1369,190 @@ Features: AI Job Discovery, Application Tracking, Resume Management
                     }
                 })
                 .catch(console.error);
+
+            // Load settings
+            loadProviders();
+            loadLocationPrefs();
+            loadBlockedEntities();
+
+            // Initialize theme
+            const savedTheme = localStorage.getItem('theme') || 'dark';
+            document.documentElement.className = savedTheme;
+            updateThemeIcon(savedTheme);
+        });
+
+        // === Theme Toggle ===
+        document.getElementById('themeToggle').addEventListener('click', () => {
+            const html = document.documentElement;
+            const currentTheme = html.className || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.className = newTheme;
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        });
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('themeIcon');
+            if (theme === 'light') {
+                icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+            } else {
+                icon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+            }
+        }
+
+        // === Settings Modal ===
+        document.getElementById('settingsBtn').addEventListener('click', () => {
+            document.getElementById('settingsModal').classList.remove('hidden');
+        });
+
+        // Settings tabs
+        document.querySelectorAll('.settings-tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const targetTab = tab.dataset.tab;
+                document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.settings-panel').forEach(p => p.classList.remove('active'));
+                tab.classList.add('active');
+                document.getElementById(`settings-panel-${targetTab}`).classList.add('active');
+            });
+        });
+
+        // === Providers ===
+        async function loadProviders() {
+            try {
+                const response = await fetch('/api/job-config');
+                const config = await response.json();
+                const container = document.getElementById('providersList');
+                const providers = config.providers || {};
+
+                container.innerHTML = Object.entries(providers).map(([key, provider]) => `
+                    <div class="provider-item">
+                        <span><strong>${provider.name}</strong></span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" data-provider="${key}" ${provider.enabled ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                `).join('');
+
+                container.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.addEventListener('change', async (e) => {
+                        const providerKey = e.target.dataset.provider;
+                        const enabled = e.target.checked;
+                        try {
+                            const resp = await fetch(`/api/job-config/provider/${providerKey}?enabled=${enabled}`, { method: 'POST' });
+                            if (!resp.ok) throw new Error('Failed to update');
+                            showStatus(`${providerKey} ${enabled ? 'enabled' : 'disabled'}`, 'success');
+                        } catch (err) {
+                            e.target.checked = !enabled;
+                            showStatus('Error updating provider', 'error');
+                        }
+                    });
+                });
+            } catch (e) {
+                console.error('Failed to load providers', e);
+            }
+        }
+
+        // === Location Preferences ===
+        async function loadLocationPrefs() {
+            try {
+                const response = await fetch('/api/job-config');
+                const config = await response.json();
+                const loc = config.location || {};
+                document.getElementById('defaultLocation').value = loc.default_location || '';
+                document.getElementById('preferRemote').checked = loc.prefer_remote || false;
+                document.getElementById('allowHybrid').checked = loc.allow_hybrid || false;
+                document.getElementById('allowOnsite').checked = loc.allow_onsite || false;
+            } catch (e) {
+                console.error('Failed to load location prefs', e);
+            }
+        }
+
+        document.getElementById('saveLocationBtn').addEventListener('click', async () => {
+            const location = document.getElementById('defaultLocation').value;
+            const preferRemote = document.getElementById('preferRemote').checked;
+            const allowHybrid = document.getElementById('allowHybrid').checked;
+            const allowOnsite = document.getElementById('allowOnsite').checked;
+
+            try {
+                const resp = await fetch('/api/job-config/location', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        default_location: location,
+                        prefer_remote: preferRemote,
+                        allow_hybrid: allowHybrid,
+                        allow_onsite: allowOnsite
+                    })
+                });
+                if (!resp.ok) throw new Error('Failed to update');
+                showStatus('Location preferences updated', 'success');
+            } catch (e) {
+                showStatus(`Error: ${e.message}`, 'error');
+            }
+        });
+
+        // === Blocked Entities ===
+        async function loadBlockedEntities() {
+            try {
+                const response = await fetch('/api/config');
+                const config = await response.json();
+                renderBlockedList(config.blocked_entities || []);
+            } catch (e) {
+                console.error('Failed to load blocked entities', e);
+            }
+        }
+
+        function renderBlockedList(entities) {
+            const list = document.getElementById('blockedList');
+            if (!entities.length) {
+                list.innerHTML = '<li style="color: hsl(var(--muted-foreground)); padding: 0.75rem;">None blocked</li>';
+                return;
+            }
+            list.innerHTML = entities.map(item => `
+                <li class="blocked-item">
+                    <span><strong>${item.type}</strong>: ${escapeHtml(item.value)}</span>
+                    <button class="btn btn-ghost btn-sm" data-type="${item.type}" data-value="${escapeHtml(item.value)}">Remove</button>
+                </li>
+            `).join('');
+
+            list.querySelectorAll('button').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const type = btn.dataset.type;
+                    const value = btn.dataset.value;
+                    try {
+                        const resp = await fetch(`/api/config/block-entity/${type}/${encodeURIComponent(value)}`, { method: 'DELETE' });
+                        const config = await resp.json();
+                        renderBlockedList(config.blocked_entities || []);
+                        showStatus(`Removed ${value}`, 'success');
+                    } catch (e) {
+                        showStatus('Failed to remove', 'error');
+                    }
+                });
+            });
+        }
+
+        document.getElementById('addBlockedBtn').addEventListener('click', async () => {
+            const entity = document.getElementById('blockedEntity').value.trim();
+            const type = document.getElementById('blockedType').value;
+            if (!entity) {
+                showStatus('Enter an entity to block', 'error');
+                return;
+            }
+            try {
+                const resp = await fetch('/api/config/block-entity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ entity, entity_type: type })
+                });
+                const config = await resp.json();
+                if (!resp.ok) throw new Error(config.detail?.error || 'Failed');
+                renderBlockedList(config.blocked_entities || []);
+                document.getElementById('blockedEntity').value = '';
+                showStatus(`Blocked ${entity}`, 'success');
+            } catch (e) {
+                showStatus(`Error: ${e.message}`, 'error');
+            }
         });
     </script>
 </body>
