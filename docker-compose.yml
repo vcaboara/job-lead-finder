@@ -27,6 +27,7 @@ services:
       - job-logs:/app/logs # Shared volume for logs
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
     ports:
       - "8000:8000"
     command: python -m uvicorn app.ui_server:app --host 0.0.0.0 --port 8000
@@ -46,6 +47,7 @@ services:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - RAPIDAPI_KEY=${RAPIDAPI_KEY}
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
     command: python -m app.worker
     restart: unless-stopped
     depends_on:

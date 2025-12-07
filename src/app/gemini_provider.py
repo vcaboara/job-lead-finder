@@ -1,14 +1,20 @@
-"""Google Gemini provider template.
+"""Google Gemini provider with Ollama fallback.
 
-This file provides a small wrapper for `google-generativeai`.
-It is a minimal template; the provider is optional and will raise
-clear errors when the dependency or API key is missing.
+This file provides a wrapper for `google-generativeai` with automatic
+fallback to Ollama for local inference when quota is exceeded.
 """
 
+import json
 import os
 import time
 import traceback
 from typing import Any, Dict
+
+try:
+    import requests
+    REQUESTS_AVAILABLE = True
+except ImportError:
+    REQUESTS_AVAILABLE = False
 
 # Support either the newer `google.generativeai` package or the older
 # `google.genai` package (legacy). Try to import both and prefer the
@@ -42,18 +48,21 @@ class GeminiProvider:
 
     def __init__(self, api_key: str | None = None, model: str | None = None, request_timeout: int = 90):
         """Initialize Gemini provider.
-        
+
         Args:
             api_key: Google API key for Gemini (falls back to env vars)
             model: Model name to use (default: gemini-2.5-flash-preview-09-2025)
             request_timeout: Request timeout in seconds (default: 90)
         """
         # Accept either GEMINI_API_KEY (preferred) or GOOGLE_API_KEY for backward compatibility
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+        self.api_key = api_key or os.getenv(
+            "GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not self.api_key:
-            raise RuntimeError("GOOGLE_API_KEY not set; Gemini provider requires a key")
+            raise RuntimeError(
+                "GOOGLE_API_KEY not set; Gemini provider requires a key")
         if genai is None:
-            raise RuntimeError("google-generativeai package not installed; install optional 'gemini' extras")
+            raise RuntimeError(
+                "google-generativeai package not installed; install optional 'gemini' extras")
 
         # Some SDK variants provide a module-level `configure`; call it only if present.
         try:
@@ -96,7 +105,8 @@ class GeminiProvider:
             # Try google.genai Client first (newer SDK)
             if genai_name == "google.genai" and hasattr(genai, "Client"):
                 client = genai.Client(api_key=self.api_key)
-                resp = client.models.generate_content(model=self.model, contents=prompt)
+                resp = client.models.generate_content(
+                    model=self.model, contents=prompt)
                 # Extract text from response
                 text = ""
                 try:
@@ -131,7 +141,8 @@ class GeminiProvider:
                             genai.configure(api_key=self.api_key)
                     except Exception:
                         pass
-                    out = genai.chat.create(model=self.model, messages=[{"role": "user", "content": prompt}])
+                    out = genai.chat.create(model=self.model, messages=[
+                                            {"role": "user", "content": prompt}])
                     text = ""
                     if hasattr(out, "candidates") and out.candidates:
                         text = out.candidates[0].content
@@ -149,7 +160,7 @@ class GeminiProvider:
             end = text.rfind("}")
             if start != -1 and end != -1 and end > start:
                 try:
-                    payload = json.loads(text[start : end + 1])
+                    payload = json.loads(text[start: end + 1])
                     return {"score": int(payload.get("score", 50)), "reasoning": payload.get("reasoning", "")}
                 except Exception:
                     pass
@@ -208,7 +219,8 @@ class GeminiProvider:
             text = ""
             if genai_name == "google.genai" and hasattr(genai, "Client"):
                 client = genai.Client(api_key=self.api_key)
-                resp = client.models.generate_content(model=self.model, contents=prompt)
+                resp = client.models.generate_content(
+                    model=self.model, contents=prompt)
                 if hasattr(resp, "text"):
                     text = resp.text
                 elif hasattr(resp, "candidates") and resp.candidates:
@@ -235,12 +247,13 @@ class GeminiProvider:
             start = text.find("[")
             end = text.rfind("]")
             if start != -1 and end != -1 and end > start:
-                rankings = json.loads(text[start : end + 1])
+                rankings = json.loads(text[start: end + 1])
 
                 # Apply rankings to jobs
                 ranked_jobs = []
                 for ranking in rankings[:top_n]:
-                    idx = ranking.get("index", 0) - 1  # Convert 1-based to 0-based
+                    # Convert 1-based to 0-based
+                    idx = ranking.get("index", 0) - 1
                     if 0 <= idx < len(jobs):
                         job = jobs[idx].copy()
                         job["score"] = int(ranking.get("score", 50))
@@ -252,7 +265,20 @@ class GeminiProvider:
                 return ranked_jobs[:top_n]
 
         except Exception as e:
-            print(f"Batch ranking failed: {e}")
+            error_msg = str(e)
+            print(f"Batch ranking failed: {error_msg}")
+
+            # Check if it's a quota/rate limit error
+            if "429" in error_msg or "quota" in error_msg.lower() or "RESOURCE_EXHAUSTED" in error_msg:
+                print("Gemini quota exceeded - attempting Ollama fallback...")
+                if check_ollama_available():
+                    try:
+                        return rank_jobs_with_ollama(jobs, resume_text, top_n)
+                    except Exception as ollama_err:
+                        print(f"Ollama fallback also failed: {ollama_err}")
+                else:
+                    print(
+                        "Ollama not available. Install with: curl -fsSL https://ollama.ai/install.sh | sh")
 
         # Fallback: return first N jobs with default scores
         for job in jobs[:top_n]:
@@ -285,16 +311,20 @@ class GeminiProvider:
             # Allow overriding the model per-call
             use_model = model or self.model
             if verbose:
-                print(f"gemini_provider: entering generate_job_leads (model={use_model})")
+                print(
+                    f"gemini_provider: entering generate_job_leads (model={use_model})")
                 try:
                     print("gemini_provider: detected genai_name=", genai_name)
-                    print("gemini_provider: genai attributes preview:", dir(genai)[:80])
-                    print("gemini_provider: has Client?", hasattr(genai, "Client"))
+                    print("gemini_provider: genai attributes preview:",
+                          dir(genai)[:80])
+                    print("gemini_provider: has Client?",
+                          hasattr(genai, "Client"))
                     print("gemini_provider: has chat?", hasattr(genai, "chat"))
                     chat_obj = getattr(genai, "chat", None)
                     print(
                         "gemini_provider: chat.create exists?",
-                        hasattr(chat_obj, "create") if chat_obj is not None else False,
+                        hasattr(
+                            chat_obj, "create") if chat_obj is not None else False,
                     )
                     # Also write a full dir() and repr() to a timestamped file for deeper inspection
                     try:
@@ -314,9 +344,11 @@ class GeminiProvider:
                                     fh.write("\n".join(sorted(dir(genai))))
                                 except Exception:
                                     fh.write("<failed to list dir(genai)>\n")
-                            print(f"gemini_provider: wrote genai dir/repr to {fname_dir}")
+                            print(
+                                f"gemini_provider: wrote genai dir/repr to {fname_dir}")
                         except Exception as _e:
-                            print("gemini_provider: failed to write genai dir file:", _e)
+                            print(
+                                "gemini_provider: failed to write genai dir file:", _e)
                     except Exception:
                         pass
                 except Exception:
@@ -332,15 +364,19 @@ class GeminiProvider:
                     # Configure httpx client with timeout
                     import httpx
                     http_options = httpx.Timeout(timeout=self.request_timeout)
-                    client = genai.Client(api_key=self.api_key, http_options={"timeout": http_options})
+                    client = genai.Client(api_key=self.api_key, http_options={
+                                          "timeout": http_options})
                     # Note: google_search tool disabled due to MALFORMED_FUNCTION_CALL errors
                     # and redirect URLs instead of direct links. Simple prompting works better.
                     if verbose:
-                        print(f"gemini_provider: calling generate_content on {use_model} (timeout={self.request_timeout}s)")
+                        print(
+                            f"gemini_provider: calling generate_content on {use_model} (timeout={self.request_timeout}s)")
                     try:
-                        resp = client.models.generate_content(model=use_model, contents=prompt)
+                        resp = client.models.generate_content(
+                            model=use_model, contents=prompt)
                         if verbose:
-                            print(f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
+                            print(
+                                f"gemini_provider: response type: {type(resp)}, repr: {repr(resp)[:200]}")
                     except Exception as api_err:
                         print(f"ERROR calling Gemini API: {api_err}")
                         traceback.print_exc()
@@ -396,7 +432,8 @@ class GeminiProvider:
                                             and hasattr(cand.content, "parts")
                                             and cand.content.parts
                                         ):
-                                            part_text = getattr(cand.content.parts[0], "text", "")
+                                            part_text = getattr(
+                                                cand.content.parts[0], "text", "")
                                             stream_text += part_text
                                         else:
                                             stream_text += str(cand)
@@ -417,10 +454,12 @@ class GeminiProvider:
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname = f"logs/last_gemini_response_{ts}.txt"
-                        print("gemini_provider: used legacy genai.Client; model=", use_model)
+                        print(
+                            "gemini_provider: used legacy genai.Client; model=", use_model)
                         # print a short preview to the console
                         try:
-                            preview = raw_response[:4000] + "\n...\n" if len(raw_response) > 4000 else raw_response
+                            preview = raw_response[:4000] + "\n...\n" if len(
+                                raw_response) > 4000 else raw_response
                         except Exception:
                             preview = repr(raw_response)[:4000]
                         print("gemini_provider: raw response preview:\n", preview)
@@ -428,7 +467,8 @@ class GeminiProvider:
                         try:
                             print("gemini_provider: resp type:", type(resp))
                             try:
-                                print("gemini_provider: resp dir preview:", dir(resp)[:50])
+                                print("gemini_provider: resp dir preview:",
+                                      dir(resp)[:50])
                             except Exception:
                                 pass
                             # Try to access common attributes
@@ -441,7 +481,8 @@ class GeminiProvider:
                                             repr(val)[:200],
                                         )
                                     else:
-                                        print(f"gemini_provider: resp has no attribute {attr}")
+                                        print(
+                                            f"gemini_provider: resp has no attribute {attr}")
                                 except Exception:
                                     traceback.print_exc()
                         except Exception:
@@ -450,15 +491,18 @@ class GeminiProvider:
                         try:
                             with open(fname, "w", encoding="utf-8") as fh:
                                 fh.write(repr(resp))
-                            print(f"gemini_provider: wrote raw repr to {fname}")
+                            print(
+                                f"gemini_provider: wrote raw repr to {fname}")
                         except Exception as e:
-                            print("gemini_provider: failed to write raw repr file:", e)
+                            print(
+                                "gemini_provider: failed to write raw repr file:", e)
                 except Exception:
                     text = ""
 
             # Case B: `google.generativeai` chat-style API
             elif hasattr(genai, "chat") and hasattr(genai.chat, "create"):
-                out = genai.chat.create(model=self.model, messages=[{"role": "user", "content": prompt}])
+                out = genai.chat.create(model=self.model, messages=[
+                                        {"role": "user", "content": prompt}])
                 text = ""
                 if hasattr(out, "candidates") and out.candidates:
                     text = out.candidates[0].content
@@ -477,26 +521,31 @@ class GeminiProvider:
                     fname = f"logs/gemini_response_{ts}.txt"
                     print("gemini_provider: used chat.create; model=", use_model)
                     try:
-                        preview = raw_response[:4000] + "\n...\n" if len(raw_response) > 4000 else raw_response
+                        preview = raw_response[:4000] + "\n...\n" if len(
+                            raw_response) > 4000 else raw_response
                     except Exception:
                         preview = repr(raw_response)[:4000]
                     print("gemini_provider: raw response preview:\n", preview)
                     try:
                         print("gemini_provider: out type:", type(out))
                         try:
-                            print("gemini_provider: out dir preview:", dir(out)[:50])
+                            print("gemini_provider: out dir preview:",
+                                  dir(out)[:50])
                         except Exception:
                             pass
                         # Try to print candidate/text structure
                         try:
                             if hasattr(out, "candidates"):
-                                print("gemini_provider: out.candidates type:", type(out.candidates))
+                                print("gemini_provider: out.candidates type:", type(
+                                    out.candidates))
                                 try:
-                                    print("gemini_provider: out.candidates[0] repr:", repr(out.candidates[0])[:400])
+                                    print("gemini_provider: out.candidates[0] repr:", repr(
+                                        out.candidates[0])[:400])
                                 except Exception:
                                     pass
                             if hasattr(out, "message"):
-                                print("gemini_provider: out.message repr:", repr(getattr(out, "message"))[:400])
+                                print("gemini_provider: out.message repr:",
+                                      repr(getattr(out, "message"))[:400])
                         except Exception:
                             traceback.print_exc()
                     except Exception:
@@ -512,7 +561,8 @@ class GeminiProvider:
             elif genai_name == "google.generativeai" and hasattr(genai, "GenerativeModel"):
                 try:
                     if verbose:
-                        print("gemini_provider: using google.generativeai.GenerativeModel with google_search")
+                        print(
+                            "gemini_provider: using google.generativeai.GenerativeModel with google_search")
 
                     # Configure google_search tool as a dictionary
                     # Note: google.generativeai SDK doesn't support google_search tool yet
@@ -526,29 +576,35 @@ class GeminiProvider:
                         )
 
                     response = model.generate_content(prompt)
-                    text = response.text if hasattr(response, "text") else str(response)
+                    text = response.text if hasattr(
+                        response, "text") else str(response)
                     raw_response = str(response)
 
                     if verbose:
                         ts = int(time.time())
                         os.makedirs("logs", exist_ok=True)
                         fname = f"logs/generativemodel_response_{ts}.txt"
-                        print("gemini_provider: used GenerativeModel; model=", use_model)
+                        print(
+                            "gemini_provider: used GenerativeModel; model=", use_model)
                         try:
-                            preview = raw_response[:4000] + "\n...\n" if len(raw_response) > 4000 else raw_response
+                            preview = raw_response[:4000] + "\n...\n" if len(
+                                raw_response) > 4000 else raw_response
                         except Exception:
                             preview = repr(raw_response)[:4000]
                         print("gemini_provider: raw response preview:\n", preview)
                         try:
                             with open(fname, "w", encoding="utf-8") as fh:
                                 fh.write(repr(response))
-                            print(f"gemini_provider: wrote raw repr to {fname}")
+                            print(
+                                f"gemini_provider: wrote raw repr to {fname}")
                         except Exception as e:
-                            print("gemini_provider: failed to write raw repr file:", e)
+                            print(
+                                "gemini_provider: failed to write raw repr file:", e)
 
                 except Exception as gm_err:
                     if verbose:
-                        print(f"gemini_provider: GenerativeModel call failed: {gm_err}")
+                        print(
+                            f"gemini_provider: GenerativeModel call failed: {gm_err}")
 
                         traceback.print_exc()
                     text = ""
@@ -577,7 +633,7 @@ class GeminiProvider:
             jobs = []
             if start != -1 and end != -1 and end > start:
                 try:
-                    payload = json.loads(text[start : end + 1])
+                    payload = json.loads(text[start: end + 1])
                     if isinstance(payload, list):
                         jobs = payload
                 except Exception:
@@ -586,7 +642,8 @@ class GeminiProvider:
             # Fallback: if tool-enabled call returned 0 jobs, retry without tools
             if not jobs and hasattr(genai, "Client"):
                 if verbose:
-                    print("gemini_provider: tool call returned 0 jobs; retrying without tools")
+                    print(
+                        "gemini_provider: tool call returned 0 jobs; retrying without tools")
                 try:
                     simple_prompt = (
                         "Generate a JSON array of job postings based on this profile and query.\n"
@@ -596,20 +653,22 @@ class GeminiProvider:
                         "Return ONLY the JSON array, no markdown or other text."
                     )
                     client = genai.Client(api_key=self.api_key)
-                    resp = client.models.generate_content(model=use_model, contents=simple_prompt)
+                    resp = client.models.generate_content(
+                        model=use_model, contents=simple_prompt)
                     text2 = getattr(resp, "text", str(resp))
                     start = text2.find("[")
                     end = text2.rfind("]")
                     if start != -1 and end != -1 and end > start:
                         try:
-                            payload = json.loads(text2[start : end + 1])
+                            payload = json.loads(text2[start: end + 1])
                             if isinstance(payload, list):
                                 jobs = payload
                         except Exception:
                             pass
                 except Exception as fallback_err:
                     if verbose:
-                        print(f"gemini_provider: fallback failed: {fallback_err}")
+                        print(
+                            f"gemini_provider: fallback failed: {fallback_err}")
 
             return jobs
         except Exception as e:
@@ -635,12 +694,15 @@ def simple_gemini_query(
     """
     key = api_key or os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     if not key:
-        raise RuntimeError("No GEMINI_API_KEY/GOOGLE_API_KEY found in environment; cannot call Gemini")
+        raise RuntimeError(
+            "No GEMINI_API_KEY/GOOGLE_API_KEY found in environment; cannot call Gemini")
 
     if genai is None:
-        raise RuntimeError("No supported Gemini SDK (google.genai or google.generativeai) is installed")
+        raise RuntimeError(
+            "No supported Gemini SDK (google.genai or google.generativeai) is installed")
 
-    use_model = model or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash-preview-09-2025"
+    use_model = model or os.getenv(
+        "GEMINI_MODEL") or "gemini-2.5-flash-preview-09-2025"
 
     # Try legacy client call first if present
     if hasattr(genai, "Client"):
@@ -648,10 +710,12 @@ def simple_gemini_query(
             client = genai.Client(api_key=key)
             # best-effort: call with or without types/config
             try:
-                resp = client.models.generate_content(model=use_model, contents=prompt)
+                resp = client.models.generate_content(
+                    model=use_model, contents=prompt)
             except Exception:
                 # fallback with minimal args
-                resp = client.models.generate_content(model=use_model, contents=prompt)
+                resp = client.models.generate_content(
+                    model=use_model, contents=prompt)
             # Try to extract text attribute
             text = getattr(resp, "text", None)
             if text is None:
@@ -671,7 +735,8 @@ def simple_gemini_query(
                     genai.configure(api_key=key)
             except Exception:
                 pass
-            out = genai.chat.create(model=use_model, messages=[{"role": "user", "content": prompt}])
+            out = genai.chat.create(model=use_model, messages=[
+                                    {"role": "user", "content": prompt}])
             # best-effort to extract text
             if hasattr(out, "candidates") and out.candidates:
                 return out.candidates[0].content
@@ -705,12 +770,14 @@ def simple_gemini_query(
                     try:
                         resp = fn(**kwargs)
                         if verbose:
-                            print(f"simple_gemini_query: used genai.{fn_name} with kwargs={kwargs}")
+                            print(
+                                f"simple_gemini_query: used genai.{fn_name} with kwargs={kwargs}")
                         text = getattr(resp, "text", None) or str(resp)
                         return text
                     except Exception as e:
                         if verbose:
-                            print(f"simple_gemini_query: attempt genai.{fn_name} with {kwargs} failed: {e}")
+                            print(
+                                f"simple_gemini_query: attempt genai.{fn_name} with {kwargs} failed: {e}")
             except Exception:
                 pass
 
@@ -728,7 +795,8 @@ def simple_gemini_query(
                     return text
                 except Exception as e:
                     if verbose:
-                        print(f"simple_gemini_query: genai.models.{attr} failed: {e}")
+                        print(
+                            f"simple_gemini_query: genai.models.{attr} failed: {e}")
 
     # Try get_model(...).generate style
     if hasattr(genai, "get_model"):
@@ -738,7 +806,8 @@ def simple_gemini_query(
                 try:
                     resp = m.generate(contents=prompt)
                     if verbose:
-                        print("simple_gemini_query: used genai.get_model(...).generate")
+                        print(
+                            "simple_gemini_query: used genai.get_model(...).generate")
                     text = getattr(resp, "text", None) or str(resp)
                     return text
                 except Exception as e:
@@ -748,4 +817,167 @@ def simple_gemini_query(
             pass
 
     # If nothing worked, raise for the caller to inspect environment
-    raise RuntimeError(f"Gemini SDK present but no supported call pattern succeeded. Tried: {tried}")
+    raise RuntimeError(
+        f"Gemini SDK present but no supported call pattern succeeded. Tried: {tried}")
+
+
+# ============================================================================
+# Ollama Fallback Provider
+# ============================================================================
+
+def check_ollama_available(host: str = "http://localhost:11434") -> bool:
+    """Check if Ollama is running and accessible.
+
+    Args:
+        host: Ollama server URL (default: http://localhost:11434)
+
+    Returns:
+        True if Ollama is available, False otherwise
+    """
+    if not REQUESTS_AVAILABLE:
+        return False
+
+    try:
+        response = requests.get(f"{host}/api/tags", timeout=2)
+        return response.status_code == 200
+    except Exception:
+        return False
+
+
+def ollama_generate(
+    prompt: str,
+    model: str = "llama3.2:3b",
+    host: str = "http://localhost:11434",
+    temperature: float = 0.7,
+    max_tokens: int = 2048,
+) -> str:
+    """Generate text using Ollama API.
+
+    Args:
+        prompt: Text prompt to send to the model
+        model: Ollama model name (default: llama3.2:3b)
+        host: Ollama server URL
+        temperature: Sampling temperature (0.0-1.0)
+        max_tokens: Maximum tokens to generate
+
+    Returns:
+        Generated text response
+
+    Raises:
+        RuntimeError: If Ollama is not available or request fails
+    """
+    if not REQUESTS_AVAILABLE:
+        raise RuntimeError(
+            "requests library not available - install with: pip install requests")
+
+    try:
+        response = requests.post(
+            f"{host}/api/generate",
+            json={
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+                "options": {
+                    "temperature": temperature,
+                    "num_predict": max_tokens,
+                }
+            },
+            timeout=60
+        )
+
+        if response.status_code != 200:
+            raise RuntimeError(
+                f"Ollama API error: {response.status_code} - {response.text}")
+
+        data = response.json()
+        return data.get("response", "")
+
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError(
+            "Cannot connect to Ollama. Make sure it's running: ollama serve")
+    except requests.exceptions.Timeout:
+        raise RuntimeError("Ollama request timed out (60s)")
+    except Exception as e:
+        raise RuntimeError(f"Ollama generation failed: {e}")
+
+
+def rank_jobs_with_ollama(
+    jobs: list[Dict[str, Any]],
+    resume_text: str,
+    top_n: int = 10,
+    model: str = "llama3.2:3b",
+    host: str = "http://localhost:11434",
+) -> list[Dict[str, Any]]:
+    """Rank jobs using Ollama as fallback when Gemini quota is exceeded.
+
+    Args:
+        jobs: List of job dicts to rank
+        resume_text: Candidate's resume text
+        top_n: Number of top jobs to return
+        model: Ollama model to use
+        host: Ollama server URL
+
+    Returns:
+        List of top N jobs with score and reasoning fields
+    """
+    if not jobs:
+        return []
+
+    # Limit batch size
+    max_batch = 30  # Ollama handles smaller batches better
+    if len(jobs) > max_batch:
+        jobs = jobs[:max_batch]
+
+    # Build concise job list
+    jobs_text = ""
+    for i, job in enumerate(jobs, 1):
+        jobs_text += f"\n{i}. {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}\n"
+        jobs_text += f"   Location: {job.get('location', 'Unknown')}\n"
+        desc = job.get("summary", job.get("description", ""))[:200]
+        jobs_text += f"   Desc: {desc}...\n"
+
+    prompt = (
+        f"Rank these {len(jobs)} jobs for this candidate. Score 0-100 based on:\n"
+        "- Skills match (40pts)\n"
+        "- Experience level (25pts)\n"
+        "- Domain fit (20pts)\n"
+        "- Role alignment (15pts)\n\n"
+        f"Resume:\n{resume_text[:2000]}\n\n"
+        f"Jobs:{jobs_text}\n\n"
+        f"Return top {min(top_n, len(jobs))} as JSON array:\n"
+        '[{"index": 1, "score": 85, "reasoning": "Python, AWS match. Senior fit."}]\n'
+        "ONLY return the JSON array."
+    )
+
+    try:
+        response = ollama_generate(
+            prompt, model=model, host=host, temperature=0.3)
+
+        # Parse JSON response
+        start = response.find("[")
+        end = response.rfind("]")
+        if start != -1 and end != -1 and end > start:
+            rankings = json.loads(response[start: end + 1])
+
+            # Apply rankings
+            ranked_jobs = []
+            for ranking in rankings[:top_n]:
+                idx = ranking.get("index", 0) - 1
+                if 0 <= idx < len(jobs):
+                    job = jobs[idx].copy()
+                    job["score"] = int(ranking.get("score", 50))
+                    job["reasoning"] = ranking.get("reasoning", "")
+                    ranked_jobs.append(job)
+
+            # Sort by score
+            ranked_jobs.sort(key=lambda x: x.get("score", 0), reverse=True)
+            return ranked_jobs[:top_n]
+
+    except Exception as e:
+        print(f"Ollama ranking failed: {e}")
+
+    # Fallback: return with default scores
+    for job in jobs[:top_n]:
+        job["score"] = 50
+        job["reasoning"] = "Ollama ranking failed"
+    return jobs[:top_n]
