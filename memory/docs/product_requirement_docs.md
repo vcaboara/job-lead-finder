@@ -8,7 +8,7 @@ Job seekers face fragmentation across multiple job boards, lack of organization 
 **Solution:**
 Job Lead Finder is an AI-powered job search aggregation and tracking platform that:
 - Consolidates jobs from multiple sources (WeWorkRemotely, RemoteOK, Remotive, company career pages)
-- Provides intelligent job evaluation and custom cover letter generation via Google Gemini
+- Provides intelligent job evaluation and custom cover letter generation via Google Gemini/Ollama
 - Tracks application status through the entire hiring funnel
 - Offers both CLI and web UI interfaces for flexible workflows
 - Discovers companies passively via JSearch API integration
@@ -53,6 +53,7 @@ Job Lead Finder is an AI-powered job search aggregation and tracking platform th
 - **Remotive Integration** - Job board scraping
 - **Company Career Pages** - Gemini-powered direct company search
 - **Round-Robin Distribution** - Ensure diversity across providers
+- **Parallel** - Use providers in parallel to find job listings for quality comparisons, etc. (TODO)
 
 #### Job Tracking
 - **Status Management** - new, applied, interviewing, rejected, offer, hidden
@@ -60,7 +61,7 @@ Job Lead Finder is an AI-powered job search aggregation and tracking platform th
 - **Search & Filter** - By status, provider, keyword
 - **Duplicate Detection** - Avoid showing same job multiple times
 
-#### AI Features (Gemini)
+#### AI Features (Gemini/Ollama)
 - **Job Evaluation** - Match score against resume
 - **Cover Letter Generation** - Customized per application
 - **Company Career Page Discovery** - Find direct application links
@@ -174,7 +175,7 @@ uv run python -m app.main health
 ## Future Enhancements
 
 ### Roadmap Items
-1. **Token Compression** - Reduce Gemini API costs via style guides
+1. **Token Compression** - Reduce API costs via style guides
 2. **Advanced Filtering** - Salary range, company size, remote vs hybrid
 3. **Email Notifications** - New job alerts matching criteria
 4. **Calendar Integration** - Interview scheduling
