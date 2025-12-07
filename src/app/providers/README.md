@@ -7,7 +7,7 @@ This directory contains modular job search providers following the MCP (Model Co
 ```
 providers/
 ├── __init__.py              # Package exports and legacy compatibility
-├── base.py                  # MCPProvider base class and utilities  
+├── base.py                  # MCPProvider base class and utilities
 ├── weworkremotely.py        # We Work Remotely RSS provider
 ├── remote_ok.py             # RemoteOK API provider (TODO)
 ├── remotive.py              # Remotive API provider (TODO)
@@ -26,11 +26,11 @@ from .base import MCPProvider, HTTPX_AVAILABLE
 class NewSiteMCP(MCPProvider):
     def __init__(self):
         super().__init__("NewSite")
-    
+
     def is_available(self) -> bool:
         # Check if provider can be used
         return HTTPX_AVAILABLE
-    
+
     def search_jobs(
         self,
         query: str,

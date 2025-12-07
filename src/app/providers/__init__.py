@@ -21,7 +21,7 @@ Currently available providers:
 """
 
 # Import base classes
-from .base import MCPProvider, HTTPX_AVAILABLE, BS4_AVAILABLE
+from .base import BS4_AVAILABLE, HTTPX_AVAILABLE, MCPProvider
 
 # Import new modular providers
 from .weworkremotely import WeWorkRemotelyMCP
@@ -30,14 +30,14 @@ from .weworkremotely import WeWorkRemotelyMCP
 # This maintains backward compatibility
 try:
     from ..mcp_providers import (
-        LinkedInMCP,
-        IndeedMCP,
-        GitHubJobsMCP,
-        DuckDuckGoMCP,
         CompanyJobsMCP,
+        DuckDuckGoMCP,
+        GitHubJobsMCP,
+        IndeedMCP,
+        LinkedInMCP,
+        MCPAggregator,
         RemoteOKMCP,
         RemotiveMCP,
-        MCPAggregator,
         generate_job_leads_via_mcp,
     )
 except ImportError:
@@ -49,10 +49,8 @@ __all__ = [
     "MCPProvider",
     "HTTPX_AVAILABLE",
     "BS4_AVAILABLE",
-    
     # Modular providers (new structure)
     "WeWorkRemotelyMCP",
-    
     # Legacy providers (to be migrated)
     "LinkedInMCP",
     "IndeedMCP",
@@ -61,7 +59,6 @@ __all__ = [
     "CompanyJobsMCP",
     "RemoteOKMCP",
     "RemotiveMCP",
-    
     # Aggregator and utilities
     "MCPAggregator",
     "generate_job_leads_via_mcp",

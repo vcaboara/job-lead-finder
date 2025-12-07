@@ -47,9 +47,15 @@ Thumbs.db
 
 # Generated debug files
 logs/*.txt
+logs/*.log
 !logs/.gitkeep
 
+# Test generated files
+job_tracking.json
+leads.json
+
 # Job search data (personal/private)
+data/
 config.json
 leads.json
 job_tracking.json
@@ -61,6 +67,7 @@ Vincent Resume.txt
 *.resume.txt
 IMPLEMENTED_FEATURES_AND_TODO.txt
 IMPLEMENTED_FEATURES_AND_TODO.md
+comments.json  # GitHub API response data from PR reviews
 
 # Local test artifacts
 /tests/.cache/
@@ -129,3 +136,4 @@ docker-compose.override.yml
 
 # Output files
 leads.json
+jsearch_discovery_results.json

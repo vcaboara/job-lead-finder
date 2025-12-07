@@ -20,8 +20,9 @@ STATUS_HIDDEN = "hidden"
 
 VALID_STATUSES = {STATUS_NEW, STATUS_APPLIED, STATUS_INTERVIEWING, STATUS_REJECTED, STATUS_OFFER, STATUS_HIDDEN}
 
-# Persistence file
-TRACKING_FILE = Path("job_tracking.json")
+# Persistence file - use absolute path in shared volume if available, else current dir
+_DATA_DIR = Path("/app/data") if Path("/app/data").exists() else Path(".")
+TRACKING_FILE = _DATA_DIR / "job_tracking.json"
 
 
 def generate_job_id(job: Dict[str, Any]) -> str:
@@ -141,6 +142,20 @@ class JobTracker:
         self.save()
         return True
 
+    def update_notes(self, job_id: str, notes: str) -> bool:
+        """Update notes for a job.
+
+        Returns True if successful, False if job not found.
+        """
+        if job_id not in self.jobs:
+            print(f"job_tracker: Job {job_id} not found")
+            return False
+
+        self.jobs[job_id]["notes"] = notes
+        self.jobs[job_id]["last_updated"] = datetime.now(timezone.utc).isoformat()
+        self.save()
+        return True
+
     def hide_job(self, job_id: str) -> bool:
         """Mark job as hidden (won't appear in search results)."""
         return self.update_status(job_id, STATUS_HIDDEN)
@@ -210,6 +225,11 @@ class JobTracker:
         """Check if a job is hidden based on its link or title+company."""
         job_id = generate_job_id(job)
         return job_id in self.get_hidden_job_ids()
+
+    def clear_all_jobs(self) -> None:
+        """Clear all tracked jobs from the database."""
+        self.jobs = {}
+        self.save()
 
 
 # Global tracker instance

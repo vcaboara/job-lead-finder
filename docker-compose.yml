@@ -1,4 +1,3 @@
-
 services:
   app:
     build:
@@ -12,19 +11,48 @@ services:
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - RAPIDAPI_KEY=${RAPIDAPI_KEY}
     # Keep container running for interactive execs; use `docker compose run` for one-off commands.
     command: tail -f /dev/null
     tty: true
 
   ui:
-    extends:
-      app
+    extends: app
     build:
       args:
         INSTALL_TEST_DEPS: "false"
+    volumes:
+      - ./:/app:delegated
+      - job-data:/app/data # Shared volume for database
+      - job-logs:/app/logs # Shared volume for logs
     environment:
       - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
     ports:
       - "8000:8000"
     command: python -m uvicorn app.ui_server:app --host 0.0.0.0 --port 8000
     tty: true
+
+  worker:
+    extends: app
+    build:
+      args:
+        INSTALL_TEST_DEPS: "false"
+    volumes:
+      - ./:/app:delegated
+      - job-data:/app/data # Shared volume for database
+      - job-logs:/app/logs # Shared volume for logs
+    working_dir: /app
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - RAPIDAPI_KEY=${RAPIDAPI_KEY}
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    command: python -m app.worker
+    restart: unless-stopped
+    depends_on:
+      - ui
+
+volumes:
+  job-data:
+  job-logs:

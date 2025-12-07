@@ -104,8 +104,8 @@ docker compose up -d
 $body = @{query="python";count=10} | ConvertTo-Json
 $response = Invoke-RestMethod -Uri "http://localhost:8000/api/search" -Method POST -Body $body -ContentType "application/json"
 Write-Host "Found $($response.jobs.Count) jobs"
-$response.jobs | Select-Object -First 5 | ForEach-Object { 
-    Write-Host "`n$($_.title) at $($_.company) - Source: $($_.source)" 
+$response.jobs | Select-Object -First 5 | ForEach-Object {
+    Write-Host "`n$($_.title) at $($_.company) - Source: $($_.source)"
 }
 
 # Verify specific provider (e.g., WeWorkRemotely)
@@ -147,7 +147,7 @@ docker run --rm -v ${PWD}:/workspace -w /workspace job-starter-ci python -m py_c
 ```
 
 #### CI Pipeline Checks:
-- [ ] All tests pass (149+ tests)
+- [ ] All tests pass (172+ tests)
 - [ ] No syntax errors
 - [ ] Code coverage maintained (if coverage enabled)
 - [ ] Docker build succeeds

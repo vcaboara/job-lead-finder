@@ -3,10 +3,10 @@
 ## Performance Optimizations (Low Priority)
 
 ### PDF Text Cleaning (ui_server.py:771-777)
-**Issue**: Multiple string `.replace()` calls create new string objects repeatedly  
-**Impact**: Minor performance hit on large PDFs (>100 pages)  
-**Suggestion**: Use regex pattern with translation table for single-pass cleaning  
-**Effort**: Medium (requires testing mojibake patterns)  
+**Issue**: Multiple string `.replace()` calls create new string objects repeatedly
+**Impact**: Minor performance hit on large PDFs (>100 pages)
+**Suggestion**: Use regex pattern with translation table for single-pass cleaning
+**Effort**: Medium (requires testing mojibake patterns)
 **Priority**: Low - Current implementation works fine for typical resume PDFs
 
 ```python
@@ -32,9 +32,9 @@ cleaned_text = pattern.sub(lambda m: mojibake_map[m.group(0)], cleaned_text)
 ## Code Quality
 
 ### Mojibake Pattern Validation
-**Issue**: Some mojibake patterns may have incorrect byte sequences  
-**Current Status**: Patterns work for common PDFs we've tested  
-**Action**: Monitor for encoding issues in production, adjust patterns as needed  
+**Issue**: Some mojibake patterns may have incorrect byte sequences
+**Current Status**: Patterns work for common PDFs we've tested
+**Action**: Monitor for encoding issues in production, adjust patterns as needed
 **Priority**: Low - reactive fix if users report issues
 
 ---
@@ -42,8 +42,8 @@ cleaned_text = pattern.sub(lambda m: mojibake_map[m.group(0)], cleaned_text)
 ## Testing
 
 ### Integration Test CI Isolation
-**Status**: ✅ COMPLETE - Tests marked with `@pytest.mark.integration`  
-**File**: `tests/test_pdf_extraction.py`  
+**Status**: ✅ COMPLETE - Tests marked with `@pytest.mark.integration`
+**File**: `tests/test_pdf_extraction.py`
 **Skip in CI**: `pytest -m "not integration"` or set `CI=true` environment variable
 
 ---
@@ -69,8 +69,8 @@ cleaned_text = pattern.sub(lambda m: mojibake_map[m.group(0)], cleaned_text)
 
 ## PR Scope Management Learnings
 
-**This PR**: +820 -95 lines, 15+ files  
-**Result**: 3 rounds of Copilot reviews with diminishing returns  
+**This PR**: +820 -95 lines, 15+ files
+**Result**: 3 rounds of Copilot reviews with diminishing returns
 
 **Best Practices for Future PRs**:
 1. **Lines changed**: Keep under 300-400 lines total

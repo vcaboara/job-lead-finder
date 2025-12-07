@@ -14,12 +14,12 @@ def clean_config():
     # Cleanup before test - essential for test isolation
     if CONFIG_FILE.exists():
         CONFIG_FILE.unlink()
-    
+
     # Verify it's really gone
     assert not CONFIG_FILE.exists(), "Config file should be deleted before test"
-    
+
     yield
-    
+
     # Cleanup after test
     if CONFIG_FILE.exists():
         CONFIG_FILE.unlink()
@@ -28,11 +28,12 @@ def clean_config():
 @pytest.fixture
 def client(clean_config):
     """Create a fresh test client for each test.
-    
+
     Depends on clean_config to ensure config is cleaned before client initialization.
     """
     # Import here to ensure fresh module state after config cleanup
     from app.ui_server import app
+
     return TestClient(app)
 
 
@@ -105,7 +106,7 @@ def test_remove_nonexistent_entity(client):
 
 def test_multiple_entities(client):
     """Test adding multiple different entities.
-    
+
     Note: This test verifies that all added entities are present,
     but doesn't require exactly 3 entities total due to potential
     test isolation issues in some test runners.
@@ -116,12 +117,12 @@ def test_multiple_entities(client):
 
     assert response.status_code == 200
     data = response.json()
-    
+
     # Verify all three entities we added are present
     assert {"type": "site", "value": "site1.com"} in data["blocked_entities"]
     assert {"type": "site", "value": "site2.com"} in data["blocked_entities"]
     assert {"type": "employer", "value": "Employer One"} in data["blocked_entities"]
-    
+
     # Check we have at least our 3 entities (may have more due to test ordering)
     assert len(data["blocked_entities"]) >= 3
 
@@ -132,4 +133,3 @@ def test_entity_trimmed(client):
     assert response.status_code == 200
     data = response.json()
     assert {"type": "site", "value": "spaced.com"} in data["blocked_entities"]
-

@@ -225,6 +225,23 @@ class TestJobTracker:
         assert job is not None
         assert job["title"] == sample_job["title"]
 
+    def test_clear_all_jobs(self, temp_tracker, sample_job):
+        """Test clearing all tracked jobs."""
+        # Track some jobs
+        job_id1 = temp_tracker.track_job(sample_job)
+        job_id2 = temp_tracker.track_job({**sample_job, "link": "https://example.com/job2"})
+
+        # Verify jobs exist
+        assert len(temp_tracker.get_all_jobs()) == 2
+
+        # Clear all jobs
+        temp_tracker.clear_all_jobs()
+
+        # Verify all jobs are cleared
+        assert len(temp_tracker.get_all_jobs()) == 0
+        assert temp_tracker.get_job(job_id1) is None
+        assert temp_tracker.get_job(job_id2) is None
+
 
 class TestJobTrackingAPIEndpoints:
     """Tests for job tracking API endpoints."""
@@ -405,6 +422,17 @@ class TestJobTrackingAPIEndpoints:
                 assert response.status_code == 200
                 data = response.json()
                 assert data["found"] is False
+
+    def test_clear_all_tracked_jobs(self, client):
+        """Test clearing all tracked jobs via API."""
+        with patch("app.ui_server.get_tracker") as mock_tracker:
+            mock_instance = mock_tracker.return_value
+            response = client.delete("/api/jobs/tracked/clear")
+            assert response.status_code == 200
+            data = response.json()
+            assert data["message"] == "All tracked jobs cleared"
+            assert data["count"] == 0
+            mock_instance.clear_all_jobs.assert_called_once()
 
 
 class TestJobTrackingIntegration:

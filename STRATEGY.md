@@ -1,7 +1,7 @@
 # Job Lead Finder - Strategic Analysis & Recommendations
 
-**Date:** December 1, 2025  
-**Branch:** fix/post-merge-improvements  
+**Date:** December 1, 2025
+**Branch:** fix/post-merge-improvements
 **Status:** Ready for PR review
 
 ---
@@ -80,7 +80,7 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=len(available)) as execut
 - With Gemini: Results in ~6 minutes (384s total)
 - **297x slower** for questionable value
 
-**Recommendation:** 
+**Recommendation:**
 ```json
 // config.json
 {
@@ -307,7 +307,7 @@ Title: Post-merge improvements - timeout handling and code quality
 
 **Current Status:** ✅ Production-ready with caveats
 
-**Primary Recommendation:** 
+**Primary Recommendation:**
 1. **Merge current PR** (timeout fixes, code quality)
 2. **Disable CompanyJobs** (Gemini) by default
 3. **Add 3-5 fast aggregators** (We Work Remotely, Remote.co, etc.)

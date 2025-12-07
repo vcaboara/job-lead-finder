@@ -2,6 +2,7 @@
 
 import os
 from unittest.mock import Mock, patch
+
 import pytest
 
 from app import gemini_provider
