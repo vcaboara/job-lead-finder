@@ -45,6 +45,10 @@ Thumbs.db
 .venv
 .dockerignore
 
+# Rulebook-AI (generated files, keep memory/ and tools/ in git)
+.rulebook-ai/
+.github/copilot-instructions.md
+
 # Generated debug files
 logs/*.txt
 logs/*.log
