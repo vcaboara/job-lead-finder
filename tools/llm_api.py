@@ -138,7 +138,8 @@ def query_llm(
             if provider == "openai":
                 model = "gpt-4o"
             elif provider == "azure":
-                model = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT", "gpt-4o-ms")  # Get from env with fallback
+                # Get from env with fallback
+                model = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT", "gpt-4o-ms")
             elif provider == "deepseek":
                 model = "deepseek-chat"
             elif provider == "siliconflow":
@@ -236,7 +237,8 @@ def main():
         elif args.provider == "gemini":
             args.model = "gemini-2.0-flash-exp"
         elif args.provider == "azure":
-            args.model = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT", "gpt-4o-ms")  # Get from env with fallback
+            # Get from env with fallback
+            args.model = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT", "gpt-4o-ms")
 
     client = create_llm_client(args.provider)
     response = query_llm(args.prompt, client, model=args.model, provider=args.provider, image_path=args.image)
