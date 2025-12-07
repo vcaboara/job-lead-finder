@@ -14,12 +14,18 @@ JobFlow is a job search application that helps users find relevant job postings 
 
 ## Code Style & Patterns
 
+### General
+- **Comments/Documentation**: Keep concise - explain WHY not WHAT
+- **PR Requirements**: Include UI screenshots for visual changes
+- **Testing**: Use screenshots to verify no regressions before committing
+
 ### Python
 - Use type hints for all function parameters and return types
 - Follow PEP 8 naming conventions (snake_case for functions/variables)
 - Prefer async/await for I/O operations
 - Use dataclasses or Pydantic models for structured data
-- Always include docstrings with Args/Returns sections
+- Docstrings: Brief one-liner if obvious, detailed only when complex
+- Use logging module (logger.debug/info/error), never print()
 - Use proper exception handling with specific error messages
 - Keep functions focused (single responsibility)
 
@@ -28,7 +34,7 @@ JobFlow is a job search application that helps users find relevant job postings 
 - Prefer fetch API for HTTP requests
 - Use descriptive variable names (camelCase)
 - Keep functions pure when possible
-- Add comments for complex logic
+- Comments only for non-obvious logic
 
 ### CSS
 - Use CSS variables for theming (defined in `:root`)
@@ -111,8 +117,11 @@ JobFlow is a job search application that helps users find relevant job postings 
 ## Git Workflow
 - Feature branches: `feature/<description>`
 - Fix branches: `fix/<description>`
-- Commits: Use conventional commits (feat:, fix:, chore:, docs:)
-- PRs: Merge to `main` via pull request
+- Commits: Use conventional commits (feat:, fix:, chore:, docs:, refactor:)
+- PRs: 
+  * Merge to `main` via pull request
+  * **Include screenshots for any UI changes**
+  * Verify no visual regressions with before/after screenshots
 - Tags: Semantic versioning (v0.X.0 for features, v0.X.Y for fixes)
 
 ## What NOT to Do
