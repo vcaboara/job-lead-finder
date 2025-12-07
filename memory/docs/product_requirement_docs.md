@@ -217,15 +217,22 @@ uv run python -m app.main health
 ## Documentation
 
 ### Required Documentation
-- **README.md** - Quick start, features, installation
-- **PERSONAL_CONFIG_GUIDE.md** - API key setup
-- **AGGREGATOR_TO_COMPANY_GUIDE.md** - Company search workflow
-- **JSEARCH_PROVIDER.md** - JSearch integration guide
-- **CHANGELOG.md** - Version history and changes
-- **TODO.md** - Technical debt and future improvements
+- **README.md** - Quick start, features, installation (root)
+- **docs/PERSONAL_CONFIG_GUIDE.md** - API key setup
+- **docs/AGGREGATOR_TO_COMPANY_GUIDE.md** - Company search workflow
+- **docs/JSEARCH_PROVIDER.md** - JSearch integration guide
+- **docs/DISCOVERY_CLI.md** - CLI usage guide
+- **docs/PROVIDERS.md** - Provider architecture
+- **docs/RULEBOOK_INTEGRATION.md** - Rulebook-AI usage guide
+- **docs/GITHUB_RULEBOOK_INTEGRATION.md** - GitHub Actions integration
+- **docs/TODO.md** - Technical debt and future improvements
+- **CHANGELOG.md** - Version history and changes (root)
 
 ### Developer Documentation
-- **Architecture Diagram** - System components and relationships
+- **memory/docs/architecture.md** - System components and relationships
+- **memory/docs/technical.md** - Development environment and stack
+- **memory/tasks/tasks_plan.md** - Detailed task backlog
+- **memory/tasks/active_context.md** - Current work focus
 - **API Documentation** - FastAPI auto-generated docs at /docs
 - **Test Guide** - Running and writing tests
 - **Contributing Guide** - Code style, PR process

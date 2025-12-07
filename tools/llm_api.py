@@ -2,6 +2,7 @@
 
 import argparse
 import base64
+import logging
 import mimetypes
 import os
 import sys
@@ -12,6 +13,9 @@ import google.generativeai as genai
 from anthropic import Anthropic
 from dotenv import load_dotenv
 from openai import AzureOpenAI, OpenAI
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
 def load_environment():
@@ -25,25 +29,25 @@ def load_environment():
     env_files = [".env.local", ".env", ".env.example"]
     env_loaded = False
 
-    print("Current working directory:", Path(".").absolute(), file=sys.stderr)
-    print("Looking for environment files:", env_files, file=sys.stderr)
+    logger.debug("Current working directory: %s", Path(".").absolute())
+    logger.debug("Looking for environment files: %s", env_files)
 
     for env_file in env_files:
         env_path = Path(".") / env_file
-        print(f"Checking {env_path.absolute()}", file=sys.stderr)
+        logger.debug("Checking %s", env_path.absolute())
         if env_path.exists():
-            print(f"Found {env_file}, loading variables...", file=sys.stderr)
+            logger.info("Found %s, loading variables...", env_file)
             load_dotenv(dotenv_path=env_path)
             env_loaded = True
-            print(f"Loaded environment variables from {env_file}", file=sys.stderr)
-            # Print loaded keys (but not values for security)
+            logger.info("Loaded environment variables from %s", env_file)
+            # Log loaded keys (but not values for security)
             with open(env_path) as f:
                 keys = [line.split("=")[0].strip() for line in f if "=" in line and not line.startswith("#")]
-                print(f"Keys loaded from {env_file}: {keys}", file=sys.stderr)
+                logger.debug("Keys loaded from %s: %s", env_file, keys)
 
     if not env_loaded:
-        print("Warning: No .env files found. Using system environment variables only.", file=sys.stderr)
-        print("Available system environment variables:", list(os.environ.keys()), file=sys.stderr)
+        logger.warning("No .env files found. Using system environment variables only.")
+        logger.debug("Available system environment variables: %s", list(os.environ.keys()))
 
 
 # Load environment variables at module import
@@ -71,46 +75,70 @@ def encode_image_file(image_path: str) -> tuple[str, str]:
 
 
 def create_llm_client(provider="openai"):
-    if provider == "openai":
-        api_key = os.getenv("OPENAI_API_KEY")
+    """Create an LLM client for the specified provider."""
+
+    provider_configs = {
+        "openai": {
+            "env_key": "OPENAI_API_KEY",
+            "client_class": OpenAI,
+            "kwargs": lambda key: {"api_key": key},
+        },
+        "azure": {
+            "env_key": "AZURE_OPENAI_API_KEY",
+            "client_class": AzureOpenAI,
+            "kwargs": lambda key: {
+                "api_key": key,
+                "api_version": "2024-08-01-preview",
+                "azure_endpoint": "https://msopenai.openai.azure.com",
+            },
+        },
+        "deepseek": {
+            "env_key": "DEEPSEEK_API_KEY",
+            "client_class": OpenAI,
+            "kwargs": lambda key: {"api_key": key, "base_url": "https://api.deepseek.com/v1"},
+        },
+        "siliconflow": {
+            "env_key": "SILICONFLOW_API_KEY",
+            "client_class": OpenAI,
+            "kwargs": lambda key: {"api_key": key, "base_url": "https://api.siliconflow.cn/v1"},
+        },
+        "anthropic": {
+            "env_key": "ANTHROPIC_API_KEY",
+            "client_class": Anthropic,
+            "kwargs": lambda key: {"api_key": key},
+        },
+        "gemini": {
+            "env_key": "GOOGLE_API_KEY",
+            "client_class": None,  # Special case
+            "kwargs": lambda key: {"api_key": key},
+        },
+        "local": {
+            "env_key": None,  # No API key required
+            "client_class": OpenAI,
+            "kwargs": lambda key: {"base_url": "http://192.168.180.137:8006/v1", "api_key": "not-needed"},
+        },
+    }
+
+    if provider not in provider_configs:
+        raise ValueError(f"Unsupported provider: {provider}")
+
+    config = provider_configs[provider]
+
+    # Get API key if required
+    if config["env_key"]:
+        api_key = os.getenv(config["env_key"])
         if not api_key:
-            raise ValueError("OPENAI_API_KEY not found in environment variables")
-        return OpenAI(api_key=api_key)
-    elif provider == "azure":
-        api_key = os.getenv("AZURE_OPENAI_API_KEY")
-        if not api_key:
-            raise ValueError("AZURE_OPENAI_API_KEY not found in environment variables")
-        return AzureOpenAI(
-            api_key=api_key, api_version="2024-08-01-preview", azure_endpoint="https://msopenai.openai.azure.com"
-        )
-    elif provider == "deepseek":
-        api_key = os.getenv("DEEPSEEK_API_KEY")
-        if not api_key:
-            raise ValueError("DEEPSEEK_API_KEY not found in environment variables")
-        return OpenAI(
-            api_key=api_key,
-            base_url="https://api.deepseek.com/v1",
-        )
-    elif provider == "siliconflow":
-        api_key = os.getenv("SILICONFLOW_API_KEY")
-        if not api_key:
-            raise ValueError("SILICONFLOW_API_KEY not found in environment variables")
-        return OpenAI(api_key=api_key, base_url="https://api.siliconflow.cn/v1")
-    elif provider == "anthropic":
-        api_key = os.getenv("ANTHROPIC_API_KEY")
-        if not api_key:
-            raise ValueError("ANTHROPIC_API_KEY not found in environment variables")
-        return Anthropic(api_key=api_key)
-    elif provider == "gemini":
-        api_key = os.getenv("GOOGLE_API_KEY")
-        if not api_key:
-            raise ValueError("GOOGLE_API_KEY not found in environment variables")
+            raise ValueError(f"{config['env_key']} not found in environment variables")
+    else:
+        api_key = None
+
+    # Special case for Gemini
+    if provider == "gemini":
         genai.configure(api_key=api_key)
         return genai
-    elif provider == "local":
-        return OpenAI(base_url="http://192.168.180.137:8006/v1", api_key="not-needed")
-    else:
-        raise ValueError(f"Unsupported provider: {provider}")
+
+    # Create and return client
+    return config["client_class"](**config["kwargs"](api_key))
 
 
 def query_llm(
@@ -132,84 +160,83 @@ def query_llm(
     if client is None:
         client = create_llm_client(provider)
 
+    # Default models per provider
+    default_models = {
+        "openai": "gpt-4o",
+        "azure": os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT", "gpt-4o-ms"),
+        "deepseek": "deepseek-chat",
+        "siliconflow": "deepseek-ai/DeepSeek-R1",
+        "anthropic": "claude-3-7-sonnet-20250219",
+        "gemini": "gemini-2.0-flash-exp",
+        "local": "Qwen/Qwen2.5-32B-Instruct-AWQ",
+    }
+
+    model = model or default_models.get(provider, "gpt-4o")
+
     try:
-        # Set default model
-        if model is None:
-            if provider == "openai":
-                model = "gpt-4o"
-            elif provider == "azure":
-                # Get from env with fallback
-                model = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT", "gpt-4o-ms")
-            elif provider == "deepseek":
-                model = "deepseek-chat"
-            elif provider == "siliconflow":
-                model = "deepseek-ai/DeepSeek-R1"
-            elif provider == "anthropic":
-                model = "claude-3-7-sonnet-20250219"
-            elif provider == "gemini":
-                model = "gemini-2.0-flash-exp"
-            elif provider == "local":
-                model = "Qwen/Qwen2.5-32B-Instruct-AWQ"
-
+        # OpenAI-compatible providers (use chat completions API)
         if provider in ["openai", "local", "deepseek", "azure", "siliconflow"]:
-            messages = [{"role": "user", "content": []}]
-
-            # Add text content
-            messages[0]["content"].append({"type": "text", "text": prompt})
-
-            # Add image content if provided
-            if image_path:
-                if provider == "openai":
-                    encoded_image, mime_type = encode_image_file(image_path)
-                    messages[0]["content"] = [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded_image}"}},
-                    ]
-
-            kwargs = {
-                "model": model,
-                "messages": messages,
-                "temperature": 0.7,
-            }
-
-            # Add o1-specific parameters
-            if model == "o1":
-                kwargs["response_format"] = {"type": "text"}
-                kwargs["reasoning_effort"] = "low"
-                del kwargs["temperature"]
-
-            response = client.chat.completions.create(**kwargs)
-            return response.choices[0].message.content
-
+            return _query_openai_compatible(client, model, prompt, image_path, provider)
         elif provider == "anthropic":
-            messages = [{"role": "user", "content": []}]
-
-            # Add text content
-            messages[0]["content"].append({"type": "text", "text": prompt})
-
-            # Add image content if provided
-            if image_path:
-                encoded_image, mime_type = encode_image_file(image_path)
-                messages[0]["content"].append(
-                    {"type": "image", "source": {"type": "base64", "media_type": mime_type, "data": encoded_image}}
-                )
-
-            response = client.messages.create(model=model, max_tokens=1000, messages=messages)
-            return response.content[0].text
-
+            return _query_anthropic(client, model, prompt, image_path)
         elif provider == "gemini":
-            model = client.GenerativeModel(model)
-            if image_path:
-                file = genai.upload_file(image_path, mime_type="image/png")
-                chat_session = model.start_chat(history=[{"role": "user", "parts": [file, prompt]}])
-            else:
-                chat_session = model.start_chat(history=[{"role": "user", "parts": [prompt]}])
-            response = chat_session.send_message(prompt)
-            return response.text
+            return _query_gemini(client, model, prompt, image_path)
+        else:
+            raise ValueError(f"Unsupported provider: {provider}")
 
     except Exception as e:
-        print(f"Error querying LLM: {e}", file=sys.stderr)
+        logger.error("Error querying LLM: %s", e, exc_info=True)
         return None
+
+
+def _query_openai_compatible(client, model: str, prompt: str, image_path: Optional[str], provider: str) -> str:
+    """Query OpenAI-compatible APIs (OpenAI, Azure, DeepSeek, SiliconFlow, Local)."""
+    messages = [{"role": "user", "content": [{"type": "text", "text": prompt}]}]
+
+    # Add image content if provided (only OpenAI supports vision currently)
+    if image_path and provider == "openai":
+        encoded_image, mime_type = encode_image_file(image_path)
+        messages[0]["content"].append(
+            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded_image}"}}
+        )
+
+    kwargs = {"model": model, "messages": messages, "temperature": 0.7}
+
+    # Special handling for o1 models
+    if model == "o1":
+        kwargs["response_format"] = {"type": "text"}
+        kwargs["reasoning_effort"] = "low"
+        del kwargs["temperature"]
+
+    response = client.chat.completions.create(**kwargs)
+    return response.choices[0].message.content
+
+
+def _query_anthropic(client, model: str, prompt: str, image_path: Optional[str]) -> str:
+    """Query Anthropic Claude API."""
+    content = [{"type": "text", "text": prompt}]
+
+    # Add image content if provided
+    if image_path:
+        encoded_image, mime_type = encode_image_file(image_path)
+        content.append({"type": "image", "source": {"type": "base64", "media_type": mime_type, "data": encoded_image}})
+
+    response = client.messages.create(model=model, max_tokens=1000, messages=[{"role": "user", "content": content}])
+    return response.content[0].text
+
+
+def _query_gemini(client, model_name: str, prompt: str, image_path: Optional[str]) -> str:
+    """Query Google Gemini API."""
+    model = client.GenerativeModel(model_name)
+
+    if image_path:
+        file = genai.upload_file(image_path, mime_type="image/png")
+        chat_session = model.start_chat(history=[{"role": "user", "parts": [file, prompt]}])
+    else:
+        chat_session = model.start_chat(history=[{"role": "user", "parts": [prompt]}])
+
+    response = chat_session.send_message(prompt)
+    return response.text
 
 
 def main():
@@ -243,9 +270,10 @@ def main():
     client = create_llm_client(args.provider)
     response = query_llm(args.prompt, client, model=args.model, provider=args.provider, image_path=args.image)
     if response:
-        print(response)
+        print(response)  # Output to stdout for CLI usage
     else:
-        print("Failed to get response from LLM")
+        logger.error("Failed to get response from LLM")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

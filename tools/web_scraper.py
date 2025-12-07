@@ -59,36 +59,43 @@ def parse_html(html_content: Optional[str]) -> str:
             if should_skip_element(elem):
                 return
 
-            # Handle text content
+            # Process element's direct text content
             if hasattr(elem, "text") and elem.text:
-                text = elem.text.strip()
-                if text and text not in seen_texts:
-                    # Check if this is an anchor tag
-                    if elem.tag == "{http://www.w3.org/1999/xhtml}a":
-                        href = None
-                        for attr, value in elem.items():
-                            if attr.endswith("href"):
-                                href = value
-                                break
-                        if href and not href.startswith(("#", "javascript:")):
-                            # Format as markdown link
-                            link_text = f"[{text}]({href})"
-                            result.append("  " * depth + link_text)
-                            seen_texts.add(text)
-                    else:
-                        result.append("  " * depth + text)
-                        seen_texts.add(text)
+                _add_text_content(elem, elem.text.strip(), depth)
 
             # Process children
             for child in elem:
                 process_element(child, depth + 1)
 
-            # Handle tail text
+            # Process tail text (text after closing tag)
             if hasattr(elem, "tail") and elem.tail:
-                tail = elem.tail.strip()
-                if tail and tail not in seen_texts:
-                    result.append("  " * depth + tail)
-                    seen_texts.add(tail)
+                _add_plain_text(elem.tail.strip(), depth)
+
+        def _add_text_content(elem, text: str, depth: int):
+            """Add text content, formatting links as markdown if applicable."""
+            if not text or text in seen_texts:
+                return
+
+            # Check if this is an anchor tag with a valid href
+            if elem.tag == "{http://www.w3.org/1999/xhtml}a":
+                href = _get_href(elem)
+                if href and not href.startswith(("#", "javascript:")):
+                    result.append("  " * depth + f"[{text}]({href})")
+                    seen_texts.add(text)
+                    return
+
+            # Add as plain text
+            _add_plain_text(text, depth)
+
+        def _add_plain_text(text: str, depth: int):
+            """Add plain text with indentation."""
+            if text and text not in seen_texts:
+                result.append("  " * depth + text)
+                seen_texts.add(text)
+
+        def _get_href(elem) -> Optional[str]:
+            """Extract href attribute from an element."""
+            return next((value for attr, value in elem.items() if attr.endswith("href")), None)
 
         # Start processing from the body tag
         body = document.find(".//{http://www.w3.org/1999/xhtml}body")
