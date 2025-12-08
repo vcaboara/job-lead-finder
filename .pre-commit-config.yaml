@@ -39,23 +39,23 @@ repos:
     hooks:
       - id: branch-protection
         name: branch-protection
-        entry: powershell
+        entry: python
         args:
-          - -Command
+          - -c
           - |
-            $protected_branches = @('main', 'master')
-            $current_branch = git symbolic-ref HEAD
-            $current_branch = $current_branch -replace 'refs/heads/', ''
-            if ($protected_branches -contains $current_branch) {
-                Write-Host ""
-                Write-Host "❌ ERROR: Direct pushes to '$current_branch' are not allowed!" -ForegroundColor Red
-                Write-Host ""
-                Write-Host "Please use feature branches and Pull Requests." -ForegroundColor Yellow
-                Write-Host "See docs/VERSIONING.md for the workflow." -ForegroundColor Yellow
-                Write-Host ""
-                exit 1
-            }
-            exit 0
+            import sys
+            import subprocess
+            protected_branches = ['main', 'master']
+            current_branch = subprocess.check_output(['git', 'symbolic-ref', 'HEAD'], text=True).strip()
+            current_branch = current_branch.replace('refs/heads/', '')
+            if current_branch in protected_branches:
+                print("")
+                print(f"❌ ERROR: Direct pushes to '{current_branch}' are not allowed!")
+                print("")
+                print("Please use feature branches and Pull Requests.")
+                print("See docs/VERSIONING.md for the workflow.")
+                print("")
+                sys.exit(1)
         language: system
         pass_filenames: false
         stages: [pre-push]
