@@ -49,6 +49,10 @@ Thumbs.db
 .rulebook-ai/
 .github/copilot-instructions.md
 
+# Vibe services (cloned repos)
+vibe-check-mcp/
+vibe-kanban/
+
 # Generated debug files
 logs/*.txt
 logs/*.log

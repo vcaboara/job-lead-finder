@@ -76,6 +76,57 @@ After PR #47 merges, complete the Memory Bank documentation:
 
 ## Future Enhancements (Not for this PR)
 
+### AI/ML Infrastructure & Automation
+
+- [ ] **Email Server Integration for Aggregator Automation**
+  - Setup mail server to receive and forward aggregator emails
+  - Auto-evaluation of job postings from emails
+  - Automatic resume generation tailored to job posting
+  - Automatic cover letter generation
+  - Extract and validate direct application links
+  - **Priority**: High - Enables end-to-end automation
+
+- [ ] **Learning from Job Suggestions**
+  - Track which suggested jobs user applies to / is interested in
+  - Build preference model from user feedback
+  - Improve job matching algorithm based on historical data
+  - Store acceptance/rejection patterns
+  - **Priority**: Medium - Improves relevance over time
+
+- [ ] **Provider-Agnostic AI Evaluation Framework**
+  - Abstract AI provider interface for resume evaluation
+  - Support multiple LLM backends (OpenAI, Anthropic, Gemini, Local, etc.)
+  - Configurable provider selection per task type
+  - Fallback provider chain for reliability
+  - **Priority**: High - Reduces vendor lock-in
+
+- [ ] **AI Profile System**
+  - Create specialized AI profiles for different tasks:
+    - Resume evaluation profile (critical, detailed analysis)
+    - Resume generation profile (creative, marketing-focused)
+    - Cover letter profile (persuasive, personalized)
+    - Job matching profile (analytical, quick decisions)
+  - Each profile has custom system instructions and parameters
+  - **Priority**: Medium - Optimizes AI performance per task
+
+- [ ] **Small Language Model Integration**
+  - Identify simple tasks suitable for small LMs (classification, extraction)
+  - Integrate efficient small models for:
+    - Job title classification
+    - Skills extraction from job descriptions
+    - Basic text summarization
+    - Duplicate detection
+  - Cost-performance optimization: use small LMs where possible
+  - **Priority**: Medium - Reduces API costs
+
+- [ ] **Tech Demo Portfolio Generator**
+  - For tech job seekers: auto-generate project ideas in their domain
+  - Create GitHub repo templates with starter code
+  - Generate README with project description and setup
+  - Suggest tech stack based on job requirements
+  - Link demos to resume/portfolio
+  - **Priority**: Low - Nice-to-have for technical roles
+
 ### Developer Experience
 - [ ] Cross-platform setup utility (`setup_dev.py`)
   - Automated virtual environment creation
