@@ -59,12 +59,14 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
-      - id: pytest
-        name: pytest
-        entry: python -m pytest
-        language: system
-        pass_filenames: false
-        types: [python]
-        files: ^(src/|tests/)
-        args: [tests/, -v, --tb=short, -m, "not slow"]
-        stages: [pre-commit]
+      # pytest disabled in pre-commit for speed - run manually or in CI
+      # Run with: pre-commit run pytest --all-files
+      # - id: pytest
+      #   name: pytest
+      #   entry: python -m pytest
+      #   language: system
+      #   pass_filenames: false
+      #   types: [python]
+      #   files: ^(src/|tests/)
+      #   args: [tests/, -v, --tb=short, -m, "not slow"]
+      #   stages: [manual]

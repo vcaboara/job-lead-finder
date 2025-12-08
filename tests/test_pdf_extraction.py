@@ -33,7 +33,7 @@ Python, FastAPI, Django, Docker, Jenkins, PostgreSQL, Redis, Git
     # Upload as PDF
     pdf_content = create_test_pdf(resume_text)
     files = {"file": ("resume.pdf", BytesIO(pdf_content), "application/pdf")}
-    resp = client.post("/api/upload/resume", files=files)
+    resp = client.post("/api/resume/upload", files=files)
 
     assert resp.status_code == 200
     data = resp.json()
@@ -74,14 +74,14 @@ SKILLS
 
     # Upload text resume
     files_txt = {"file": ("resume.txt", BytesIO(resume_text.encode()), "text/plain")}
-    resp_upload_txt = client.post("/api/upload/resume", files=files_txt)
+    resp_upload_txt = client.post("/api/resume/upload", files=files_txt)
     assert resp_upload_txt.status_code == 200
     txt_resume = resp_upload_txt.json()["resume"]
 
     # Upload same content as PDF
     pdf_content = create_test_pdf(resume_text)
     files_pdf = {"file": ("resume.pdf", BytesIO(pdf_content), "application/pdf")}
-    resp_upload_pdf = client.post("/api/upload/resume", files=files_pdf)
+    resp_upload_pdf = client.post("/api/resume/upload", files=files_pdf)
     assert resp_upload_pdf.status_code == 200
     pdf_resume = resp_upload_pdf.json()["resume"]
 
