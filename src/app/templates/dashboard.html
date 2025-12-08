@@ -1,11 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Lead Finder - Dashboard</title>
+    <title>Dashboard - JobFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
     <style>
+        :root {
+            --font-sans: 'DM Sans', system-ui, sans-serif;
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+
+            --background: 210 20% 98%;
+            --foreground: 222 47% 11%;
+            --card: 0 0% 100%;
+            --primary: 217 91% 60%;
+            --accent: 172 66% 50%;
+            --muted: 210 40% 96%;
+            --border: 214 32% 91%;
+        }
+
+        .dark {
+            --background: 222 47% 6%;
+            --foreground: 210 40% 98%;
+            --card: 222 47% 9%;
+            --primary: 217 91% 60%;
+            --accent: 172 66% 50%;
+            --muted: 217 33% 17%;
+            --border: 217 33% 17%;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,11 +39,11 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            padding: 20px;
+            font-family: var(--font-sans);
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
             min-height: 100vh;
+            padding: 2rem;
         }
 
         .container {
@@ -26,34 +52,57 @@
         }
 
         header {
-            text-align: center;
-            color: white;
-            margin-bottom: 40px;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
         h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            font-family: var(--font-display);
+            font-size: 2rem;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .subtitle {
-            font-size: 1.2em;
-            opacity: 0.9;
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            padding: 0.5rem 1rem;
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.5rem;
+            text-decoration: none;
+            color: hsl(var(--foreground));
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: hsl(var(--primary));
+            color: white;
+            transform: translateY(-2px);
         }
 
         .status-bar {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 30px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
         }
 
         .status-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
+            gap: 1.5rem;
         }
 
         .status-item {
@@ -61,147 +110,139 @@
         }
 
         .status-label {
-            font-size: 0.9em;
-            color: #666;
-            margin-bottom: 5px;
+            font-size: 0.875rem;
+            color: hsl(var(--foreground) / 0.6);
+            margin-bottom: 0.5rem;
         }
 
         .status-value {
-            font-size: 1.8em;
-            font-weight: bold;
-            color: #667eea;
+            font-size: 1.875rem;
+            font-weight: 700;
+            font-family: var(--font-display);
+            color: hsl(var(--primary));
         }
 
-        .status-value.online {
-            color: #10b981;
-        }
-
-        .status-value.offline {
-            color: #ef4444;
-        }
+        .status-value.online { color: hsl(142, 76%, 36%); }
+        .status-value.offline { color: hsl(0, 84%, 60%); }
 
         .services-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
         }
 
         .service-card {
-            background: white;
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            padding: 1.5rem;
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .service-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px hsl(var(--primary) / 0.1);
         }
 
         .service-header {
             display: flex;
             align-items: center;
-            margin-bottom: 15px;
+            margin-bottom: 1rem;
         }
 
         .service-icon {
             font-size: 2em;
-            margin-right: 15px;
+            margin-right: 1rem;
         }
 
         .service-title {
-            font-size: 1.3em;
-            font-weight: bold;
-            color: #333;
+            font-size: 1.25rem;
+            font-weight: 600;
+            font-family: var(--font-display);
         }
 
         .service-description {
-            color: #666;
-            margin-bottom: 15px;
+            color: hsl(var(--foreground) / 0.7);
+            margin-bottom: 1rem;
             line-height: 1.5;
         }
 
         .service-status {
             display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
             font-weight: 600;
         }
 
         .service-status.running {
-            background: #d1fae5;
-            color: #065f46;
+            background: hsl(142, 76%, 36% / 0.1);
+            color: hsl(142, 76%, 36%);
         }
 
         .service-status.stopped {
-            background: #fee2e2;
-            color: #991b1b;
+            background: hsl(0, 84%, 60% / 0.1);
+            color: hsl(0, 84%, 60%);
         }
 
         .service-link {
             display: inline-block;
-            margin-top: 10px;
-            padding: 8px 16px;
-            background: #667eea;
+            margin-top: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
             color: white;
             text-decoration: none;
-            border-radius: 5px;
+            border-radius: 0.5rem;
             font-weight: 500;
-            transition: background 0.2s;
+            transition: transform 0.2s;
         }
 
         .service-link:hover {
-            background: #5568d3;
+            transform: translateY(-2px);
         }
 
         .quick-actions {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
-            padding: 25px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            padding: 1.5rem;
         }
 
         .quick-actions h2 {
-            margin-bottom: 20px;
-            color: #333;
+            font-family: var(--font-display);
+            margin-bottom: 1.5rem;
         }
 
         .action-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 15px;
+            gap: 1rem;
         }
 
         .action-btn {
-            padding: 15px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 1rem 1.25rem;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
             color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 1em;
+            border-radius: 0.5rem;
+            font-size: 1rem;
             font-weight: 600;
+            font-family: var(--font-sans);
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s;
             text-align: left;
         }
 
         .action-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-        }
-
-        .action-btn-secondary {
-            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
         }
 
         .footer {
             text-align: center;
-            color: white;
-            margin-top: 40px;
-            opacity: 0.8;
+            color: hsl(var(--foreground) / 0.6);
+            margin-top: 2rem;
+            font-size: 0.875rem;
         }
     </style>
 </head>
@@ -209,8 +250,11 @@
 <body>
     <div class="container">
         <header>
-            <h1>🚀 Job Lead Finder</h1>
-            <p class="subtitle">AI-Powered Job Search & Lead Management</p>
+            <h1>🚀 JobFlow Dashboard</h1>
+            <div class="nav-links">
+                <a href="/" class="nav-link">← Job Search</a>
+                <a href="/visual-kanban" class="nav-link">📋 Kanban Board</a>
+            </div>
         </header>
 
         <div class="status-bar">
@@ -244,7 +288,7 @@
                     Main web interface for searching jobs, managing leads, and tracking applications.
                 </div>
                 <span class="service-status running" id="ui-status">Checking...</span>
-                <a href="http://localhost:8000" class="service-link" target="_blank">Open UI →</a>
+                <a href="/" class="service-link">Open UI →</a>
             </div>
 
             <div class="service-card">
@@ -292,7 +336,7 @@
                     Human-friendly visual Kanban board to observe autonomous AI progress.
                 </div>
                 <span class="service-status running">Local</span>
-                <a href="./kanban.html" class="service-link" target="_blank">View Board →</a>
+                <a href="/visual-kanban" class="service-link">View Board →</a>
             </div>
 
             <div class="service-card">
@@ -313,22 +357,14 @@
                 <button class="action-btn" onclick="runCommand('python scripts/autonomous_task_executor.py')">
                     📋 Generate Execution Plan
                 </button>
-                <button class="action-btn action-btn-secondary"
-                    onclick="runCommand('python scripts/autonomous_task_executor.py --execute')">
+                <button class="action-btn" onclick="runCommand('python scripts/autonomous_task_executor.py --execute')">
                     🚀 Execute Tasks (Live)
                 </button>
                 <button class="action-btn" onclick="runCommand('python scripts/init_memory_bank.py')">
                     📁 Initialize Memory Bank
                 </button>
-                <button class="action-btn action-btn-secondary" onclick="runCommand('docker compose ps')">
+                <button class="action-btn" onclick="runCommand('docker compose ps')">
                     🐳 Check Container Status
-                </button>
-                <button class="action-btn" onclick="window.open('http://localhost:9000/api/metrics', '_blank')">
-                    📊 View AI Metrics (JSON)
-                </button>
-                <button class="action-btn action-btn-secondary"
-                    onclick="window.open('http://localhost:3001/api/tasks', '_blank')">
-                    📝 View Kanban Tasks (JSON)
                 </button>
             </div>
         </div>
@@ -348,10 +384,7 @@
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 2000);
-                const response = await fetch(url, {
-                    signal: controller.signal,
-                    mode: 'cors'
-                });
+                const response = await fetch(url, { signal: controller.signal, mode: 'cors' });
                 clearTimeout(timeoutId);
                 document.getElementById(statusElementId).textContent = 'Running';
                 document.getElementById(statusElementId).className = 'service-status running';
@@ -365,15 +398,10 @@
             try {
                 const response = await fetch('http://localhost:9000/api/metrics');
                 const data = await response.json();
-
-                const copilotRemaining = data.copilot?.remaining || 0;
-                const geminiRemaining = data.gemini?.remaining || 0;
-
-                document.getElementById('copilot-quota').textContent = `${copilotRemaining}/1500`;
-                document.getElementById('gemini-quota').textContent = `${geminiRemaining}/20`;
+                document.getElementById('copilot-quota').textContent = `${data.copilot?.remaining || 0}/1500`;
+                document.getElementById('gemini-quota').textContent = `${data.gemini?.remaining || 0}/20`;
                 document.getElementById('container-status').textContent = '6/6';
                 document.getElementById('container-status').className = 'status-value online';
-
             } catch (error) {
                 document.getElementById('copilot-quota').textContent = 'N/A';
                 document.getElementById('gemini-quota').textContent = 'N/A';
@@ -386,8 +414,7 @@
             try {
                 const response = await fetch('http://localhost:3001/api/tasks');
                 const tasks = await response.json();
-                const activeTasks = Array.isArray(tasks) ?
-                    tasks.filter(t => t.status === 'in-progress' || t.status === 'todo').length : 0;
+                const activeTasks = Array.isArray(tasks) ? tasks.filter(t => t.status === 'in-progress' || t.status === 'todo').length : 0;
                 document.getElementById('active-tasks').textContent = activeTasks;
             } catch (error) {
                 document.getElementById('active-tasks').textContent = '0';
@@ -395,8 +422,7 @@
         }
 
         function updateTimestamp() {
-            const now = new Date();
-            document.getElementById('last-update').textContent = now.toLocaleString();
+            document.getElementById('last-update').textContent = new Date().toLocaleString();
         }
 
         async function refreshAll() {
@@ -413,5 +439,4 @@
         setInterval(refreshAll, 30000);
     </script>
 </body>
-
 </html>
