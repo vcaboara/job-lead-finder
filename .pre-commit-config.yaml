@@ -37,6 +37,28 @@ repos:
 
   - repo: local
     hooks:
+      - id: branch-protection
+        name: branch-protection
+        entry: python
+        args:
+          - -c
+          - |
+            import sys
+            import subprocess
+            protected_branches = ['main', 'master']
+            current_branch = subprocess.check_output(['git', 'symbolic-ref', 'HEAD'], text=True).strip()
+            current_branch = current_branch.replace('refs/heads/', '')
+            if current_branch in protected_branches:
+                print("")
+                print(f"❌ ERROR: Direct pushes to '{current_branch}' are not allowed!")
+                print("")
+                print("Please use feature branches and Pull Requests.")
+                print("See docs/VERSIONING.md for the workflow.")
+                print("")
+                sys.exit(1)
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
       - id: pytest
         name: pytest
         entry: python -m pytest

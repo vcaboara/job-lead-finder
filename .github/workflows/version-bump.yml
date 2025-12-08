@@ -1,0 +1,139 @@
+name: Version Bump
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  bump-version:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install toml
+
+      - name: Determine version bump type
+        id: bump-type
+        run: |
+          # Check PR labels for version bump type
+          PR_LABELS="${{ join(github.event.pull_request.labels.*.name, ',') }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          if [[ "$PR_LABELS" == *"major"* ]] || [[ "$PR_TITLE" == *"BREAKING CHANGE"* ]]; then
+            echo "type=major" >> $GITHUB_OUTPUT
+          elif [[ "$PR_LABELS" == *"minor"* ]] || [[ "$PR_TITLE" == feat:* ]] || [[ "$PR_TITLE" == *"feat("* ]]; then
+            echo "type=minor" >> $GITHUB_OUTPUT
+          else
+            echo "type=patch" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bump version
+        id: bump
+        run: |
+          python - <<'EOF'
+          import toml
+          import re
+          import os
+
+          # Read current version
+          with open('pyproject.toml', 'r') as f:
+              data = toml.load(f)
+
+          current_version = data['project']['version']
+          major, minor, patch = map(int, current_version.split('.'))
+
+          # Bump version based on type
+          bump_type = os.environ['BUMP_TYPE']
+          if bump_type == 'major':
+              major += 1
+              minor = 0
+              patch = 0
+          elif bump_type == 'minor':
+              minor += 1
+              patch = 0
+          else:
+              patch += 1
+
+          new_version = f"{major}.{minor}.{patch}"
+
+          # Update pyproject.toml
+          data['project']['version'] = new_version
+          with open('pyproject.toml', 'w') as f:
+              toml.dump(data, f)
+
+          # Output new version
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as f:
+              f.write(f"version={new_version}\n")
+              f.write(f"old_version={current_version}\n")
+
+          print(f"Version bumped: {current_version} -> {new_version}")
+          EOF
+        env:
+          BUMP_TYPE: ${{ steps.bump-type.outputs.type }}
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_AUTHOR="${{ github.event.pull_request.user.login }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+
+          cat > release_notes.md <<EOF
+          ## Release v${{ steps.bump.outputs.version }}
+
+          **PR #${PR_NUMBER}**: ${PR_TITLE}
+
+          Merged by: @${PR_AUTHOR}
+          PR: ${PR_URL}
+
+          ### Changes
+          ${{ github.event.pull_request.body }}
+          EOF
+
+          # Set multiline output
+          {
+            echo "notes<<EOF"
+            cat release_notes.md
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml
+          git commit -m "chore: bump version to v${{ steps.bump.outputs.version }}"
+          git push
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ steps.bump.outputs.version }}" -m "Release v${{ steps.bump.outputs.version }}: ${{ github.event.pull_request.title }}"
+          git push origin "v${{ steps.bump.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.bump.outputs.version }}
+          release_name: Release v${{ steps.bump.outputs.version }}
+          body: ${{ steps.release-notes.outputs.notes }}
+          draft: false
+          prerelease: false
