@@ -95,6 +95,18 @@ class ResourceMonitor:
         )
 
         monthly_limit = self.data["copilot"]["monthly_limit"]
+
+        # Validate that limit is positive
+        if monthly_limit <= 0:
+            logger.warning("Copilot monthly_limit is %d, should be positive", monthly_limit)
+            return {
+                "daily": daily_usage,
+                "monthly": monthly_usage,
+                "monthly_limit": monthly_limit,
+                "remaining": 0,
+                "percentage_used": 100.0 if monthly_usage > 0 else 0.0,
+            }
+
         remaining = monthly_limit - monthly_usage
 
         return {
@@ -102,7 +114,7 @@ class ResourceMonitor:
             "monthly": monthly_usage,
             "monthly_limit": monthly_limit,
             "remaining": remaining,
-            "percentage_used": (monthly_usage / monthly_limit) * 100 if monthly_limit > 0 else 0,
+            "percentage_used": (monthly_usage / monthly_limit) * 100,
         }
 
     def get_gemini_usage(self) -> Dict[str, int]:
@@ -110,13 +122,24 @@ class ResourceMonitor:
         today = datetime.now().strftime("%Y-%m-%d")
         daily_usage = self.data["gemini"]["daily"].get(today, 0)
         daily_limit = self.data["gemini"]["daily_limit"]
+
+        # Validate that limit is positive
+        if daily_limit <= 0:
+            logger.warning("Gemini daily_limit is %d, should be positive", daily_limit)
+            return {
+                "daily": daily_usage,
+                "daily_limit": daily_limit,
+                "remaining": 0,
+                "percentage_used": 100.0 if daily_usage > 0 else 0.0,
+            }
+
         remaining = daily_limit - daily_usage
 
         return {
             "daily": daily_usage,
             "daily_limit": daily_limit,
             "remaining": remaining,
-            "percentage_used": (daily_usage / daily_limit) * 100 if daily_limit > 0 else 0,
+            "percentage_used": (daily_usage / daily_limit) * 100,
         }
 
     def check_ollama_status(self) -> Optional[Dict]:
@@ -210,7 +233,12 @@ class ResourceMonitor:
         gemini = self.get_gemini_usage()
 
         # Copilot recommendations
-        if copilot["percentage_used"] > 80:
+        if copilot["monthly_limit"] <= 0:
+            recommendations.append(
+                "⚠️  Copilot monthly_limit is invalid (set to 0 or negative). "
+                "Please update configuration with a positive limit."
+            )
+        elif copilot["percentage_used"] > 80:
             recommendations.append(
                 f"⚠️  Copilot usage at {copilot['percentage_used']:.0f}% "
                 f"({copilot['remaining']} requests remaining this month). "
@@ -222,7 +250,12 @@ class ResourceMonitor:
             )
 
         # Gemini recommendations
-        if gemini["percentage_used"] > 80:
+        if gemini["daily_limit"] <= 0:
+            recommendations.append(
+                "⚠️  Gemini daily_limit is invalid (set to 0 or negative). "
+                "Please update configuration with a positive limit."
+            )
+        elif gemini["percentage_used"] > 80:
             recommendations.append(
                 f"⚠️  Gemini quota at {gemini['percentage_used']:.0f}% "
                 f"({gemini['remaining']} requests remaining today). "

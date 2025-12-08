@@ -398,12 +398,24 @@ class AIResourceMonitor:
         )
 
         monthly_limit = 1500
+
+        # Validate that limit is positive (future-proofing if limit becomes configurable)
+        if monthly_limit <= 0:
+            logger.warning("Copilot monthly_limit is %d, should be positive", monthly_limit)
+            return {
+                "daily": daily_count,
+                "monthly": monthly_count,
+                "monthly_limit": monthly_limit,
+                "remaining": 0,
+                "percentage_used": 100.0 if monthly_count > 0 else 0.0,
+            }
+
         return {
             "daily": daily_count,
             "monthly": monthly_count,
             "monthly_limit": monthly_limit,
             "remaining": max(0, monthly_limit - monthly_count),
-            "percentage_used": (monthly_count / monthly_limit * 100) if monthly_limit > 0 else 0,
+            "percentage_used": (monthly_count / monthly_limit * 100),
         }
 
     def get_gemini_usage(self) -> Dict[str, float]:
@@ -416,11 +428,22 @@ class AIResourceMonitor:
         daily_count = sum(1 for entry in self.data.get("gemini", {}).get("daily", []) if entry["date"] == today)
 
         daily_limit = 20
+
+        # Validate that limit is positive (future-proofing if limit becomes configurable)
+        if daily_limit <= 0:
+            logger.warning("Gemini daily_limit is %d, should be positive", daily_limit)
+            return {
+                "daily": daily_count,
+                "daily_limit": daily_limit,
+                "remaining": 0,
+                "percentage_used": 100.0 if daily_count > 0 else 0.0,
+            }
+
         return {
             "daily": daily_count,
             "daily_limit": daily_limit,
             "remaining": max(0, daily_limit - daily_count),
-            "percentage_used": (daily_count / daily_limit * 100) if daily_limit > 0 else 0,
+            "percentage_used": (daily_count / daily_limit * 100),
         }
 
     def check_ollama_status(self) -> Optional[Dict]:
@@ -502,14 +525,18 @@ class AIResourceMonitor:
         recommendations = []
 
         copilot = self.get_copilot_usage()
-        if copilot["percentage_used"] > 80:
+        if copilot["monthly_limit"] <= 0:
+            recommendations.append("⚠️ Copilot monthly_limit is invalid. Please update configuration.")
+        elif copilot["percentage_used"] > 80:
             recommendations.append(
                 f"⚠️ Copilot usage at {copilot['percentage_used']:.0f}% "
                 f"({copilot['remaining']} requests remaining) - Consider using Gemini or Local LLM"
             )
 
         gemini = self.get_gemini_usage()
-        if gemini["percentage_used"] > 80:
+        if gemini["daily_limit"] <= 0:
+            recommendations.append("⚠️ Gemini daily_limit is invalid. Please update configuration.")
+        elif gemini["percentage_used"] > 80:
             recommendations.append(
                 f"⚠️ Gemini API usage at {gemini['percentage_used']:.0f}% "
                 f"({gemini['remaining']} requests remaining) - Switch to Local LLM or Copilot"
