@@ -1,7 +1,7 @@
-# Pytest Quick Reference & Aliases
-# Run these commands for different test scenarios
+# Pytest Quick Reference & Commands
+# All pytest configuration is now in pyproject.toml under [tool.pytest.ini_options]
 
-[aliases]
+[command-aliases]
 # Fast feedback - Run only changed tests
 fast = "pytest --picked --maxfail=1 --ff"
 
@@ -23,7 +23,7 @@ profile = "pytest --durations=20 --durations-min=1.0"
 # Watch mode - Rerun on file changes (requires pytest-watch)
 watch = "ptw -- --maxfail=1 --ff"
 
-[commands]
+[quick-commands]
 # Quick test commands (copy-paste ready)
 # pytest --picked           # Only changed files (FASTEST - ~10-30s)
 # pytest -m unit           # Unit tests only (~30-60s)
@@ -31,3 +31,8 @@ watch = "ptw -- --maxfail=1 --ff"
 # pytest -m "not slow"     # Skip slow tests (DEFAULT - ~2min)
 # pytest                   # Full suite (~2.5min)
 # pytest --durations=20    # Profile slowest tests
+
+[notes]
+# Configuration has been consolidated into pyproject.toml
+# See [tool.pytest.ini_options] section in pyproject.toml for all settings
+# This file is just a reference for commonly used commands
