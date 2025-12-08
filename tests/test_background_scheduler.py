@@ -134,6 +134,7 @@ class TestSchedulerFunctions:
         with (
             patch("app.job_tracker.JobTracker") as mock_tracker_class,
             patch("app.link_finder.find_direct_link") as mock_find_link,
+            patch("asyncio.sleep"),  # Mock sleep to speed up test
         ):
             mock_tracker = MagicMock()
             mock_tracker.get_all_jobs.return_value = mock_jobs

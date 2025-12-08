@@ -129,13 +129,15 @@ class TestAutoDiscovery:
                         mock_tracker = MockTracker.return_value
                         mock_tracker.jobs = {}
 
-                        await scheduler.discover_jobs_from_resume()
+                        # Mock asyncio.sleep to speed up test
+                        with patch("asyncio.sleep"):
+                            await scheduler.discover_jobs_from_resume()
 
-                        # Should search for extracted queries
-                        assert mock_search.call_count == 2  # Two queries
+                            # Should search for extracted queries
+                            assert mock_search.call_count == 2  # Two queries
 
-                        # Should track high-scoring jobs only
-                        assert mock_tracker.track.call_count == 4  # 2 queries × 2 jobs each (score >= 60)
+                            # Should track high-scoring jobs only
+                            assert mock_tracker.track.call_count == 4  # 2 queries × 2 jobs each (score >= 60)
 
     def test_generate_job_id(self, scheduler):
         """Test job ID generation."""

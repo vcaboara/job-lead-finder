@@ -76,6 +76,15 @@ After PR #47 merges, complete the Memory Bank documentation:
 
 ## Future Enhancements (Not for this PR)
 
+### Developer Experience
+- [ ] Cross-platform setup utility (`setup_dev.py`)
+  - Automated virtual environment creation
+  - Dependency installation (dev, web, test, gemini)
+  - Pre-commit hooks setup (pre-commit + pre-push)
+  - .env file creation from template
+  - Git configuration verification
+  - Works on Windows (PowerShell/CMD) and Unix (bash)
+
 ### Resume Format Support
 - [ ] Support `.rtf` (Rich Text Format) - requires `striprtf` package
 - [ ] Support `.odt` (OpenDocument) - requires `odfpy` package
