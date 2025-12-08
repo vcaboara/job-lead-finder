@@ -7,6 +7,7 @@ scenarios without external network calls.
 import json
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.ui_server import app
@@ -14,9 +15,67 @@ from app.ui_server import app
 CONFIG_FILE = Path("config.json")
 
 
+# In-memory config storage for tests
+_test_config_data = {}
+
+
 def _write_config(data: dict):  # noqa: ANN001
-    with open(CONFIG_FILE, "w", encoding="utf-8") as fh:
-        json.dump(data, fh)
+    """Write config to in-memory storage instead of disk."""
+    _test_config_data["config"] = data
+
+
+@pytest.fixture(autouse=True)
+def mock_config_file_io(monkeypatch):
+    """Mock config.json file I/O to use in-memory storage."""
+    global _test_config_data
+    _test_config_data.clear()
+
+    # Initialize with empty config
+    _test_config_data["config"] = {}
+
+    def mock_exists(self):
+        return "config" in _test_config_data and _test_config_data["config"] is not None
+
+    # Mock open() to intercept config.json reads/writes
+    original_open = open
+
+    def mock_open_func(file, mode="r", *args, **kwargs):
+        # Convert Path to string for comparison
+        file_str = str(file)
+        if "config.json" in file_str:
+            if "r" in mode:
+                # Return in-memory config
+                from io import StringIO
+
+                config_str = json.dumps(_test_config_data.get("config", {}))
+                return StringIO(config_str)
+            elif "w" in mode:
+                # Capture writes to in-memory storage
+                from io import StringIO
+
+                buffer = StringIO()
+                original_write = buffer.write
+
+                def capture_write(content):
+                    result = original_write(content)
+                    # Store in memory
+                    try:
+                        _test_config_data["config"] = json.loads(buffer.getvalue())
+                    except (json.JSONDecodeError, KeyError):
+                        pass
+                    return result
+
+                buffer.write = capture_write
+                return buffer
+        return original_open(file, mode, *args, **kwargs)
+
+    # Patch Path.exists and open()
+    monkeypatch.setattr(Path, "exists", mock_exists)
+    monkeypatch.setattr("builtins.open", mock_open_func)
+
+    yield
+
+    _test_config_data.clear()
 
 
 def setup_function():  # noqa: D401
@@ -208,4 +267,5 @@ def test_search_filters_hidden_jobs(monkeypatch):
     assert "Job1" in titles
     assert "Job2 (will be hidden)" not in titles
     assert "Job3" in titles
-    assert len(data["leads"]) == 2  # Requested 3 but only 2 non-hidden available
+    # Requested 3 but only 2 non-hidden available
+    assert len(data["leads"]) == 2

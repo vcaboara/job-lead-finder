@@ -65,6 +65,5 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
-        files: ^(src/|tests/)
-        args: [tests/, -v, --tb=short, -m, "not slow"]
-        stages: [pre-commit]
+        args: [-v, --tb=short]
+        stages: [pre-push]

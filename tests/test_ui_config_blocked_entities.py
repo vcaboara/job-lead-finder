@@ -1,6 +1,8 @@
 """Tests for blocked entities configuration endpoints."""
 
+import json
 from pathlib import Path
+from unittest.mock import MagicMock, mock_open
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,27 +11,52 @@ CONFIG_FILE = Path("config.json")
 
 
 @pytest.fixture(autouse=True)
-def clean_config():
-    """Clean up config before and after each test to ensure isolation."""
-    # Cleanup before test - essential for test isolation
-    if CONFIG_FILE.exists():
-        CONFIG_FILE.unlink()
+def mock_config_file(monkeypatch):
+    """Mock config.json file I/O to prevent disk access and parallel test conflicts."""
+    # Mock config data storage (in-memory)
+    config_data = {}
 
-    # Verify it's really gone
-    assert not CONFIG_FILE.exists(), "Config file should be deleted before test"
+    def mock_exists():
+        return "config" in config_data
+
+    def mock_read():
+        return json.dumps(config_data.get("config", {}))
+
+    def mock_write(content):
+        config_data["config"] = json.loads(content)
+
+    def mock_unlink():
+        config_data.pop("config", None)
+
+    # Mock Path.exists()
+    mock_path = MagicMock()
+    mock_path.exists.side_effect = mock_exists
+    mock_path.unlink.side_effect = mock_unlink
+
+    # Mock open() for read/write
+    def mock_file_open(file, mode="r", *args, **kwargs):
+        if "r" in mode:
+            return mock_open(read_data=mock_read())(*args, **kwargs)
+        else:
+            m = mock_open()
+            original_write = m.return_value.write
+            m.return_value.write = lambda content: (mock_write(content), original_write(content))[1]
+            return m(*args, **kwargs)
+
+    monkeypatch.setattr("app.config_manager.CONFIG_FILE", mock_path)
+    monkeypatch.setattr("builtins.open", mock_file_open)
 
     yield
 
-    # Cleanup after test
-    if CONFIG_FILE.exists():
-        CONFIG_FILE.unlink()
+    # Cleanup in-memory config
+    config_data.clear()
 
 
 @pytest.fixture
-def client(clean_config):
+def client(mock_config_file):
     """Create a fresh test client for each test.
 
-    Depends on clean_config to ensure config is cleaned before client initialization.
+    Depends on mock_config_file to ensure config is mocked before client initialization.
     """
     # Import here to ensure fresh module state after config cleanup
     from app.ui_server import app
