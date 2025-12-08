@@ -119,6 +119,40 @@ def index():
         raise HTTPException(status_code=500, detail="UI template not found") from exc
 
 
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    """Serve the dashboard index page showing all services.
+
+    Returns:
+        HTMLResponse: Dashboard HTML page with service status and quick actions.
+
+    Raises:
+        HTTPException: 500 if template file cannot be read.
+    """
+    html_path = Path(__file__).parent / "templates" / "dashboard.html"
+    try:
+        return HTMLResponse(html_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Dashboard template not found") from exc
+
+
+@app.get("/visual-kanban", response_class=HTMLResponse)
+def visual_kanban():
+    """Serve the visual Kanban board for monitoring autonomous AI task progress.
+
+    Returns:
+        HTMLResponse: Visual Kanban board HTML page.
+
+    Raises:
+        HTTPException: 500 if template file cannot be read.
+    """
+    html_path = Path(__file__).parent / "templates" / "kanban.html"
+    try:
+        return HTMLResponse(html_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail="Kanban template not found") from exc
+
+
 @app.get("/health", response_model=HealthResponse)
 def health():
     api_key = os.getenv("GEMINI_API_KEY", "")
