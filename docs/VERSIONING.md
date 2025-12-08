@@ -51,11 +51,10 @@ The version bump type is determined by:
 3. **Merge PR** to main:
    - GitHub Action automatically:
      - Determines version bump type
-     - Updates `pyproject.toml`
-     - Creates git commit with version bump
-     - Creates git tag `vX.Y.Z`
-     - Pushes tag to GitHub
+     - Creates git tag `vX.Y.Z` pointing to the merge commit
      - Creates GitHub Release with notes
+
+**Note:** The version in `pyproject.toml` is updated in the tag commit, but not pushed to main (to avoid bypassing branch protection). The git tags are the source of truth for versioning.
 
 ## Manual Versioning
 

@@ -247,4 +247,4 @@ for company in result.companies:
 3. **Company Database** - Save discovered companies to SQLite
 4. **Notifications** - Alert when new companies are found
 
-See [COMPANY_DISCOVERY_PLAN.md](../../../docs/COMPANY_DISCOVERY_PLAN.md) for the full roadmap.
+See [COMPANY_DISCOVERY_PLAN.md](COMPANY_DISCOVERY_PLAN.md) for the full roadmap.
