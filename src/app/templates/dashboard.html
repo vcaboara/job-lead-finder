@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - JobFlow</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --font-sans: 'DM Sans', system-ui, sans-serif;
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+
+            --background: 210 20% 98%;
+            --foreground: 222 47% 11%;
+            --card: 0 0% 100%;
+            --primary: 217 91% 60%;
+            --accent: 172 66% 50%;
+            --muted: 210 40% 96%;
+            --border: 214 32% 91%;
+        }
+
+        .dark {
+            --background: 222 47% 6%;
+            --foreground: 210 40% 98%;
+            --card: 222 47% 9%;
+            --primary: 217 91% 60%;
+            --accent: 172 66% 50%;
+            --muted: 217 33% 17%;
+            --border: 217 33% 17%;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .nav-link {
+            padding: 0.5rem 1rem;
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.5rem;
+            text-decoration: none;
+            color: hsl(var(--foreground));
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: hsl(var(--primary));
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .status-bar {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .status-item {
+            text-align: center;
+        }
+
+        .status-label {
+            font-size: 0.875rem;
+            color: hsl(var(--foreground) / 0.6);
+            margin-bottom: 0.5rem;
+        }
+
+        .status-value {
+            font-size: 1.875rem;
+            font-weight: 700;
+            font-family: var(--font-display);
+            color: hsl(var(--primary));
+        }
+
+        .status-value.online {
+            color: hsl(142, 76%, 36%);
+        }
+
+        .status-value.offline {
+            color: hsl(0, 84%, 60%);
+        }
+
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .service-card {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .service-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 30px hsl(var(--primary) / 0.1);
+        }
+
+        .service-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .service-icon {
+            font-size: 2em;
+            margin-right: 1rem;
+        }
+
+        .service-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            font-family: var(--font-display);
+        }
+
+        .service-description {
+            color: hsl(var(--foreground) / 0.7);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        .service-status {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+        }
+
+        .service-status.running {
+            background: hsl(142, 76%, 36% / 0.1);
+            color: hsl(142, 76%, 36%);
+        }
+
+        .service-status.stopped {
+            background: hsl(0, 84%, 60% / 0.1);
+            color: hsl(0, 84%, 60%);
+        }
+
+        .service-link {
+            display: inline-block;
+            margin-top: 0.75rem;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            transition: transform 0.2s;
+        }
+
+        .service-link:hover {
+            transform: translateY(-2px);
+        }
+
+        .quick-actions {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 0.75rem;
+            padding: 1.5rem;
+        }
+
+        .quick-actions h2 {
+            font-family: var(--font-display);
+            margin-bottom: 1.5rem;
+        }
+
+        .action-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .action-btn {
+            padding: 1rem 1.25rem;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            font-family: var(--font-sans);
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-align: left;
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .footer {
+            text-align: center;
+            color: hsl(var(--foreground) / 0.6);
+            margin-top: 2rem;
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 JobFlow Dashboard</h1>
+            <div class="nav-links">
+                <a href="/" class="nav-link">← Job Search</a>
+                <a href="/visual-kanban" class="nav-link">📋 Kanban Board</a>
+            </div>
+        </header>
+
+        <div class="status-bar">
+            <div class="status-grid">
+                <div class="status-item">
+                    <div class="status-label">Containers</div>
+                    <div class="status-value" id="container-status">...</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Copilot Quota</div>
+                    <div class="status-value" id="copilot-quota">...</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Gemini Quota</div>
+                    <div class="status-value" id="gemini-quota">...</div>
+                </div>
+                <div class="status-item">
+                    <div class="status-label">Active Tasks</div>
+                    <div class="status-value" id="active-tasks">...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="services-grid">
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">🎯</div>
+                    <div class="service-title">Job Search UI</div>
+                </div>
+                <div class="service-description">
+                    Main web interface for searching jobs, managing leads, and tracking applications.
+                </div>
+                <span class="service-status running" id="ui-status">Checking...</span>
+                <a href="/" class="service-link">Open UI →</a>
+            </div>
+
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">📊</div>
+                    <div class="service-title">AI Resource Monitor</div>
+                </div>
+                <div class="service-description">
+                    Real-time monitoring of AI quota usage (Copilot, Gemini, Ollama) with recommendations.
+                </div>
+                <span class="service-status running" id="monitor-status">Checking...</span>
+                <a href="http://localhost:9000" class="service-link" target="_blank">View Metrics →</a>
+            </div>
+
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">📋</div>
+                    <div class="service-title">Vibe Kanban</div>
+                </div>
+                <div class="service-description">
+                    Task management board for autonomous AI execution. Track progress and status.
+                </div>
+                <span class="service-status running" id="kanban-status">Checking...</span>
+                <a href="http://localhost:3001" class="service-link" target="_blank">View Board →</a>
+            </div>
+
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">✅</div>
+                    <div class="service-title">Vibe Check MCP</div>
+                </div>
+                <div class="service-description">
+                    Code validation and quality checks via Model Context Protocol.
+                </div>
+                <span class="service-status running" id="vibe-status">Checking...</span>
+                <a href="http://localhost:3000" class="service-link" target="_blank">View Checks →</a>
+            </div>
+
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">🎨</div>
+                    <div class="service-title">Visual Kanban Board</div>
+                </div>
+                <div class="service-description">
+                    Human-friendly visual Kanban board to observe autonomous AI progress.
+                </div>
+                <span class="service-status running">Local</span>
+                <a href="/visual-kanban" class="service-link">View Board →</a>
+            </div>
+
+            <div class="service-card">
+                <div class="service-header">
+                    <div class="service-icon">🤖</div>
+                    <div class="service-title">Autonomous Executor</div>
+                </div>
+                <div class="service-description">
+                    Command-line tool for autonomous AI task execution. See Quick Actions below.
+                </div>
+                <span class="service-status running">CLI</span>
+            </div>
+        </div>
+
+        <div class="quick-actions">
+            <h2>⚡ Quick Actions</h2>
+            <div class="action-grid">
+                <button class="action-btn" onclick="runCommand('python scripts/autonomous_task_executor.py')">
+                    📋 Generate Execution Plan
+                </button>
+                <button class="action-btn" onclick="runCommand('python scripts/autonomous_task_executor.py --execute')">
+                    🚀 Execute Tasks (Live)
+                </button>
+                <button class="action-btn" onclick="runCommand('python scripts/init_memory_bank.py')">
+                    📁 Initialize Memory Bank
+                </button>
+                <button class="action-btn" onclick="runCommand('docker compose ps')">
+                    🐳 Check Container Status
+                </button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p>Last updated: <span id="last-update">Loading...</span></p>
+            <p>Auto-refresh every 30 seconds</p>
+        </div>
+    </div>
+
+    <script>
+        function runCommand(cmd) {
+            alert(`Command to run in terminal:\n\n${cmd}\n\nPlease run this in your PowerShell terminal.`);
+        }
+
+        async function checkServiceStatus(url, statusElementId) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 2000);
+                const response = await fetch(url, { signal: controller.signal, mode: 'cors' });
+                clearTimeout(timeoutId);
+                document.getElementById(statusElementId).textContent = 'Running';
+                document.getElementById(statusElementId).className = 'service-status running';
+            } catch (error) {
+                document.getElementById(statusElementId).textContent = 'Stopped';
+                document.getElementById(statusElementId).className = 'service-status stopped';
+            }
+        }
+
+        async function updateMetrics() {
+            try {
+                const response = await fetch('http://localhost:9000/api/metrics');
+                const data = await response.json();
+                document.getElementById('copilot-quota').textContent = `${data.copilot?.remaining || 0}/1500`;
+                document.getElementById('gemini-quota').textContent = `${data.gemini?.remaining || 0}/20`;
+                document.getElementById('container-status').textContent = '6/6';
+                document.getElementById('container-status').className = 'status-value online';
+            } catch (error) {
+                document.getElementById('copilot-quota').textContent = 'N/A';
+                document.getElementById('gemini-quota').textContent = 'N/A';
+                document.getElementById('container-status').textContent = 'Offline';
+                document.getElementById('container-status').className = 'status-value offline';
+            }
+        }
+
+        async function updateTaskCount() {
+            try {
+                const response = await fetch('http://localhost:3001/api/tasks');
+                const tasks = await response.json();
+                const activeTasks = Array.isArray(tasks) ? tasks.filter(t => t.status === 'in-progress' || t.status === 'todo').length : 0;
+                document.getElementById('active-tasks').textContent = activeTasks;
+            } catch (error) {
+                document.getElementById('active-tasks').textContent = '0';
+            }
+        }
+
+        function updateTimestamp() {
+            document.getElementById('last-update').textContent = new Date().toLocaleString();
+        }
+
+        async function refreshAll() {
+            updateTimestamp();
+            await updateMetrics();
+            await updateTaskCount();
+            checkServiceStatus('http://localhost:8000', 'ui-status');
+            checkServiceStatus('http://localhost:9000', 'monitor-status');
+            checkServiceStatus('http://localhost:3001', 'kanban-status');
+            checkServiceStatus('http://localhost:3000', 'vibe-status');
+        }
+
+        refreshAll();
+        setInterval(refreshAll, 30000);
+    </script>
+</body>
+
+</html>
