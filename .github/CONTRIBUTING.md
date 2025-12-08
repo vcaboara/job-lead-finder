@@ -4,6 +4,45 @@
 
 Follow these standards for all contributions to maintain code quality and project consistency.
 
+### 0. Branch Protection & PR Workflow
+
+**🔒 CRITICAL: Direct pushes to `main` are PROHIBITED**
+
+All changes must go through the Pull Request workflow:
+
+1. **Install Pre-commit Hooks** (one-time setup):
+   ```bash
+   pre-commit install --hook-type pre-commit --hook-type pre-push
+   ```
+
+2. **Create Feature Branch**:
+   ```bash
+   git checkout -b feature/your-feature-name
+   # or: fix/bug-description, docs/what-you-changed, refactor/what-you-refactored
+   ```
+
+3. **Make Changes & Commit**: Follow conventional commits (see section 1 below)
+
+4. **Push Branch**:
+   ```bash
+   git push -u origin feature/your-feature-name
+   ```
+
+5. **Create Pull Request**: On GitHub, create PR targeting `main`
+
+6. **Automated Versioning**: Upon PR merge, GitHub Actions automatically:
+   - Bumps version in `pyproject.toml` based on conventional commits
+   - Creates git tag with release notes
+   - Publishes GitHub release
+
+**Pre-commit hooks will:**
+- Run code formatting (black, isort)
+- Run linting (flake8)
+- Run fast tests (pytest)
+- **BLOCK direct pushes to main/master**
+
+See `docs/VERSIONING.md` for complete versioning workflow details.
+
 ### 1. Commit Standards
 
 **One feature per commit:**

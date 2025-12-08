@@ -37,6 +37,29 @@ repos:
 
   - repo: local
     hooks:
+      - id: branch-protection
+        name: branch-protection
+        entry: bash
+        args:
+          - -c
+          - |
+            protected_branches="main master"
+            current_branch=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
+            for branch in $protected_branches; do
+              if [ "$current_branch" = "$branch" ]; then
+                echo ""
+                echo "❌ ERROR: Direct pushes to '$branch' are not allowed!"
+                echo ""
+                echo "Please use feature branches and Pull Requests."
+                echo "See docs/VERSIONING.md for the workflow."
+                echo ""
+                exit 1
+              fi
+            done
+            exit 0
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
       - id: pytest
         name: pytest
         entry: python -m pytest
