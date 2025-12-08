@@ -24,6 +24,7 @@ def _track_job_helper(client, job):
     return track_response.json()
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_endpoint_returns_all_jobs(client, mock_search_response):
     """Test that tracked jobs endpoint returns all tracked jobs."""
     # Track multiple jobs
@@ -59,6 +60,7 @@ def test_tracked_jobs_endpoint_returns_all_jobs(client, mock_search_response):
     assert len(tracked["jobs"]) >= len(job_ids)
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_includes_metadata(client, mock_search_response):
     """Test that tracked jobs include all necessary metadata."""
     # Create and track a job
@@ -156,6 +158,7 @@ def test_filter_tracked_jobs_by_status(client, mock_search_response):
     assert interviewing_jobs[0]["job_id"] == job2_id
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_empty_when_none_tracked(client):
     """Test that tracked jobs endpoint returns empty when no jobs are tracked."""
     response = client.get("/api/jobs/tracked")
@@ -165,6 +168,7 @@ def test_tracked_jobs_empty_when_none_tracked(client):
     assert len(tracked["jobs"]) == 0
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_track_job_endpoint_creates_new_tracked_job(client):
     """Test that the /api/jobs/track endpoint creates a new tracked job."""
     job_data = {
