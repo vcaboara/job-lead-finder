@@ -23,16 +23,16 @@ When you commit code, the checker runs automatically and will:
 
 ### Common Replacements
 
-| Avoid | Use Instead | Context |
-|-------|-------------|---------|
-| whitelist | allowlist, passlist | Access control |
-| blacklist | denylist, blocklist | Access control |
-| master (database/server) | primary, leader | System architecture |
-| slave (database/server) | replica, secondary, follower | System architecture |
-| grandfathered | legacy status, exempted | Legacy systems |
-| man-hours | person-hours, work-hours | Time tracking |
-| sanity check | confidence check, verification | Testing |
-| dummy data | placeholder, sample, mock | Test data |
+| Avoid                    | Use Instead                    | Context             |
+| ------------------------ | ------------------------------ | ------------------- |
+| whitelist                | allowlist, passlist            | Access control      |
+| blacklist                | denylist, blocklist            | Access control      |
+| master (database/server) | primary, leader                | System architecture |
+| slave (database/server)  | replica, secondary, follower   | System architecture |
+| grandfathered            | legacy status, exempted        | Legacy systems      |
+| man-hours                | person-hours, work-hours       | Time tracking       |
+| sanity check             | confidence check, verification | Testing             |
+| dummy data               | placeholder, sample, mock      | Test data           |
 
 ### Legitimate Exceptions
 

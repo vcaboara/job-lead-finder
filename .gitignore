@@ -93,6 +93,14 @@ IMPLEMENTED_FEATURES_AND_TODO.txt
 IMPLEMENTED_FEATURES_AND_TODO.md
 comments.json  # GitHub API response data from PR reviews
 
+# Root-level documentation files (keep in docs/)
+/CHANGELOG.md
+/TODO.md
+/PARALLEL_WORK_STRATEGY.md
+/MERGE_PR44_INSTRUCTIONS.md
+/*.md  # Ignore all markdown files in root except README.md
+!README.md
+
 # Local test artifacts
 /tests/.cache/
 # Byte-compiled / optimized / DLL files
