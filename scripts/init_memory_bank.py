@@ -19,11 +19,11 @@ from pathlib import Path
 
 def create_architecture_md(memory_dir: Path):
     """Create architecture.md with system design."""
-    content = (
-        """# System Architecture
+    content = """# System Architecture
 
 ## Overview
-Job Lead Finder is a containerized Python application for automated job search and lead management with AI-powered analysis.
+Job Lead Finder is a containerized Python application for automated job
+search and lead management with AI-powered analysis.
 
 ## Component Architecture
 
@@ -229,7 +229,6 @@ All components run in Docker containers:
 ---
 *Last Updated: {datetime.now().strftime('%Y-%m-%d')}*
 """
-    )
     file_path = memory_dir / "docs" / "architecture.md"
     file_path.write_text(content, encoding="utf-8")
     print(f"   ✓ Created: {file_path}")
@@ -548,7 +547,8 @@ def create_tasks_plan_md(memory_dir: Path):
     content = """# Tasks Plan
 
 ## Overview
-This file tracks the project's task backlog, progress, and status. Tasks are organized by priority (P0-P3) and grouped into tracks.
+This file tracks the project's task backlog, progress, and status. Tasks
+are organized by priority (P0-P3) and grouped into tracks.
 
 ## Current Sprint Focus
 
