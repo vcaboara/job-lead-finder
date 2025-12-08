@@ -477,9 +477,16 @@ class AIResourceMonitor:
 
                 return {"status": "running", "models": models, "model_count": len(models)}
 
+            # Non-zero return code - Ollama not running or command failed
+            if result.stderr:
+                logger.debug("Ollama ps command failed (rc=%d): %s", result.returncode, result.stderr.strip())
             return {"status": "not running", "models": [], "model_count": 0}
 
-        except (FileNotFoundError, subprocess.TimeoutExpired):
+        except FileNotFoundError:
+            logger.debug("Ollama command not found - Ollama not installed")
+            return None
+        except subprocess.TimeoutExpired:
+            logger.warning("Ollama ps command timed out after 5 seconds")
             return None
 
     def check_gpu_usage(self) -> Optional[Dict]:
@@ -513,9 +520,16 @@ class AIResourceMonitor:
                         "mem_total_mb": float(parts[3]),
                     }
 
-        except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
-            # nvidia-smi not available (no NVIDIA GPU) or command timeout - gracefully return None
-            pass
+            # Non-zero return code or empty output
+            if result.returncode != 0 and result.stderr:
+                logger.debug("nvidia-smi command failed (rc=%d): %s", result.returncode, result.stderr.strip())
+
+        except FileNotFoundError:
+            logger.debug("nvidia-smi command not found - NVIDIA GPU drivers not installed")
+        except subprocess.TimeoutExpired:
+            logger.warning("nvidia-smi command timed out after 5 seconds")
+        except ValueError as e:
+            logger.warning("Failed to parse nvidia-smi output: %s", e)
 
         return None
 
