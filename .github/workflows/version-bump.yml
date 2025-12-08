@@ -127,12 +127,10 @@ jobs:
           git push origin "v${{ steps.bump.outputs.version }}"
 
       - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.bump.outputs.version }}
-          release_name: Release v${{ steps.bump.outputs.version }}
+          name: Release v${{ steps.bump.outputs.version }}
           body: ${{ steps.release-notes.outputs.notes }}
           draft: false
           prerelease: false
