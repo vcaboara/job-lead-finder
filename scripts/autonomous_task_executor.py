@@ -154,14 +154,14 @@ class TaskOrchestrator:
             if response.status_code in [200, 201]:
                 return response.json().get("id")
             elif response.status_code == 404:
-                print(f"   ⚠️  Vibe Kanban API endpoint not found (is it running?)")
+                print("   ⚠️  Vibe Kanban API endpoint not found (is it running?)")
                 return None
             else:
                 print(f"   ⚠️  Vibe Kanban returned {response.status_code}: {response.text[:100]}")
                 return None
         except httpx.ConnectError:
             print(f"   ⚠️  Vibe Kanban not accessible at {self.kanban_url}")
-            print(f"      Check: docker compose ps | grep kanban")
+            print("      Check: docker compose ps | grep kanban")
             return None
         except Exception as e:
             print(f"   ⚠️  Error creating Kanban task: {e}")
