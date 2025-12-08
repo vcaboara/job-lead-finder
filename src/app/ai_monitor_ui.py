@@ -317,7 +317,6 @@ DASHBOARD_HTML = """
                         const vramPercent = data.gpu.mem_total_mb
                             ? (data.gpu.mem_used_mb / data.gpu.mem_total_mb * 100)
                             : 0;
-                            : 0;
 
                         gpuChart.data.datasets[0].data = [
                             data.gpu.gpu_util || 0,
@@ -357,7 +356,11 @@ DASHBOARD_HTML = """
 class AIResourceMonitor:
     """Monitor AI resource usage across providers."""
 
-    def __init__(self, tracking_file: str = ".ai_usage_tracking.json"):
+    def __init__(self, tracking_file: Optional[str] = None):
+        if tracking_file is None:
+            import os
+
+            tracking_file = os.getenv("AI_TRACKING_FILE", ".ai_usage_tracking.json")
         self.tracking_file = Path(tracking_file)
         self.data = self._load_data()
 
@@ -550,7 +553,7 @@ class AIResourceMonitor:
             vram_usage = (gpu["mem_used_mb"] / gpu["mem_total_mb"]) * 100
             if vram_usage > 90:
                 recommendations.append(
-                    f"⚠️ VRAM usage high ({vram_usage:.0f}%) - " "Consider using smaller model or reducing batch size"
+                    f"⚠️ VRAM usage high ({vram_usage:.0f}%) - Consider using smaller model or reducing batch size"
                 )
 
         ollama = self.check_ollama_status()
@@ -593,4 +596,6 @@ def get_metrics() -> Dict:
 
 
 if __name__ == "__main__":
+    # Development server - for production, use a WSGI server like Gunicorn or Waitress
+    # Example: gunicorn app.ai_monitor_ui:app --bind 0.0.0.0:9000
     app.run(host="0.0.0.0", port=9000, debug=False)

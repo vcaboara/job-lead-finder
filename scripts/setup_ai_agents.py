@@ -128,9 +128,13 @@ def get_gpu_info() -> Optional[Dict]:
         if code == 0 and stdout:
             lines = stdout.strip().split("\n")
             if lines:
-                name, vram = lines[0].split(",")
-                vram_gb = int(vram.strip().split()[0]) / 1024
-                return {"vendor": "NVIDIA", "name": name.strip(), "vram_gb": vram_gb}
+                parts = lines[0].split(",")
+                if len(parts) == 2:
+                    name, vram = parts
+                    vram_gb = int(vram.strip().split()[0]) / 1024
+                    return {"vendor": "NVIDIA", "name": name.strip(), "vram_gb": vram_gb}
+                else:
+                    logger.warning("Unexpected nvidia-smi output format (expected 2 values, got %d)", len(parts))
     except FileNotFoundError:
         logger.debug("nvidia-smi not found, no NVIDIA GPU detected")
     except (ValueError, IndexError) as e:
@@ -142,9 +146,16 @@ def get_gpu_info() -> Optional[Dict]:
 
 
 def recommend_ollama_model(vram_gb: float) -> List[str]:
-    """Recommend Ollama models based on VRAM"""
+    """Recommend Ollama models based on VRAM
+
+    Args:
+        vram_gb: Available VRAM in gigabytes
+
+    Returns:
+        List of recommended model names for Ollama
+    """
     if vram_gb >= 16:
-        return ["qwen2.5:32b-instruct-q4_K_M", "qwen2.5:14b-instruct-q4_K_M"]
+        return ["qwen2.5:32b-instruct-fp16", "qwen2.5:32b-instruct-q4_K_M", "qwen2.5:14b-instruct-q4_K_M"]
     elif vram_gb >= 12:
         return ["qwen2.5:32b-instruct-q4_K_M", "qwen2.5:14b-instruct-q4_K_M"]
     elif vram_gb >= 8:
@@ -340,12 +351,16 @@ def verify_setup(project_root: Path) -> bool:
     env_file = project_root / ".env"
     checks.append(("Environment file (.env)", env_file.exists()))
 
-    # Check Docker services
+    # Check Docker services (expecting core services: ui, worker, ai-monitor)
     code, stdout, _ = run_command(["docker", "compose", "ps"], check=False, capture_output=True)
-    running_services = 0
+    expected_services = {"ui", "worker", "ai-monitor"}
     if code == 0 and stdout:
-        running_services = len([line for line in stdout.split("\n") if "Up" in line])
-    checks.append(("Docker services running", running_services >= 2))
+        # Check if expected services are running
+        running_service_names = {line.split()[0] for line in stdout.split("\n") if "Up" in line and line.strip()}
+        services_ok = len(expected_services.intersection(running_service_names)) >= 2
+        checks.append(("Docker services running", services_ok))
+    else:
+        checks.append(("Docker services running", False))
 
     # Check Ollama
     ollama_installed, _ = check_ollama()
