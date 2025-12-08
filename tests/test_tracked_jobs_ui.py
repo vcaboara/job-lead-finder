@@ -106,6 +106,22 @@ def test_tracked_jobs_includes_metadata(client, mock_search_response):
 @pytest.mark.xdist_group(name="tracker")
 def test_filter_tracked_jobs_by_status(client, mock_search_response):
     """Test that tracked jobs can be filtered by status (client-side filtering test via API)."""
+    # Explicitly clear any existing tracked jobs to ensure clean state
+    import os
+
+    import app.job_tracker as job_tracker_module
+
+    # Force re-initialization of tracker to ensure clean state
+    job_tracker_module._tracker = None
+
+    # Get the actual tracking file path from the module
+    tracking_file = job_tracker_module.TRACKING_FILE
+    if tracking_file.exists():
+        os.remove(tracking_file)
+
+    # Re-initialize the tracker
+    job_tracker_module._tracker = None
+
     # Track two jobs with different statuses using mocked responses
 
     # First job - set to APPLIED
