@@ -10,32 +10,24 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Build tools for any native wheels (kept only in builder)
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create a venv and install all runtime deps into it
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
+# Install uv for fast dependency installation
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy only package metadata first (for better caching)
 COPY pyproject.toml /app/
 
-# Upgrade pip and install build tools
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
-
-# Install dependencies from pyproject.toml (without source code)
-# This layer is cached unless pyproject.toml changes
-RUN pip install --no-cache-dir '.[web]' \
-    && if [ "${INSTALL_TEST_DEPS}" = "true" ]; then pip install --no-cache-dir '.[test]'; fi \
-    && if [ "${INSTALL_GEMINI}" = "true" ]; then pip install --no-cache-dir '.[gemini]'; fi
+# Create virtual environment and install dependencies
+RUN uv venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    uv pip install --no-cache '.[web]' && \
+    if [ "${INSTALL_TEST_DEPS}" = "true" ]; then uv pip install --no-cache '.[test]'; fi && \
+    if [ "${INSTALL_GEMINI}" = "true" ]; then uv pip install --no-cache '.[gemini]'; fi
 
 # Copy source code (changes frequently, so this layer rebuilds often)
 COPY src/ /app/src/
 
 # Install the package itself in editable mode (no deps, already installed above)
-RUN pip install --no-cache-dir --no-deps -e .
+RUN . /opt/venv/bin/activate && uv pip install --no-deps -e .
 
 ###############
 # Runtime stage
