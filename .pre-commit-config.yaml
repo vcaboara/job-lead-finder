@@ -39,23 +39,22 @@ repos:
     hooks:
       - id: branch-protection
         name: branch-protection
-        entry: bash
+        entry: powershell
         args:
-          - -c
+          - -Command
           - |
-            protected_branches="main master"
-            current_branch=$(git symbolic-ref HEAD | sed -e 's,.*/\(.*\),\1,')
-            for branch in $protected_branches; do
-              if [ "$current_branch" = "$branch" ]; then
-                echo ""
-                echo "❌ ERROR: Direct pushes to '$branch' are not allowed!"
-                echo ""
-                echo "Please use feature branches and Pull Requests."
-                echo "See docs/VERSIONING.md for the workflow."
-                echo ""
+            $protected_branches = @('main', 'master')
+            $current_branch = git symbolic-ref HEAD
+            $current_branch = $current_branch -replace 'refs/heads/', ''
+            if ($protected_branches -contains $current_branch) {
+                Write-Host ""
+                Write-Host "❌ ERROR: Direct pushes to '$current_branch' are not allowed!" -ForegroundColor Red
+                Write-Host ""
+                Write-Host "Please use feature branches and Pull Requests." -ForegroundColor Yellow
+                Write-Host "See docs/VERSIONING.md for the workflow." -ForegroundColor Yellow
+                Write-Host ""
                 exit 1
-              fi
-            done
+            }
             exit 0
         language: system
         pass_filenames: false
