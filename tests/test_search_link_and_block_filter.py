@@ -4,32 +4,12 @@ We monkeypatch generate_job_leads and validate_link to simulate various
 scenarios without external network calls.
 """
 
-import json
-from pathlib import Path
-
 from fastapi.testclient import TestClient
 
 from app.ui_server import app
 
-CONFIG_FILE = Path("config.json")
 
-
-def _write_config(data: dict):  # noqa: ANN001
-    with open(CONFIG_FILE, "w", encoding="utf-8") as fh:
-        json.dump(data, fh)
-
-
-def setup_function():  # noqa: D401
-    if CONFIG_FILE.exists():
-        CONFIG_FILE.unlink()
-
-
-def teardown_function():  # noqa: D401
-    if CONFIG_FILE.exists():
-        CONFIG_FILE.unlink()
-
-
-def test_search_marks_invalid_links(monkeypatch):
+def test_search_marks_invalid_links(monkeypatch, mock_config_manager):  # noqa: ARG001
     client = TestClient(app)
 
     def fake_generate(*args, **kwargs):  # noqa: ANN001
@@ -73,11 +53,14 @@ def test_search_marks_invalid_links(monkeypatch):
     assert good["link_valid"] is True
 
 
-def test_search_filters_blocked_site(monkeypatch):
+def test_search_filters_blocked_site(monkeypatch, mock_config_manager):
+    # Set config before creating TestClient so it loads properly
+    mock_config_manager["config"] = {
+        "system_instructions": "",
+        "blocked_entities": [{"type": "site", "value": "blocked.com"}],
+        "region": "",
+    }
     client = TestClient(app)
-    _write_config(
-        {"system_instructions": "", "blocked_entities": [{"type": "site", "value": "blocked.com"}], "region": ""}
-    )
 
     def fake_generate(*args, **kwargs):  # noqa: ANN001
         return [
@@ -114,11 +97,14 @@ def test_search_filters_blocked_site(monkeypatch):
     assert "Site Allowed" in titles
 
 
-def test_search_filters_blocked_employer(monkeypatch):
+def test_search_filters_blocked_employer(monkeypatch, mock_config_manager):
+    # Set config before creating TestClient so it loads properly
+    mock_config_manager["config"] = {
+        "system_instructions": "",
+        "blocked_entities": [{"type": "employer", "value": "BadCorp"}],
+        "region": "",
+    }
     client = TestClient(app)
-    _write_config(
-        {"system_instructions": "", "blocked_entities": [{"type": "employer", "value": "BadCorp"}], "region": ""}
-    )
 
     def fake_generate(*args, **kwargs):  # noqa: ANN001
         return [
@@ -155,7 +141,7 @@ def test_search_filters_blocked_employer(monkeypatch):
     assert "GoodCorp" in companies
 
 
-def test_search_filters_hidden_jobs(monkeypatch):
+def test_search_filters_hidden_jobs(monkeypatch, mock_config_manager):  # noqa: ARG001
     """Test that hidden jobs don't appear in search results."""
     client = TestClient(app)
     from app.job_tracker import generate_job_id, get_tracker
@@ -208,4 +194,5 @@ def test_search_filters_hidden_jobs(monkeypatch):
     assert "Job1" in titles
     assert "Job2 (will be hidden)" not in titles
     assert "Job3" in titles
-    assert len(data["leads"]) == 2  # Requested 3 but only 2 non-hidden available
+    # Requested 3 but only 2 non-hidden available
+    assert len(data["leads"]) == 2

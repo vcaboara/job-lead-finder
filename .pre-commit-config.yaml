@@ -60,11 +60,11 @@ repos:
         pass_filenames: false
         stages: [pre-push]
       - id: pytest
-        name: pytest
+        name: pytest (fast tests)
         entry: python -m pytest
         language: system
         pass_filenames: false
         types: [python]
         files: ^(src/|tests/)
-        args: [tests/, -v, --tb=short, -m, "not slow"]
+        args: [-m, "not slow", --maxfail=3, --tb=short, -q]
         stages: [pre-commit]

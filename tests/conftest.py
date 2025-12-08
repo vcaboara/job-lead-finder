@@ -56,7 +56,7 @@ def clean_tracker():
 
 
 @pytest.fixture
-def client(clean_tracker):
+def client(clean_tracker):  # noqa: ARG001
     """Create test client after tracker cleanup."""
     return TestClient(app)
 
@@ -182,3 +182,49 @@ def mock_resume_file(monkeypatch):
     mock_file = MagicMock()
     monkeypatch.setattr("app.ui_server.RESUME_FILE", mock_file)
     return mock_file
+
+
+@pytest.fixture
+def mock_config_manager(monkeypatch):
+    """Mock config.json file I/O to prevent disk access and parallel test conflicts.
+
+    Uses in-memory storage to avoid race conditions in parallel test execution.
+    This fixture replaces duplicated config mocking code across multiple test files.
+
+    Returns:
+        dict: In-memory config data storage for test manipulation
+    """
+
+    # Mock config data storage (in-memory)
+    config_data = {"config": {}}  # Initialize with empty config
+
+    def mock_load_config():
+        """Mock load_config() to return in-memory config."""
+        from app.config_manager import DEFAULT_CONFIG
+
+        if "config" in config_data and config_data["config"]:
+            # Deep merge with defaults (same logic as real load_config)
+            merged = DEFAULT_CONFIG.copy()
+            for key, value in config_data["config"].items():
+                if isinstance(value, dict) and key in merged and isinstance(merged[key], dict):
+                    merged[key] = {**merged[key], **value}
+                else:
+                    merged[key] = value
+            return merged
+        return DEFAULT_CONFIG.copy()
+
+    def mock_save_config(config):
+        """Mock save_config() to store in memory."""
+        config_data["config"] = config
+        return True
+
+    # Patch the config functions directly
+    monkeypatch.setattr("app.config_manager.load_config", mock_load_config)
+    monkeypatch.setattr("app.config_manager.save_config", mock_save_config)
+    # Also patch in ui_server since it imports load_config
+    monkeypatch.setattr("app.ui_server.load_config", mock_load_config)
+
+    yield config_data
+
+    # Cleanup in-memory config
+    config_data.clear()

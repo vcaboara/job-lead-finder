@@ -1,0 +1,419 @@
+title = "AI Coding Style Guide Prompts"
+
+[level_1]
+description = "level-1: only removing unnecessary spaces and new lines"
+content = """
+This is the AI Coding Style Guide. Please follow the AI Coding Style Guide to finish tasks, including completing code snippets, refactoring, autocompleting, unit testing and more.
+
+1. Please try to remove unnecessary spaces and new lines. If the indention takes more than one spaces, please use one space only. Here is an example:
+
+Wrong:
+```cpp
+int main() {
+
+    int a = 1;
+    int b = 2;
+    int c = a + b;
+
+    std::cout << c << std::endl;
+}
+```
+
+Right:
+```cpp
+int main(){
+ int a=1;
+ int b=2;
+ int c=a+b;
+ std::cout<<c<<std::endl;
+}
+```
+2. Please keep the comments of the code. Do not remove the comments.
+"""
+
+
+
+
+[level_2]
+description = "level-2: removing unnecessary spaces and new lines, and slightly compressing the code"
+content = """
+This is the AI Coding Style Guide. Please follow the AI Coding Style Guide to finish tasks, including completing code snippets, refactoring, autocompleting, unit testing and more.
+
+1. Please try to remove unnecessary spaces and new lines. If the indention takes more than one spaces, please use one space only. Here is an example:
+
+Wrong:
+```cpp
+int main() {
+
+    int a = 1;
+    int b = 2;
+    int c = a + b;
+
+    std::cout << c << std::endl;
+}
+```
+
+Right:
+```cpp
+int main(){
+ int a=1;
+ int b=2;
+ int c=a+b;
+ std::cout<<c<<std::endl;
+}
+```
+
+2. Please keep the comments of the code. Do not remove the comments.
+
+3. Try to merge some lines of code together to make the code more compact, but do not change the logic of the code. Here is an example:
+```cpp
+int main(){
+
+ int a = 1;
+ int b = 2;
+ int c = a + b;
+
+ std::cout << c << std::endl;
+}
+```
+You can compress the code to:
+```cpp
+int main(){
+ int a=1,b=2,c=a+b;
+ std::cout<<c<<std::endl;
+}
+```
+
+"""
+
+
+
+[level_3]
+description = "level-3: removing unnecessary spaces and new lines, slightly compressing the code, and making local variables shorter"
+content = """
+This is the AI Coding Style Guide. Please follow the AI Coding Style Guide to finish tasks, including completing code snippets, refactoring, autocompleting, unit testing and more.
+
+1. Please try to remove unnecessary spaces and new lines. If the indention takes more than one spaces, please use one space only. Here is an example:
+
+Wrong:
+```cpp
+int main() {
+
+    int a = 1;
+    int b = 2;
+    int c = a + b;
+
+    std::cout << c << std::endl;
+}
+```
+
+Right:
+```cpp
+int main(){
+ int a=1;
+ int b=2;
+ int c=a+b;
+ std::cout<<c<<std::endl;
+}
+```
+
+2. Please keep the comments of the code. Do not remove the comments.
+
+3. Try to merge some lines of code together to make the code more compact, but do not change the logic of the code. Here is an example:
+```cpp
+int main(){
+
+ int a = 1;
+ int b = 2;
+ int c = a + b;
+
+ std::cout << c << std::endl;
+}
+```
+You can compress the code to:
+```cpp
+int main(){
+ int a=1,b=2,c=a+b;
+ std::cout<<c<<std::endl;
+}
+```
+
+4. Try to make local variables shorter, but do not change the logic of the code. Here is an example:
+```cpp
+int main(){
+  int index = 0;
+  int sum = 0;
+  for(int i = 0; i < 10; i++){
+    sum += i;
+    index++;
+  }
+}
+```
+You can change the code to:
+```cpp
+int main(){
+ int i=0,s=0;
+ for(int j=0;j<10;j++){
+  s+=j;
+  i++;
+ }
+}
+```
+"""
+
+
+
+[level_4]
+description = "level-4: removing unnecessary spaces and new lines, slightly compressing the code, making local variables and non-exported functions, classes and variables shorter"
+content = """
+This is the AI Coding Style Guide. Please follow the AI Coding Style Guide to finish tasks, including completing code snippets, refactoring, autocompleting, unit testing and more.
+
+1. Please try to remove unnecessary spaces and new lines. If the indention takes more than one spaces, please use one space only.
+2. Please keep the comments of the code. Do not remove the comments.
+3. Try to merge some lines of code together to make the code more compact, but do not change the logic of the code.
+4. Try to make local variables shorter, but do not change the logic of the code.
+
+Here is an example:
+Wrong:
+```cpp
+int main(){
+  int index = 0;
+  int sum = 0;
+  for(int i = 0; i < 10; i++){
+    sum += i;
+    index++;
+  }
+}
+```
+You can change the code to:
+```cpp
+int main(){
+ int i=0,s=0;
+ for(int j=0;j<10;j++){
+  s+=j;
+  i++;
+ }
+}
+```
+
+5. Try to make non-exported functions, classes and variables shorter, but do not change the logic of the code. And the exported functions, classes and variables should not be changed.
+
+Here is an example:
+```js
+// Helper function to square a number
+function squareNumber(num) {
+  return num * num;
+}
+
+// Helper function to check if a number is even
+function isEven(num) {
+  return num % 2 === 0;
+}
+
+// Exported function to calculate the sum of squares of even numbers up to n
+export function sumOfEvenSquares(n) {
+  let sum = 0;
+  for (let i = 1; i <= n; i++) {
+    if (isEven(i)) {
+      sum += squareNumber(i);
+    }
+  }
+  return sum;
+}
+
+// Exported function to print the result
+export function printSum(n) {
+  const result = sumOfEvenSquares(n);
+  console.log("Sum of even squares up to", n, "is", result);
+}
+```
+
+And you need to change the code to:
+```js
+// Helper function to square a number
+function sq(n){return n*n;}
+// Helper function to check if a number is even
+function ev(n){return n%2==0;}
+// Exported function to calculate the sum of squares of even numbers up to n
+export function sumOfEvenSquares(n){
+ let s=0;
+ for(let i=1;i<=n;i++)if(ev(i))s+=sq(i);
+ return s;
+}
+// Exported function to print the result
+export function printSum(n){
+ const r=sumOfEvenSquares(n);
+ console.log("Sum of even squares up to",n,"is",r);
+}
+```
+"""
+
+
+[level_5]
+description = "level-5: removing all whitespace, new lines, making local variables and non-exported functions, classes and variables shorter"
+content = """
+This is the AI Coding Style Guide. Please follow the AI Coding Style Guide to finish tasks, including completing code snippets, refactoring, autocompleting, unit testing and more.
+
+1. Please try to remove all spaces, new lines and indentions.
+2. Please keep the comments of the code. Do not remove the comments.
+3. Try to merge some lines of code together to make the code more compact, but do not change the logic of the code.
+4. Try to make local variables shorter, but do not change the logic of the code.
+5. Try to make non-exported functions, classes and variables shorter, but do not change the logic of the code. And the exported functions, classes and variables should not be changed.
+
+Here is an example:
+```js
+// Helper function to square a number
+function squareNumber(num) {
+  return num * num;
+}
+
+// Helper function to check if a number is even
+function isEven(num) {
+  return num % 2 === 0;
+}
+
+// Exported function to calculate the sum of squares of even numbers up to n
+export function sumOfEvenSquares(n) {
+  let sum = 0;
+  for (let i = 1; i <= n; i++) {
+    if (isEven(i)) {
+      sum += squareNumber(i);
+    }
+  }
+  return sum;
+}
+
+// Exported function to print the result
+export function printSum(n) {
+  const result = sumOfEvenSquares(n);
+  console.log("Sum of even squares up to", n, "is", result);
+}
+```
+
+And you need to change the code to:
+```js
+//Helper function to square a number
+function sq(n){return n*n;}
+//Helper function to check if a number is even
+function ev(n){return n%2==0;}
+//Exported function to calculate the sum of squares of even numbers up to n
+export function sumOfEvenSquares(n){let s=0;for(let i=1;i<=n;i++)if(ev(i))s+=sq(i);return s;}
+//Exported function to print the result
+export function printSum(n){const r=sumOfEvenSquares(n);console.log("Sum of even squares up to",n,"is",r);}
+```
+"""
+
+
+[level_6]
+description = "level-6: removing all whitespace, new lines, making local variables and non-exported functions, classes and variables shorter, and removing all comments except for the exported functions, classes and variables"
+content = """
+This is the AI Coding Style Guide. Please follow the AI Coding Style Guide to finish tasks, including completing code snippets, refactoring, autocompleting, unit testing and more.
+
+1. Please try to remove all spaces, new lines and indentions.
+2. Please only keep the comments of the exported functions, classes and variables, and remove all other comments. If the comments of the exported functions, classes and variables are not necessary, you can also remove them or compress them.
+3. Try to merge some lines of code together to make the code more compact, but do not change the logic of the code.
+4. Try to make local variables shorter, but do not change the logic of the code.
+5. Try to make non-exported functions, classes and variables shorter, but do not change the logic of the code. And the exported functions, classes and variables should not be changed.
+
+Here is an example:
+```js
+// Helper function to square a number
+function squareNumber(num) {
+  return num * num;
+}
+
+// Helper function to check if a number is even
+function isEven(num) {
+  return num % 2 === 0;
+}
+
+// Exported function to calculate the sum of squares of even numbers up to n
+export function sumOfEvenSquares(n) {
+  let sum = 0;
+  for (let i = 1; i <= n; i++) {
+    if (isEven(i)) {
+      sum += squareNumber(i);
+    }
+  }
+  return sum;
+}
+
+// Exported function to print the result
+export function printSum(n) {
+  const result = sumOfEvenSquares(n);
+  console.log("Sum of even squares up to", n, "is", result);
+}
+```
+
+And you need to change the code to:
+```js
+function sq(n){return n*n;}
+function ev(n){return n%2==0;}
+//sum of squares of even numbers up to n
+export function sumOfEvenSquares(n){let s=0;for(let i=1;i<=n;i++)if(ev(i))s+=sq(i);return s;}
+//print the sum of even squares
+export function printSum(n){const r=sumOfEvenSquares(n);console.log("Sum of even squares up to",n,"is",r);}
+```
+"""
+
+[level_7]
+description = "level-7: removing all whitespace, new lines, making local variables and non-exported functions, classes and variables shorter, and removing all comments"
+content = """
+This is the AI Coding Style Guide. Please follow the AI Coding Style Guide to finish tasks, including completing code snippets, refactoring, autocompleting, unit testing and more.
+
+1. Please try to remove all spaces, new lines and indentions.
+2. Please do not keep any comments. Just remove all comments.
+3. Try to merge some lines of code together to make the code more compact, but do not change the logic of the code.
+4. Try to make local variables shorter, but do not change the logic of the code.
+5. Try to make non-exported functions, classes and variables shorter, but do not change the logic of the code. And the exported functions, classes and variables should not be changed.
+
+Here is an example:
+```js
+// Helper function to square a number
+function squareNumber(num) {
+  return num * num;
+}
+
+// Helper function to check if a number is even
+function isEven(num) {
+  return num % 2 === 0;
+}
+
+// Exported function to calculate the sum of squares of even numbers up to n
+export function sumOfEvenSquares(n) {
+  let sum = 0;
+  for (let i = 1; i <= n; i++) {
+    if (isEven(i)) {
+      sum += squareNumber(i);
+    }
+  }
+  return sum;
+}
+
+// Exported function to print the result
+export function printSum(n) {
+  const result = sumOfEvenSquares(n);
+  console.log("Sum of even squares up to", n, "is", result);
+}
+```
+
+And you need to change the code to:
+```js
+function sq(n){return n*n;}
+function ev(n){return n%2==0;}
+export function sumOfEvenSquares(n){let s=0;for(let i=1;i<=n;i++)if(ev(i))s+=sq(i);return s;}
+export function printSum(n){const r=sumOfEvenSquares(n);console.log("Sum of even squares up to",n,"is",r);}
+```
+"""
+
+[level_8]
+description = "level-8: use any programming language features to make the code as short as possible, while keeping the functionality the same"
+content = """
+This is the AI Coding Style Guide. Please follow the AI Coding Style Guide to finish tasks, including completing code snippets, refactoring, autocompleting, unit testing and more.
+
+1. Please do not keep any comments. Just remove all comments. Also do not keep any whitespace, new lines and indentions.
+2. Please try to use any programming language features to make the code as short as possible, while keeping the functionality the same.
+3. You can use any programming language features, such as lambda functions, list comprehensions, etc., to make the code as short as possible.
+4. You can do any code refactoring, such as using built-in functions, libraries, etc., to make the code as short as possible.
+5. Please keep the name of the exported functions, classes and variables the same, but you can change the name of the non-exported variables, functions, classes, member variables and member functions to make them shorter.
+"""

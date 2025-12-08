@@ -18,13 +18,14 @@ def temp_db():
         db_path = Path(f.name)
     yield db_path
     # Cleanup with Windows file lock retry
-    for _ in range(3):
+    for attempt in range(3):
         try:
             if db_path.exists():
                 db_path.unlink()
             break
         except PermissionError:
-            time.sleep(0.1)
+            if attempt < 2:  # Don't sleep on last attempt
+                time.sleep(0.01)  # Reduced from 0.1s to 0.01s
 
 
 @pytest.fixture
