@@ -53,6 +53,23 @@ services:
     depends_on:
       - ui
 
+  ai-monitor:
+    extends: app
+    build:
+      args:
+        INSTALL_TEST_DEPS: "false"
+    volumes:
+      - ./:/app:delegated
+      - ai-tracking:/app/.ai_usage_tracking # Persistent tracking data
+    working_dir: /app
+    ports:
+      - "9000:9000"
+    command: python -m app.ai_monitor_ui
+    restart: unless-stopped
+    depends_on:
+      - ui
+
 volumes:
   job-data:
   job-logs:
+  ai-tracking:

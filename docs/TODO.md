@@ -76,6 +76,66 @@ After PR #47 merges, complete the Memory Bank documentation:
 
 ## Future Enhancements (Not for this PR)
 
+### AI/ML Infrastructure & Automation
+
+- [x] **Containerized AI Resource Monitor Dashboard**
+  - Web-based graphical dashboard for monitoring AI usage
+  - Real-time tracking of Copilot, Gemini, Ollama usage
+  - GPU utilization and VRAM monitoring
+  - Auto-refreshing charts (Chart.js)
+  - Accessible at http://localhost:9000
+  - No Node.js required - pure Python/Flask in container
+  - **Status**: ✅ COMPLETE - Runs as Docker service
+
+- [ ] **Email Server Integration for Aggregator Automation**
+  - Setup mail server to receive and forward aggregator emails
+  - Auto-evaluation of job postings from emails
+  - Automatic resume generation tailored to job posting
+  - Automatic cover letter generation
+  - Extract and validate direct application links
+  - **Priority**: High - Enables end-to-end automation
+
+- [ ] **Learning from Job Suggestions**
+  - Track which suggested jobs user applies to / is interested in
+  - Build preference model from user feedback
+  - Improve job matching algorithm based on historical data
+  - Store acceptance/rejection patterns
+  - **Priority**: Medium - Improves relevance over time
+
+- [ ] **Provider-Agnostic AI Evaluation Framework**
+  - Abstract AI provider interface for resume evaluation
+  - Support multiple LLM backends (OpenAI, Anthropic, Gemini, Local, etc.)
+  - Configurable provider selection per task type
+  - Fallback provider chain for reliability
+  - **Priority**: High - Reduces vendor lock-in
+
+- [ ] **AI Profile System**
+  - Create specialized AI profiles for different tasks:
+    - Resume evaluation profile (critical, detailed analysis)
+    - Resume generation profile (creative, marketing-focused)
+    - Cover letter profile (persuasive, personalized)
+    - Job matching profile (analytical, quick decisions)
+  - Each profile has custom system instructions and parameters
+  - **Priority**: Medium - Optimizes AI performance per task
+
+- [ ] **Small Language Model Integration**
+  - Identify simple tasks suitable for small LMs (classification, extraction)
+  - Integrate efficient small models for:
+    - Job title classification
+    - Skills extraction from job descriptions
+    - Basic text summarization
+    - Duplicate detection
+  - Cost-performance optimization: use small LMs where possible
+  - **Priority**: Medium - Reduces API costs
+
+- [ ] **Tech Demo Portfolio Generator**
+  - For tech job seekers: auto-generate project ideas in their domain
+  - Create GitHub repo templates with starter code
+  - Generate README with project description and setup
+  - Suggest tech stack based on job requirements
+  - Link demos to resume/portfolio
+  - **Priority**: Low - Nice-to-have for technical roles
+
 ### Developer Experience
 - [ ] Cross-platform setup utility (`setup_dev.py`)
   - Automated virtual environment creation
@@ -119,3 +179,41 @@ After PR #47 merges, complete the Memory Bank documentation:
 - PR #3: GET/DELETE endpoints for resume management
 
 **Key Insight**: AI reviewers provide iterative feedback as code evolves. Large PRs create feedback loops where each fix generates new comments. Smaller PRs = faster convergence.
+
+---
+
+## AI Assistant Integration
+
+### Claude Code Settings - Agent Support
+
+**Source**: <https://github.com/feiskyer/claude-code-settings?tab=readme-ov-file#agents>
+
+**Description**: Investigate integrating Claude Code's agent system for autonomous task execution
+
+**Potential Benefits**:
+
+- Autonomous handling of routine development tasks
+- Integration with Memory Bank for context-aware task execution
+- Coordination with existing autonomous_task_executor.py
+
+**Action**: Research agent configuration and evaluate compatibility with current workflow
+
+**Priority**: P1 - High-Value (aligns with autonomous AI execution track)
+
+### Copilot Usage Tracking API
+
+**Issue**: Current estimation method doesn't provide actual Copilot usage data
+
+**Proposal**: Access VS Code's Copilot API to get real usage metrics instead of estimating
+
+**Scope**: Extend to all AI providers (Gemini, OpenAI, etc.) for unified usage tracking
+
+**Benefits**:
+
+- Accurate quota monitoring in dashboard
+- Better resource allocation decisions
+- Historical usage analytics
+
+**Action**: Investigate VS Code extension APIs for Copilot and other AI provider usage data
+
+**Priority**: P2 - Medium (dashboard enhancement)

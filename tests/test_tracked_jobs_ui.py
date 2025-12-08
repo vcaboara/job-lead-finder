@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+import pytest
+
 from app.job_tracker import STATUS_APPLIED, STATUS_INTERVIEWING
 
 
@@ -99,6 +101,7 @@ def test_tracked_jobs_includes_metadata(client, mock_search_response):
     assert "last_updated" in tracked_job
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_filter_tracked_jobs_by_status(client, mock_search_response):
     """Test that tracked jobs can be filtered by status (client-side filtering test via API)."""
     # Track two jobs with different statuses using mocked responses
