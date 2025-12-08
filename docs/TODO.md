@@ -46,6 +46,35 @@ cleaned_text = pattern.sub(lambda m: mojibake_map[m.group(0)], cleaned_text)
 **File**: `tests/test_pdf_extraction.py`
 **Skip in CI**: `pytest -m "not integration"` or set `CI=true` environment variable
 
+### Async Test Failures - pytest-asyncio Configuration
+**Status**: ⚠️ NEEDS FIX
+**Issue**: Async tests in multiple files fail with "async def functions are not natively supported"
+**Files Affected**:
+- `tests/test_auto_discovery.py` (7 async tests)
+- `tests/test_background_scheduler.py` (8+ async tests)
+- `tests/test_link_finder.py` (9+ async tests)
+
+**Root Cause**: `pytest-asyncio` is installed in dev/test dependencies but not properly configured in pytest.ini
+
+**Error Message**:
+```
+async def functions are not natively supported.
+You need to install a suitable plugin for your async framework, for example:
+  - anyio
+  - pytest-asyncio
+```
+
+**Solution Required**:
+1. Add `asyncio_mode = auto` to `[tool.pytest.ini_options]` in `pyproject.toml`
+2. OR add `[pytest]` section with `asyncio_mode = auto` to `pytest.ini`
+3. Verify all async tests pass after configuration
+
+**Impact**: Pre-commit pytest hook fails, blocking commits without `--no-verify`
+
+**Priority**: P1 - High (blocks normal git workflow)
+
+**Copilot Task**: See `docs/TASKS/fix-async-tests.md` for detailed implementation guide
+
 ---
 
 ## Rulebook-AI Post-Merge Tasks

@@ -315,6 +315,6 @@ webhooks:
 
 ## References
 
-- Vibe Check MCP: <https://github.com/example/vibe-check-mcp>
-- Vibe Kanban: <https://github.com/example/vibe-kanban>
+<!-- Vibe Check MCP and Vibe Kanban repositories are not public yet -->
+<!-- Contact project maintainer for access to these custom services -->
 - MCP Protocol: <https://modelcontextprotocol.io>

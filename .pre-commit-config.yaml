@@ -59,6 +59,14 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
+      - id: inclusive-language
+        name: inclusive-language
+        entry: python scripts/check_inclusive_language.py
+        language: system
+        pass_filenames: true
+        types: [text]
+        exclude: '^(\.git/|node_modules/|venv/|.*\.lock$|\.github/inclusive-language\.yaml|docs/INCLUSIVE_LANGUAGE\.md)'
+        stages: [pre-commit]
       - id: pytest
         name: pytest (fast tests)
         entry: python -m pytest
