@@ -1,0 +1,217 @@
+{
+    "$schema": "https://raw.githubusercontent.com/cline/cline/main/schemas/settings.schema.json",
+    "version": "1.0",
+    "description": "Claude Task Master settings for autonomous AI execution",
+    "autonomousMode": {
+        "enabled": true,
+        "requireApproval": {
+            "fileCreation": false,
+            "fileModification": false,
+            "terminalCommands": true,
+            "apiCalls": false
+        },
+        "maxIterations": 50,
+        "autoCommit": false,
+        "autoPR": false
+    },
+    "mcpServers": {
+        "vibe-check": {
+            "url": "http://localhost:3000",
+            "enabled": true,
+            "useCases": [
+                "code-validation",
+                "quality-check",
+                "pre-commit"
+            ]
+        },
+        "vibe-kanban": {
+            "url": "http://localhost:3001",
+            "enabled": true,
+            "useCases": [
+                "task-management",
+                "progress-tracking"
+            ]
+        }
+    },
+    "taskSources": [
+        {
+            "type": "file",
+            "path": "docs/TODO.md",
+            "parser": "markdown-checklist",
+            "priority": 1
+        },
+        {
+            "type": "file",
+            "path": ".ai-tasks/*.md",
+            "parser": "markdown",
+            "priority": 2
+        },
+        {
+            "type": "kanban",
+            "url": "http://localhost:3001/api/tasks",
+            "filter": {
+                "status": [
+                    "backlog",
+                    "todo"
+                ],
+                "priority": [
+                    "P0",
+                    "P1"
+                ]
+            },
+            "priority": 1
+        }
+    ],
+    "memoryBank": {
+        "enabled": true,
+        "readOnTaskStart": true,
+        "updateOnTaskComplete": true,
+        "files": [
+            "memory/docs/architecture.md",
+            "memory/docs/technical.md",
+            "memory/docs/product_requirement_docs.md",
+            "memory/tasks/tasks_plan.md",
+            "memory/tasks/active_context.md"
+        ]
+    },
+    "agentAllocation": {
+        "strategy": "priority-based",
+        "rules": [
+            {
+                "condition": "priority == 'P0' || track == 1",
+                "agent": "gemini",
+                "reason": "Free tier, excellent for documentation"
+            },
+            {
+                "condition": "priority == 'P1'",
+                "agent": "copilot",
+                "reason": "Premium quality for high-value implementation"
+            },
+            {
+                "condition": "priority == 'P2' || priority == 'P3'",
+                "agent": "local",
+                "reason": "Unlimited usage for lower-priority tasks"
+            }
+        ],
+        "fallbackChain": [
+            "local",
+            "gemini",
+            "copilot"
+        ],
+        "quotaMonitor": {
+            "enabled": true,
+            "url": "http://localhost:9000/api/metrics",
+            "checkInterval": 300
+        }
+    },
+    "workflow": {
+        "preTask": [
+            "Read Memory Bank files",
+            "Check resource availability via AI Monitor",
+            "Create feature branch: auto/track-{trackId}-{taskName}"
+        ],
+        "duringTask": [
+            "Follow code style from memory/docs/technical.md",
+            "Write tests for new code",
+            "Run pytest before committing",
+            "Update memory/tasks/active_context.md with progress"
+        ],
+        "postTask": [
+            "Validate code with Vibe Check MCP",
+            "Run full test suite: pytest -n auto",
+            "Update memory/tasks/tasks_plan.md (mark completed)",
+            "Create PR with checklist of completed items",
+            "Update Vibe Kanban task status"
+        ],
+        "onError": [
+            "Log error to memory/tasks/active_context.md",
+            "Update Kanban task with 'blocked' status",
+            "Notify user for intervention"
+        ]
+    },
+    "validation": {
+        "preCommit": {
+            "enabled": true,
+            "checks": [
+                {
+                    "type": "vibe-check",
+                    "url": "http://localhost:3000/api/validate",
+                    "files": "modified"
+                },
+                {
+                    "type": "tests",
+                    "command": "pytest -n auto -m \"\"",
+                    "failOn": "error"
+                },
+                {
+                    "type": "linting",
+                    "tools": [
+                        "black",
+                        "flake8",
+                        "isort"
+                    ]
+                }
+            ]
+        }
+    },
+    "monitoring": {
+        "dashboards": [
+            {
+                "name": "Vibe Kanban",
+                "url": "http://localhost:3001",
+                "description": "Task progress and status"
+            },
+            {
+                "name": "AI Resource Monitor",
+                "url": "http://localhost:9000",
+                "description": "AI quota usage and recommendations"
+            },
+            {
+                "name": "Vibe Check MCP",
+                "url": "http://localhost:3000",
+                "description": "Code validation results"
+            }
+        ],
+        "notifications": {
+            "onTaskComplete": true,
+            "onError": true,
+            "onQuotaWarning": true
+        }
+    },
+    "safety": {
+        "destructiveOperations": {
+            "requireApproval": true,
+            "operations": [
+                "file-delete",
+                "branch-delete",
+                "force-push"
+            ]
+        },
+        "apiRateLimits": {
+            "gemini": {
+                "daily": 20,
+                "warningThreshold": 5
+            },
+            "copilot": {
+                "monthly": 1500,
+                "warningThreshold": 100
+            }
+        },
+        "autoStop": {
+            "onQuotaExhausted": true,
+            "onTestFailure": false,
+            "onLintError": false
+        }
+    },
+    "preferences": {
+        "verbosity": "normal",
+        "progressUpdates": "per-subtask",
+        "commitMessages": {
+            "format": "conventional",
+            "prefix": true,
+            "includeTrackId": true
+        },
+        "branchNaming": "auto/track-{trackId}-{taskName}",
+        "prTemplate": ".github/PULL_REQUEST_TEMPLATE.md"
+    }
+}

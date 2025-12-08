@@ -462,6 +462,7 @@ class AIResourceMonitor:
                     }
 
         except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
+            # nvidia-smi not available (no NVIDIA GPU) or command timeout - gracefully return None
             pass
 
         return None

@@ -148,6 +148,7 @@ class ResourceMonitor:
                             )
                 return gpus
         except (FileNotFoundError, Exception):
+            # nvidia-smi not available or parsing failed - GPU monitoring is optional
             pass
 
         return None
