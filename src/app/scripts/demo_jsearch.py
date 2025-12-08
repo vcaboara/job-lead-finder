@@ -1,7 +1,7 @@
-"""Quick test script for JSearch provider.
+"""Quick demo script for JSearch provider.
 
 Usage:
-    python -m src.app.scripts.test_jsearch [--query "python developer"] [--limit 10]
+    python -m src.app.scripts.demo_jsearch [--query "python developer"] [--limit 10]
 """
 
 import argparse
