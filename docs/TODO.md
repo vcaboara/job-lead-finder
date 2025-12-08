@@ -179,3 +179,41 @@ After PR #47 merges, complete the Memory Bank documentation:
 - PR #3: GET/DELETE endpoints for resume management
 
 **Key Insight**: AI reviewers provide iterative feedback as code evolves. Large PRs create feedback loops where each fix generates new comments. Smaller PRs = faster convergence.
+
+---
+
+## AI Assistant Integration
+
+### Claude Code Settings - Agent Support
+
+**Source**: <https://github.com/feiskyer/claude-code-settings?tab=readme-ov-file#agents>
+
+**Description**: Investigate integrating Claude Code's agent system for autonomous task execution
+
+**Potential Benefits**:
+
+- Autonomous handling of routine development tasks
+- Integration with Memory Bank for context-aware task execution
+- Coordination with existing autonomous_task_executor.py
+
+**Action**: Research agent configuration and evaluate compatibility with current workflow
+
+**Priority**: P1 - High-Value (aligns with autonomous AI execution track)
+
+### Copilot Usage Tracking API
+
+**Issue**: Current estimation method doesn't provide actual Copilot usage data
+
+**Proposal**: Access VS Code's Copilot API to get real usage metrics instead of estimating
+
+**Scope**: Extend to all AI providers (Gemini, OpenAI, etc.) for unified usage tracking
+
+**Benefits**:
+
+- Accurate quota monitoring in dashboard
+- Better resource allocation decisions
+- Historical usage analytics
+
+**Action**: Investigate VS Code extension APIs for Copilot and other AI provider usage data
+
+**Priority**: P2 - Medium (dashboard enhancement)
