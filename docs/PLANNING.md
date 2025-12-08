@@ -123,7 +123,7 @@ job-lead-finder/
 ## Development Workflow
 
 ### Starting New Work
-1. Check `TASK.md` for current priorities
+1. Check `docs/TASK.md` for current priorities
 2. Create feature branch: `git checkout -b feature/description`
 3. Read relevant documentation in `docs/`
 4. Write tests first (TDD approach)
