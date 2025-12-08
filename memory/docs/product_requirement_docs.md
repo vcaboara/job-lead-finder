@@ -238,6 +238,23 @@ uv run python -m app.main health
 - **Test Guide** - Running and writing tests
 - **Contributing Guide** - Code style, PR process
 
+### Git Workflow & Version Control
+**CRITICAL:** Direct pushes to `main` branch are **PROHIBITED**. All changes must follow the PR workflow:
+
+1. **Create Feature Branch**: `git checkout -b feature/your-feature-name`
+2. **Make Changes & Commit**: Follow conventional commits (feat:, fix:, docs:, etc.)
+3. **Push Branch**: `git push -u origin feature/your-feature-name`
+4. **Create Pull Request**: On GitHub, create PR targeting `main`
+5. **Automated Versioning**: Upon PR merge, GitHub Actions automatically:
+   - Bumps version in `pyproject.toml` based on conventional commits
+   - Creates git tag with release notes
+   - Publishes GitHub release
+
+**Branch Protection:**
+- Pre-commit hook prevents direct pushes to `main`/`master`
+- All commits must pass: black, isort, flake8, pytest
+- See `docs/VERSIONING.md` for complete workflow details
+
 ---
 
 **Document Status:** Living document, updated with each major feature release

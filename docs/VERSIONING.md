@@ -4,6 +4,20 @@
 
 This project uses automated semantic versioning through GitHub Actions. When a PR is merged to `main`, the version is automatically bumped and a git tag is created.
 
+**🔒 Branch Protection:** Direct pushes to `main` and `master` are blocked by a pre-commit hook. All changes must go through Pull Requests.
+
+## Setup
+
+After cloning the repository, install the pre-commit hooks:
+
+```powershell
+pre-commit install --hook-type pre-commit --hook-type pre-push
+```
+
+This installs:
+- **pre-commit hooks**: Code formatting (black, isort), linting (flake8), tests (pytest)
+- **pre-push hooks**: Branch protection (blocks direct pushes to main/master)
+
 ## Version Bump Rules
 
 The version bump type is determined by:
