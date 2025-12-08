@@ -33,12 +33,10 @@ class Colors:
 
 
 def print_header(text: str) -> None:
-    """Print a colored header for CLI output.
+    """Print a styled header for CLI output.
 
     Args:
-        text: Header text to display.
-
-    Note: Uses print() for formatted console output in interactive setup.
+        text: Header text to display.    Note: Uses print() for formatted console output in interactive setup.
     """
     print(f"\n{Colors.HEADER}{Colors.BOLD}{'='*60}{Colors.ENDC}")
     print(f"{Colors.HEADER}{Colors.BOLD}{text}{Colors.ENDC}")
@@ -46,7 +44,7 @@ def print_header(text: str) -> None:
 
 
 def print_success(text: str) -> None:
-    """Print success message with colored output.
+    """Print success message with styled output.
 
     Args:
         text: Success message to display.
@@ -55,7 +53,7 @@ def print_success(text: str) -> None:
 
 
 def print_info(text: str) -> None:
-    """Print info message with colored output.
+    """Print info message with styled output.
 
     Args:
         text: Info message to display.
@@ -64,7 +62,7 @@ def print_info(text: str) -> None:
 
 
 def print_warning(text: str) -> None:
-    """Print warning message with colored output.
+    """Print warning message with styled output.
 
     Args:
         text: Warning message to display.
@@ -74,7 +72,7 @@ def print_warning(text: str) -> None:
 
 
 def print_error(text: str) -> None:
-    """Print error message with colored output.
+    """Print error message with styled output.
 
     Args:
         text: Error message to display.
