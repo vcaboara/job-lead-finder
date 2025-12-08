@@ -182,11 +182,11 @@ class TaskOrchestrator:
         p0_tasks = [t for t in tasks if t["priority"] == "P0"]
         p1_tasks = [t for t in tasks if t["priority"] == "P1"]
 
-        print(f"\n🎯 Tasks to Execute:")
-        print(f"   P0 (Foundation): {len(p0_tasks)} tracks")
-        print(f"   P1 (High-Value): {len(p1_tasks)} tracks")
+        print("\n🎯 Tasks to Execute:")
+        print("   P0 (Foundation): {} tracks".format(len(p0_tasks)))
+        print("   P1 (High-Value): {} tracks".format(len(p1_tasks)))
 
-        print(f"\n📝 Task Assignments:")
+        print("\n📝 Task Assignments:")
         for track in tasks:
             if track["priority"] in ["P0", "P1"]:
                 agent = self.assign_agent(track, resources)
