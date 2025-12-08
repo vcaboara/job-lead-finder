@@ -20,8 +20,8 @@ dependencies = [
 [project.optional-dependencies]
 # Development tools
 dev = ["pytest>=7.0", "pytest-cov>=5.0", "pytest-asyncio>=0.21.0", "pre-commit", "black", "isort"]
-# Web server dependencies (FastAPI + Uvicorn)
-web = ["fastapi>=0.100.0", "uvicorn[standard]>=0.23.0", "python-multipart>=0.0.6"]
+# Web server dependencies (FastAPI + Uvicorn + Flask for AI monitor)
+web = ["fastapi>=0.100.0", "uvicorn[standard]>=0.23.0", "python-multipart>=0.0.6", "flask>=3.0.0"]
 # Test dependencies
 test = [
   "pytest>=7.0",

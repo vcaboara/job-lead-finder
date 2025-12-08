@@ -2,6 +2,15 @@
 
 Automated utilities for setting up and monitoring parallel AI development environment.
 
+## Overview
+
+This directory contains two complementary tools:
+
+1. **`setup_ai_agents.py`** - One-time automated setup
+2. **`monitor_ai_resources.py`** - CLI tool for tracking usage
+
+For **graphical monitoring**, see the **[AI Resource Monitor Dashboard](../docs/AI_MONITOR_DASHBOARD.md)** - a containerized web UI accessible at <http://localhost:9000> when running `docker compose up -d`.
+
 ## Scripts
 
 ### 1. `setup_ai_agents.py` - Automated Setup

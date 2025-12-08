@@ -78,6 +78,15 @@ After PR #47 merges, complete the Memory Bank documentation:
 
 ### AI/ML Infrastructure & Automation
 
+- [x] **Containerized AI Resource Monitor Dashboard**
+  - Web-based graphical dashboard for monitoring AI usage
+  - Real-time tracking of Copilot, Gemini, Ollama usage
+  - GPU utilization and VRAM monitoring
+  - Auto-refreshing charts (Chart.js)
+  - Accessible at http://localhost:9000
+  - No Node.js required - pure Python/Flask in container
+  - **Status**: ✅ COMPLETE - Runs as Docker service
+
 - [ ] **Email Server Integration for Aggregator Automation**
   - Setup mail server to receive and forward aggregator emails
   - Auto-evaluation of job postings from emails
