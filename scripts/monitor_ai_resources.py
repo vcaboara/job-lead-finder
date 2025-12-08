@@ -225,61 +225,107 @@ class ResourceMonitor:
 
         return None
 
+    def _get_copilot_recommendations(self, copilot: Dict[str, float]) -> Optional[str]:
+        """Get recommendation for Copilot usage.
+
+        Args:
+            copilot: Copilot usage data.
+
+        Returns:
+            Recommendation string or None.
+        """
+        if copilot["monthly_limit"] <= 0:
+            return (
+                "⚠️  Copilot monthly_limit is invalid (set to 0 or negative). "
+                "Please update configuration with a positive limit."
+            )
+
+        if copilot["percentage_used"] > 80:
+            return (
+                f"⚠️  Copilot usage at {copilot['percentage_used']:.0f}% "
+                f"({copilot['remaining']} requests remaining this month). "
+                "Consider using Gemini or Local LLM for simpler tasks."
+            )
+
+        if copilot["percentage_used"] > 50:
+            return f"ℹ️  Copilot usage at {copilot['percentage_used']:.0f}%. Pace yourself to last the month."
+
+        return None
+
+    def _get_gemini_recommendations(self, gemini: Dict[str, float]) -> Optional[str]:
+        """Get recommendation for Gemini usage.
+
+        Args:
+            gemini: Gemini usage data.
+
+        Returns:
+            Recommendation string or None.
+        """
+        if gemini["daily_limit"] <= 0:
+            return (
+                "⚠️  Gemini daily_limit is invalid (set to 0 or negative). "
+                "Please update configuration with a positive limit."
+            )
+
+        if gemini["percentage_used"] > 80:
+            return (
+                f"⚠️  Gemini quota at {gemini['percentage_used']:.0f}% "
+                f"({gemini['remaining']} requests remaining today). "
+                "Switch to Local LLM for remaining tasks."
+            )
+
+        if gemini["remaining"] == gemini["daily_limit"]:
+            return f"✓ Gemini quota fully available ({gemini['daily_limit']} requests today)"
+
+        return None
+
+    def _get_ollama_recommendations(self, ollama_status: Optional[Dict]) -> Optional[str]:
+        """Get recommendation for Ollama status.
+
+        Args:
+            ollama_status: Ollama status data.
+
+        Returns:
+            Recommendation string or None.
+        """
+        if not ollama_status:
+            return None
+
+        status_recommendations = {
+            "not_installed": "💡 Install Ollama for unlimited local LLM usage (no API costs)",
+            "offline": "⚠️  Ollama is offline. Start it with: ollama serve",
+        }
+
+        if ollama_status["status"] in status_recommendations:
+            return status_recommendations[ollama_status["status"]]
+
+        if ollama_status["status"] == "running":
+            if ollama_status["models"]:
+                model_names = [m["name"] for m in ollama_status["models"]]
+                return f"✓ Ollama running with models: {', '.join(model_names)}"
+            return "✓ Ollama is running (no active models)"
+
+        return None
+
     def get_recommendations(self) -> List[str]:
         """Get usage recommendations"""
         recommendations = []
 
         copilot = self.get_copilot_usage()
         gemini = self.get_gemini_usage()
-
-        # Copilot recommendations
-        if copilot["monthly_limit"] <= 0:
-            recommendations.append(
-                "⚠️  Copilot monthly_limit is invalid (set to 0 or negative). "
-                "Please update configuration with a positive limit."
-            )
-        elif copilot["percentage_used"] > 80:
-            recommendations.append(
-                f"⚠️  Copilot usage at {copilot['percentage_used']:.0f}% "
-                f"({copilot['remaining']} requests remaining this month). "
-                "Consider using Gemini or Local LLM for simpler tasks."
-            )
-        elif copilot["percentage_used"] > 50:
-            recommendations.append(
-                f"ℹ️  Copilot usage at {copilot['percentage_used']:.0f}%. " "Pace yourself to last the month."
-            )
-
-        # Gemini recommendations
-        if gemini["daily_limit"] <= 0:
-            recommendations.append(
-                "⚠️  Gemini daily_limit is invalid (set to 0 or negative). "
-                "Please update configuration with a positive limit."
-            )
-        elif gemini["percentage_used"] > 80:
-            recommendations.append(
-                f"⚠️  Gemini quota at {gemini['percentage_used']:.0f}% "
-                f"({gemini['remaining']} requests remaining today). "
-                "Switch to Local LLM for remaining tasks."
-            )
-        elif gemini["remaining"] == gemini["daily_limit"]:
-            recommendations.append(f"✓ Gemini quota fully available ({gemini['daily_limit']} requests today)")
-
-        # Ollama recommendations
         ollama_status = self.check_ollama_status()
-        if ollama_status:
-            if ollama_status["status"] == "not_installed":
-                recommendations.append("💡 Install Ollama for unlimited local LLM usage (no API costs)")
-            elif ollama_status["status"] == "offline":
-                recommendations.append("⚠️  Ollama is offline. Start it with: ollama serve")
-            elif ollama_status["status"] == "running":
-                if ollama_status["models"]:
-                    model_names = [m["name"] for m in ollama_status["models"]]
-                    recommendations.append(f"✓ Ollama running with models: {', '.join(model_names)}")
-                else:
-                    recommendations.append("✓ Ollama is running (no active models)")
+        gpus = self.check_gpu_usage()
+
+        # Add provider recommendations
+        for recommendation in [
+            self._get_copilot_recommendations(copilot),
+            self._get_gemini_recommendations(gemini),
+            self._get_ollama_recommendations(ollama_status),
+        ]:
+            if recommendation:
+                recommendations.append(recommendation)
 
         # GPU recommendations
-        gpus = self.check_gpu_usage()
         if gpus:
             for i, gpu in enumerate(gpus):
                 if gpu["gpu_util"] > 90:
