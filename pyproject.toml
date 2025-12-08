@@ -1,70 +1,33 @@
 [build-system]
-requires = ["setuptools>=45", "wheel"]
+requires = [ "setuptools>=45", "wheel",]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "job-lead-starter"
-version = "0.1.0"
+version = "0.2.0"
 description = "Minimal, modular job-finder starter with Gemini template and CI"
 requires-python = ">=3.12"
-dependencies = [
-  "python-dotenv>=0.21.0",
-  "beautifulsoup4>=4.12.0",
-  "httpx>=0.25.0",
-  "defusedxml>=0.7.0",
-  "pypdf>=4.0.0",
-  "python-docx>=1.0.0",
-  "apscheduler>=3.10.0"
-]
+dependencies = [ "python-dotenv>=0.21.0", "beautifulsoup4>=4.12.0", "httpx>=0.25.0", "defusedxml>=0.7.0", "pypdf>=4.0.0", "python-docx>=1.0.0", "apscheduler>=3.10.0",]
 
 [project.optional-dependencies]
-# Development tools
-dev = ["pytest>=7.0", "pytest-cov>=5.0", "pytest-asyncio>=0.21.0", "pre-commit", "black", "isort"]
-# Web server dependencies (FastAPI + Uvicorn + Flask for AI monitor)
-web = ["fastapi>=0.100.0", "uvicorn[standard]>=0.23.0", "python-multipart>=0.0.6", "flask>=3.0.0"]
-# Test dependencies
-test = [
-  "pytest>=7.0",
-  "pytest-cov>=5.0",
-  "pytest-asyncio>=0.21.0",
-  "pytest-xdist>=3.0",
-  "pytest-sugar",
-  "pytest-benchmark",
-  "pytest-picked",
-  "reportlab"
-]
-# Gemini AI provider (google-genai supports google_search tool)
-gemini = ["google-genai>=0.1.0"]
-# Rulebook-AI context management
-rulebook = ["rulebook-ai @ git+https://github.com/botingw/rulebook-ai.git"]
-# Tools utilities (web scraping, search, LLM integration)
-tools = [
-    "playwright>=1.41.0",
-    "html5lib>=1.1",
-    "duckduckgo-search>=7.2.1",
-    "openai>=1.59.8",
-    "anthropic>=0.42.0",
-    "google-generativeai",
-    "grpcio==1.71.0"
-]
+dev = [ "pytest>=7.0", "pytest-cov>=5.0", "pytest-asyncio>=0.21.0", "pre-commit", "black", "isort",]
+web = [ "fastapi>=0.100.0", "uvicorn[standard]>=0.23.0", "python-multipart>=0.0.6", "flask>=3.0.0",]
+test = [ "pytest>=7.0", "pytest-cov>=5.0", "pytest-asyncio>=0.21.0", "pytest-xdist>=3.0", "pytest-sugar", "pytest-benchmark", "pytest-picked", "reportlab",]
+gemini = [ "google-genai>=0.1.0",]
+rulebook = [ "rulebook-ai @ git+https://github.com/botingw/rulebook-ai.git",]
+tools = [ "playwright>=1.41.0", "html5lib>=1.1", "duckduckgo-search>=7.2.1", "openai>=1.59.8", "anthropic>=0.42.0", "google-generativeai", "grpcio==1.71.0",]
 
 [project.scripts]
 job-starter = "app.main:main"
 
 [tool.black]
 line-length = 120
-target-version = ['py310', 'py311']
-skip-string-normalization = false  # Use double quotes (Black's default)
+target-version = [ "py310", "py311",]
+skip-string-normalization = false
 
 [tool.isort]
 profile = "black"
 line_length = 120
-
-# Remove autopep8 config since we're using Black
-# [tool.autopep8] - removed
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
 
 [tool.flake8]
 max-line-length = 130
@@ -72,5 +35,8 @@ max-line-length = 130
 [tool.setuptools]
 include-package-data = true
 
+[tool.pytest.ini_options]
+testpaths = [ "tests",]
+
 [tool.setuptools.package-data]
-"app" = ["templates/*.html"]
+app = [ "templates/*.html",]
