@@ -50,9 +50,13 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(level
 
 app = FastAPI(title="Job Lead Finder", version="0.1.1")
 
-LEADS_FILE = Path("leads.json")
-RESUME_FILE = Path("resume.txt")
-UPLOADS_DIR = Path("uploads")
+# Use data directory for persistent storage
+DATA_DIR = Path("data")
+DATA_DIR.mkdir(exist_ok=True)
+
+LEADS_FILE = DATA_DIR / "leads.json"
+RESUME_FILE = DATA_DIR / "resume.txt"
+UPLOADS_DIR = DATA_DIR / "uploads"
 UPLOADS_DIR.mkdir(exist_ok=True)
 
 # Progress tracking for search operations
@@ -656,7 +660,7 @@ def check_link(req: ValidateLinkRequest):
     )
 
 
-@app.post("/api/upload/resume")
+@app.post("/api/resume/upload")
 async def upload_resume(file: UploadFile = File(...)):
     """Upload resume file for job matching.
 

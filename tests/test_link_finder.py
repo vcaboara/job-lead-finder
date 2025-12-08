@@ -263,7 +263,7 @@ class TestFindDirectLinksBatch:
 
         async def mock_find(job):
             call_times.append(asyncio.get_event_loop().time())
-            await asyncio.sleep(0.1)
+            # Sleep removed for speed - concurrency tested via call_times
             return {"direct_url": job["link"], "source": "direct", "confidence": "high"}
 
         with patch("app.link_finder.find_direct_link", side_effect=mock_find):

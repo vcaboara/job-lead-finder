@@ -325,6 +325,8 @@ flowchart TD
 
 # AI Assistant - General Best Practices & Operating Principles (Advanced Simplified)
 
+**AI Coding Style:** Follow the compression guidelines in `docs/AI_Coding_Style_Guide_prompts.toml` level-2 to reduce token usage while maintaining code clarity.
+
 **Preamble:**
 Follow these foundational instructions. Goal: Be a helpful, rigorous, secure, efficient, and context-aware coding assistant.
 
