@@ -4,18 +4,33 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 
 ## Quick Links
 
-📚 **Documentation**
+📚 **Getting Started**
 - [Personal Configuration Guide](docs/PERSONAL_CONFIG_GUIDE.md) - API keys and environment setup
-- [Company Discovery Guide](docs/AGGREGATOR_TO_COMPANY_GUIDE.md) - Using the JSearch integration
+- [Ollama Setup Guide](docs/OLLAMA_SETUP.md) - Local AI setup for unlimited job evaluations
+
+🏗️ **Architecture & Planning**
+- [Project Planning](docs/PLANNING.md) - Project overview, architecture, and structure
 - [Provider Architecture](docs/PROVIDERS.md) - How job providers work
+- [Strategic Analysis](docs/STRATEGY.md) - Technical decisions and architecture analysis
+- [Company Discovery Plan](docs/COMPANY_DISCOVERY_PLAN.md) - Feature implementation details
+
+🔧 **Technical Documentation**
+- [JSearch Provider](docs/JSEARCH_PROVIDER.md) - Company discovery implementation
+- [Discovery CLI](docs/DISCOVERY_CLI.md) - Command-line interface for company discovery
+- [Company Discovery Guide](docs/AGGREGATOR_TO_COMPANY_GUIDE.md) - Using the JSearch integration
+
+🤖 **AI & Development**
+- [Claude AI Guide](docs/CLAUDE.md) - Guidelines for AI assistants working on this project
 - [Rulebook-AI Integration](docs/RULEBOOK_INTEGRATION.md) - AI assistant context management
 - [GitHub Integration](docs/GITHUB_RULEBOOK_INTEGRATION.md) - GitHub Actions and Copilot setup
 - [Versioning Workflow](docs/VERSIONING.md) - Automated semantic versioning with GitHub Actions
 
-🔧 **Technical Docs**
-- [JSearch Provider](docs/JSEARCH_PROVIDER.md) - Company discovery implementation
-- [Discovery CLI](docs/DISCOVERY_CLI.md) - Command-line interface for company discovery
-- [TODO & Technical Debt](docs/TODO.md) - Known issues and future improvements
+📋 **Planning & Roadmap**
+- [Task Tracker](docs/TASK.md) - Current development tasks and sprint planning
+- [TODO & Technical Debt](docs/TODO.md) - Known issues and improvements
+- [UI Improvements](docs/UI_IMPROVEMENTS_TODO.md) - UI/UX enhancement roadmap
+- [Future Enhancements](docs/FUTURE_ENHANCEMENTS.md) - Long-term feature ideas
+- [Changelog](CHANGELOG.md) - Version history and release notes
 
 ## Features
 
@@ -152,7 +167,7 @@ data/
 - **API**: `GET /api/job-config`, `POST /api/job-config/search`
 - **File**: `config.json` (auto-created, gitignored)
 
-See [PERSONAL_CONFIG_GUIDE.md](PERSONAL_CONFIG_GUIDE.md) for details.
+See [PERSONAL_CONFIG_GUIDE.md](docs/PERSONAL_CONFIG_GUIDE.md) for details.
 
 ## License
 

@@ -4,9 +4,9 @@ This file guides AI assistants (like Claude) working on the Job Lead Finder proj
 
 ## 🔄 Project Awareness & Context
 
-- Always read `PLANNING.md` at the start of a new conversation to understand the project's architecture, goals, style, and constraints
-- Check `TASK.md` before starting a new task. If the task isn't listed, add it with a brief description and today's date
-- Use consistent naming conventions, file structure, and architecture patterns as described in `PLANNING.md`
+- Always read `docs/PLANNING.md` at the start of a new conversation to understand the project's architecture, goals, style, and constraints
+- Check `docs/TASK.md` before starting a new task. If the task isn't listed, add it with a brief description and today's date
+- Use consistent naming conventions, file structure, and architecture patterns as described in `docs/PLANNING.md`
 - Use the virtual environment (`venv/Scripts/python.exe` on Windows) when executing Python commands
 
 ## 🧱 Code Structure & Modularity
@@ -33,8 +33,8 @@ This file guides AI assistants (like Claude) working on the Job Lead Finder proj
 
 ## ✅ Task Completion
 
-- Mark completed tasks in `TASK.md` immediately after finishing
-- Add new sub-tasks or TODOs discovered during development to `TASK.md` under "Discovered During Work"
+- Mark completed tasks in `docs/TASK.md` immediately after finishing
+- Add new sub-tasks or TODOs discovered during development to `docs/TASK.md` under "Discovered During Work"
 - Use feature branches for new work, never commit directly to `main`
 
 ## 📎 Style & Conventions

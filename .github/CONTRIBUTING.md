@@ -265,7 +265,7 @@ git commit -m "type: descriptive message"
 2. Add tests in `tests/test_mcp_providers.py`
 3. Update `src/app/providers/__init__.py` to export
 4. Add to default config in `src/app/config_manager.py`
-5. Document in `CHANGELOG.md` and `STRATEGY.md`
+5. Document in `CHANGELOG.md` and `docs/STRATEGY.md`
 6. Run smoke test to verify real jobs return
 7. Commit: `feat: Add YourProvider job aggregator`
 
