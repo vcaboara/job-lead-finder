@@ -77,8 +77,12 @@ Expected services:
 
 # Pull a model (choose based on your GPU)
 ollama pull qwen2.5:32b-instruct-q4_K_M  # ~20GB, needs 16GB+ VRAM
-ollama pull qwen2.5:14b-instruct-q4_K_M  # ~9GB, needs 8GB+ VRAM
+ollama pull qwen2.5:14b-instruct-q4_K_M  # ~9GB, needs 8GB+ VRAM (good for laptop)
 ollama pull llama3.2:3b                  # ~2GB, works on 4GB VRAM
+
+# Recommended for your 4070 Ti (12GB desktop)
+ollama pull qwen2.5:32b-instruct-q4_K_M  # Best quality, uses ~20GB with offloading
+ollama pull qwen2.5:14b-instruct-q4_K_M  # Faster, fits entirely in VRAM
 
 # Verify it's running
 ollama list
@@ -99,13 +103,16 @@ curl http://localhost:11434/api/tags
 
 ### GPU Requirements
 
-| GPU VRAM | Recommended Model | Performance |
-|----------|-------------------|-------------|
-| 4-6 GB   | llama3.2:3b or qwen2.5:7b-q4 | Basic tasks |
-| 8-12 GB  | qwen2.5:14b-q4 or llama3.1:8b | Good for most tasks |
-| 16-24 GB | qwen2.5:32b-q4 or llama3.1:70b-q4 | Best quality |
+| GPU VRAM | Recommended Model                 | Performance         |
+| -------- | --------------------------------- | ------------------- |
+| 4-6 GB   | llama3.2:3b or qwen2.5:7b-q4      | Basic tasks         |
+| 8 GB     | qwen2.5:14b-q4 or llama3.1:8b     | Good for most tasks |
+| 12 GB    | qwen2.5:32b-q4 (with offloading)  | Excellent quality   |
+| 16-24 GB | qwen2.5:32b-q4 or llama3.1:70b-q4 | Best quality        |
 
-**Note:** Your laptop's 4070 (8GB) is perfect for qwen2.5:14b-q4 or llama3.2:3b.
+**Your Hardware:**
+- **Desktop 4070 Ti (12GB)**: Perfect for qwen2.5:32b-q4 with GPU offloading, or qwen2.5:14b-q4 entirely in VRAM for maximum speed
+- **Laptop 4070 (8GB)**: Best with qwen2.5:14b-q4 or llama3.2:3b
 
 ## Configuration for Local LLM
 
@@ -163,13 +170,13 @@ python tools/llm_api.py --prompt "Review this code..." --provider gemini
 
 ### Resource Allocation
 
-| AI Resource | Daily Budget | Best For |
-|-------------|--------------|----------|
-| GitHub Copilot Pro | ~50 requests | Complex implementation, refactoring |
-| Gemini API | 20 requests | Documentation, simple code gen, testing |
-| Local LLM (Ollama) | Unlimited | Code analysis, pattern detection, repetitive tasks |
-| Vibe Check MCP | Unlimited | Code review, architectural validation |
-| Vibe Kanban | Unlimited | Task coordination, progress tracking |
+| AI Resource        | Daily Budget | Best For                                           |
+| ------------------ | ------------ | -------------------------------------------------- |
+| GitHub Copilot Pro | ~50 requests | Complex implementation, refactoring                |
+| Gemini API         | 20 requests  | Documentation, simple code gen, testing            |
+| Local LLM (Ollama) | Unlimited    | Code analysis, pattern detection, repetitive tasks |
+| Vibe Check MCP     | Unlimited    | Code review, architectural validation              |
+| Vibe Kanban        | Unlimited    | Task coordination, progress tracking               |
 
 ## Vibe Services Configuration
 

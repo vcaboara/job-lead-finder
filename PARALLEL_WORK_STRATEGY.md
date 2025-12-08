@@ -7,7 +7,7 @@
 ✅ **Docker Compose** - All services containerized
 ✅ **GitHub Copilot Pro** - 1.5k premium requests/month
 ✅ **Gemini API** - 20 requests/day (free tier)
-✅ **Local GPU** - Desktop + Laptop (4070 8GB)
+✅ **Local GPU** - Desktop 4070 Ti (12GB) + Laptop 4070 (8GB)
 
 ## AI Resource Allocation Strategy
 
