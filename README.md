@@ -10,6 +10,7 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 - [Provider Architecture](docs/PROVIDERS.md) - How job providers work
 - [Rulebook-AI Integration](docs/RULEBOOK_INTEGRATION.md) - AI assistant context management
 - [GitHub Integration](docs/GITHUB_RULEBOOK_INTEGRATION.md) - GitHub Actions and Copilot setup
+- [Versioning Workflow](docs/VERSIONING.md) - Automated semantic versioning with GitHub Actions
 
 🔧 **Technical Docs**
 - [JSearch Provider](docs/JSEARCH_PROVIDER.md) - Company discovery implementation

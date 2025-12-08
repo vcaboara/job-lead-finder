@@ -11,14 +11,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from pyproject.toml
+        id: get-version
+        run: |
+          VERSION=$(grep "^version" pyproject.toml | cut -d'"' -f2)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Building version: $VERSION"
 
       - name: Build Docker image with test deps
         run: |
-          docker build --pull --tag job-starter-ci --build-arg INSTALL_TEST_DEPS=true .
+          docker build \
+            --pull \
+            --tag job-starter-ci:${{ steps.get-version.outputs.version }} \
+            --tag job-starter-ci:latest \
+            --build-arg INSTALL_TEST_DEPS=true \
+            --label "version=${{ steps.get-version.outputs.version }}" \
+            --label "git.sha=${{ github.sha }}" \
+            .
 
       - name: Run tests inside container
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace job-starter-ci pytest -q --cov=app --cov-report=xml:/workspace/coverage.xml --cov-report=term
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace job-starter-ci:latest pytest -q --cov=app --cov-report=xml:/workspace/coverage.xml --cov-report=term
 
       - name: Verify coverage file
         run: ls -la coverage.xml
@@ -33,4 +49,4 @@ jobs:
 
       - name: Run health check inside container
         run: |
-          docker run --rm job-starter-ci python -m app.main health
+          docker run --rm job-starter-ci:latest python -m app.main health
