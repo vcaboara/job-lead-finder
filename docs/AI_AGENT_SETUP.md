@@ -23,7 +23,31 @@ This guide shows how to leverage multiple AI resources simultaneously for parall
 
 ## Quick Start
 
-### 1. Clone and Setup Repository
+### Option A: Automated Setup (Recommended)
+
+```bash
+git clone https://github.com/vcaboara/job-lead-finder.git
+cd job-lead-finder
+
+# Run automated setup script
+python scripts/setup_ai_agents.py
+
+# Edit .env and add your API keys (script creates template)
+# GEMINI_API_KEY=your_key_here
+# GITHUB_TOKEN=your_github_token (for Copilot)
+```
+
+The setup script will:
+- ✅ Detect your GPU and recommend optimal models
+- ✅ Check prerequisites (Docker, Git)
+- ✅ Create .env from template
+- ✅ Setup Ollama and pull recommended model
+- ✅ Start Docker services
+- ✅ Verify complete setup
+
+See [`scripts/README.md`](../scripts/README.md) for detailed script documentation.
+
+### Option B: Manual Setup
 
 ```bash
 git clone https://github.com/vcaboara/job-lead-finder.git

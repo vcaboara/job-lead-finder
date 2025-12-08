@@ -53,6 +53,9 @@ Thumbs.db
 vibe-check-mcp/
 vibe-kanban/
 
+# AI resource tracking
+.ai_usage_tracking.json
+
 # Generated debug files
 logs/*.txt
 logs/*.log
