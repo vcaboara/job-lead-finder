@@ -1,0 +1,94 @@
+# Inclusive Language Configuration
+# Reference: https://developers.google.com/style/inclusive-documentation
+
+# Terms to avoid and their inclusive alternatives
+terms:
+  # Access control
+  whitelist:
+    alternatives: [allowlist, passlist]
+    severity: warning
+    context: "Use 'allowlist' for permitted items"
+
+  blacklist:
+    alternatives: [denylist, blocklist]
+    severity: warning
+    context: "Use 'denylist' or 'blocklist' for prohibited items"
+
+  # System architecture
+  master:
+    alternatives: [primary, main, leader, coordinator]
+    severity: warning
+    context: "Use 'primary' for databases/servers. Git 'main' branch is preferred."
+    exceptions:
+      - "master branch" # Legacy Git, transitioning to 'main'
+      - "Task Master" # Proper name for tool/extension
+      - "Scrum Master" # Official role title
+
+  slave:
+    alternatives: [replica, secondary, follower, worker]
+    severity: error
+    context: "Use 'replica' or 'secondary' for databases/servers"
+
+  # Legacy/status
+  grandfathered:
+    alternatives: [legacy status, exempted, preexisting]
+    severity: warning
+    context: "Use 'legacy status' or 'exempted'"
+
+  # Time/effort
+  man-hours:
+    alternatives: [person-hours, work-hours, engineering hours]
+    severity: warning
+    context: "Use gender-neutral terms"
+
+  man-days:
+    alternatives: [person-days, work-days]
+    severity: warning
+    context: "Use gender-neutral terms"
+
+  # Quality assurance
+  sanity check:
+    alternatives: [confidence check, verification, smoke test, quick check]
+    severity: info
+    context: "Use more specific technical terms"
+
+  # Placeholder values
+  dummy:
+    alternatives: [placeholder, sample, mock, stub, test]
+    severity: info
+    context: "Use more descriptive terms for test data"
+
+  # Technical competence
+  guru:
+    alternatives: [expert, specialist]
+    severity: info
+    context: "Use professional titles"
+
+  native:
+    alternatives: [built-in, core, standard, first-party]
+    severity: info
+    context: "In technical contexts, prefer 'built-in' or 'core'"
+    exceptions:
+      - "native speaker" # Linguistic context is acceptable
+      - "React Native" # Framework name
+
+# Additional patterns to watch for
+patterns:
+  - name: gendered-pronouns
+    regex: '\b(he|she)\s+(will|has|does|can)\b'
+    suggestion: "Consider using 'they' for generic references"
+    severity: info
+
+  - name: cultural-assumptions
+    terms: [brownbag, powwow]
+    suggestion: "Use culturally neutral terms like 'lunch and learn' or 'meeting'"
+    severity: warning
+# Severity levels:
+# - error: Block commit (must fix)
+# - warning: Show warning but allow commit
+# - info: Informational only
+
+# How to handle false positives:
+# 1. Add to exceptions list in this file
+# 2. Add context-specific patterns to EXCLUDE_PATTERNS in .pre-commit-config.yaml
+# 3. Use inline comments: # inclusive-language: ignore-line

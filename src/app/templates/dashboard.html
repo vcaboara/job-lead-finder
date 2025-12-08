@@ -521,7 +521,7 @@
             'python scripts/init_memory_bank.py',
             'docker compose ps'
         ];
-        
+
         const buttons = document.querySelectorAll('.action-btn');
         buttons.forEach((button, index) => {
             button.addEventListener('click', () => handleCommandClick(commands[index]));

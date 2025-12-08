@@ -486,3 +486,89 @@ If needed, you can further use the `web_scraper.py` file to scrape the web page 
 5.  **Report & Update:** Report outcome. Provide fix/tests if successful. Propose updates: **`error-documentation.md` (Mandatory)**, `tasks_plan`, `active_context`, potentially `lessons` or flags for core docs. Handle getting stuck by reporting findings and requesting help.
 
 **(End of Debugging Workflow - Advanced Simplified)**
+
+---
+
+# Rule: 02-pr-review-criteria.md
+
+# Pull Request Review Criteria
+
+When reviewing pull requests or code changes, apply these comprehensive quality criteria:
+
+## Code Structure
+- **Complex conditionals**: Can if/elif chains be simplified with dictionaries, pattern matching, or early returns?
+- **Nested blocks**: Are there deeply nested if blocks or for loops that reduce readability?
+- **Control flow**: Opportunities to use guard clauses or extract helper functions?
+- **Function size**: Are functions appropriately sized and focused on single responsibilities?
+
+## Code Quality
+- **Simplicity**: Can any complex logic be simplified?
+- **Conciseness**: Are functions and classes appropriately sized without unnecessary verbosity?
+- **DRYness**: Any duplicated code patterns that should be extracted into reusable components?
+- **Modularity**: Are components well-separated with clear boundaries and interfaces?
+- **Readability**: Is the code self-documenting with clear variable/function names?
+
+## Best Practices
+- **Logging**: Are print statements used instead of proper logging? Should use logging module with appropriate levels.
+- **Output handling**: Is stdout/stderr used appropriately for the context?
+- **Error handling**: Robust exception handling with specific error types rather than bare except clauses?
+- **Type hints**: Comprehensive type annotations for function signatures and class attributes?
+- **Docstrings**: Clear documentation for public APIs following project conventions?
+- **Resource management**: Proper use of context managers for file/connection handling?
+
+## Python-Specific
+- **Pythonic patterns**: Using list comprehensions, generators, context managers appropriately?
+- **Standard library**: Leveraging built-in modules instead of reinventing functionality?
+- **Performance**: Avoiding common anti-patterns (repeated string concatenation, unnecessary loops)?
+- **imports**: Organized and minimal, following PEP 8 conventions?
+
+## Architecture & Design
+- **Separation of concerns**: Clear boundaries between different layers (UI, business logic, data)?
+- **Dependency management**: Appropriate use of dependency injection and loose coupling?
+- **Scalability**: Will the design handle growth in data/users/features?
+- **Testability**: Is the code structured to facilitate unit and integration testing?
+
+## Testing
+- **Coverage**: Are critical paths and edge cases covered by tests?
+- **Test quality**: Are tests clear, maintainable, and testing the right things?
+- **Test organization**: Proper use of fixtures, parametrization, and test isolation?
+- **Mocking**: Appropriate mocking of external dependencies?
+
+## Frontend (when applicable)
+- **CSS organization**: Can styles be better organized or use more CSS custom properties?
+- **JavaScript**: Any inline JS that should be extracted? Modern patterns used?
+- **Performance**: Unnecessary DOM operations or rendering inefficiencies?
+- **Accessibility**: Semantic HTML, ARIA attributes, keyboard navigation support?
+- **Responsive design**: Proper handling of different screen sizes and devices?
+
+## Flask/Web (when applicable)
+- **Route organization**: Clear, RESTful routing patterns?
+- **Template structure**: Proper separation of concerns in Jinja templates?
+- **Error handling**: Appropriate HTTP status codes and error pages?
+- **Security**: CSRF protection, input validation, SQL injection prevention?
+- **Session management**: Secure handling of user sessions and authentication?
+
+## Documentation & Comments
+- **Why over what**: Comments explain reasoning, not just restate code?
+- **API documentation**: Public interfaces clearly documented?
+- **Inline comments**: Used sparingly and only when code complexity requires explanation?
+- **README updates**: Are user-facing changes reflected in documentation?
+
+## PR-Specific
+- **Scope**: Is the PR focused on a single concern or feature?
+- **Commits**: Clear, logical commit history with descriptive messages?
+- **Breaking changes**: Are they clearly called out and justified?
+- **Existing comments**: Have all previous review comments been addressed?
+- **Unresolved discussions**: Are there open questions that need clarification?
+
+## Review Questions to Ask
+1. Can this code be understood by someone unfamiliar with the context in 6 months?
+2. Are there obvious edge cases or error conditions not being handled?
+3. Does this introduce technical debt that should be documented?
+4. Are there simpler alternatives that achieve the same goal?
+5. Does this follow the existing patterns and conventions in the codebase?
+6. Is there duplicated logic that already exists elsewhere?
+7. Would this benefit from additional abstraction or is it over-engineered?
+8. Are there performance implications that should be considered?
+9. Is this change backwards compatible or does it require migration?
+10. Have all relevant stakeholders been considered (users, developers, operations)?

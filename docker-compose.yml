@@ -18,9 +18,6 @@ services:
 
   ui:
     extends: app
-    build:
-      args:
-        INSTALL_TEST_DEPS: "false"
     volumes:
       - ./:/app:delegated
       - job-data:/app/data # Shared volume for database
@@ -35,9 +32,6 @@ services:
 
   worker:
     extends: app
-    build:
-      args:
-        INSTALL_TEST_DEPS: "false"
     volumes:
       - ./:/app:delegated
       - job-data:/app/data # Shared volume for database
@@ -53,6 +47,22 @@ services:
     depends_on:
       - ui
 
+  ai-monitor:
+    extends: app
+    volumes:
+      - ./:/app:delegated
+      - ai-tracking:/app/.ai_usage_tracking/ # Persistent tracking directory for JSON files
+    working_dir: /app
+    environment:
+      - AI_TRACKING_FILE=/app/.ai_usage_tracking/.ai_usage_tracking.json
+    ports:
+      - "9000:9000"
+    command: python -m app.ai_monitor_ui
+    restart: unless-stopped
+    depends_on:
+      - ui
+
 volumes:
   job-data:
   job-logs:
+  ai-tracking:

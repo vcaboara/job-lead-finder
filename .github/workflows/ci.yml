@@ -34,7 +34,7 @@ jobs:
 
       - name: Run tests inside container
         run: |
-          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace job-starter-ci:latest pytest -q -m "" --cov=app --cov-report=xml:/workspace/coverage.xml --cov-report=term
+          docker run --rm -v ${{ github.workspace }}:/workspace -w /workspace job-starter-ci:latest pytest -n auto -m "" --cov=app --cov-report=xml:/workspace/coverage.xml --cov-report=term
 
       - name: Verify coverage file
         run: ls -la coverage.xml

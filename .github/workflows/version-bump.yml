@@ -123,6 +123,11 @@ jobs:
 
       - name: Create and push tag
         run: |
+          # Delete tag if it exists locally
+          git tag -d "v${{ steps.bump.outputs.version }}" 2>/dev/null || true
+          # Delete tag from remote if it exists
+          git push origin ":refs/tags/v${{ steps.bump.outputs.version }}" 2>/dev/null || true
+          # Create new tag
           git tag -a "v${{ steps.bump.outputs.version }}" -m "Release v${{ steps.bump.outputs.version }}: ${{ github.event.pull_request.title }}"
           git push origin "v${{ steps.bump.outputs.version }}"
 
