@@ -467,9 +467,7 @@
             try {
                 const response = await fetch('http://localhost:3001/api/tasks');
                 const tasks = await response.json();
-                const activeTasks = Array.isArray(tasks) 
-                    ? tasks.filter(t => t.status === TASK_STATUS.IN_PROGRESS || t.status === TASK_STATUS.TODO).length 
-                    : 0;
+                const activeTasks = Array.isArray(tasks) ? tasks.filter(t => t.status === TASK_STATUS.IN_PROGRESS || t.status === TASK_STATUS.TODO).length : 0;
                 document.getElementById('active-tasks').textContent = activeTasks;
             } catch (error) {
                 document.getElementById('active-tasks').textContent = '0';
@@ -516,24 +514,22 @@
         `;
         document.head.appendChild(style);
 
+        // Attach event listeners to action buttons
+        const commands = [
+            'python scripts/autonomous_task_executor.py',
+            'python scripts/autonomous_task_executor.py --execute',
+            'python scripts/init_memory_bank.py',
+            'docker compose ps'
+        ];
+        
+        const buttons = document.querySelectorAll('.action-btn');
+        buttons.forEach((button, index) => {
+            button.addEventListener('click', () => handleCommandClick(commands[index]));
+        });
+
         // Initialize dashboard
         refreshAll();
         setInterval(refreshAll, 30000);
-
-        // Attach event listeners to action buttons
-        document.addEventListener('DOMContentLoaded', () => {
-            const commands = [
-                'python scripts/autonomous_task_executor.py',
-                'python scripts/autonomous_task_executor.py --execute',
-                'python scripts/init_memory_bank.py',
-                'docker compose ps'
-            ];
-            
-            const buttons = document.querySelectorAll('.action-btn');
-            buttons.forEach((button, index) => {
-                button.addEventListener('click', () => handleCommandClick(commands[index]));
-            });
-        });
     </script>
 </body>
 </html>
