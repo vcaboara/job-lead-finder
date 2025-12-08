@@ -2,7 +2,7 @@
 # Usage: .\test.ps1 [fast|unit|smoke|all|cov|profile]
 
 param(
-    [Parameter(Position=0)]
+    [Parameter(Position = 0)]
     [ValidateSet('fast', 'unit', 'smoke', 'all', 'cov', 'profile', 'watch')]
     [string]$Mode = 'fast'
 )

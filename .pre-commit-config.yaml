@@ -59,15 +59,12 @@ repos:
         language: system
         pass_filenames: false
         stages: [pre-push]
-      # pytest disabled in pre-commit for speed - run manually with ./test.ps1
-      # For pre-push validation, use: ./test.ps1 smoke
-      # Full suite in CI only
-      # - id: pytest
-      #   name: pytest
-      #   entry: python -m pytest
-      #   language: system
-      #   pass_filenames: false
-      #   types: [python]
-      #   files: ^(src/|tests/)
-      #   args: [tests/, -v, --tb=short, -m, "not slow"]
-      #   stages: [manual]
+      - id: pytest
+        name: pytest (fast tests)
+        entry: python -m pytest
+        language: system
+        pass_filenames: false
+        types: [python]
+        files: ^(src/|tests/)
+        args: [-m, "not slow", --maxfail=3, --tb=short, -q]
+        stages: [pre-commit]

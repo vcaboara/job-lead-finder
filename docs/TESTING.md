@@ -121,13 +121,13 @@ def test_api_call(monkeypatch):
 
 ## Test Execution Time Targets
 
-| Mode | Target | Command |
-|------|--------|---------|
-| Changed files | <30s | `pytest --picked` |
-| Unit tests | <60s | `pytest -m unit` |
-| Smoke test | varies | `pytest --ff -x` |
-| Default (CI) | <2min | `pytest` |
-| Full suite | <2.5min | `pytest --slow` |
+| Mode          | Target  | Command           |
+| ------------- | ------- | ----------------- |
+| Changed files | <30s    | `pytest --picked` |
+| Unit tests    | <60s    | `pytest -m unit`  |
+| Smoke test    | varies  | `pytest --ff -x`  |
+| Default (CI)  | <2min   | `pytest`          |
+| Full suite    | <2.5min | `pytest --slow`   |
 
 ## CI/CD Integration
 
