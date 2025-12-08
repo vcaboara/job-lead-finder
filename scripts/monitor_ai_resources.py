@@ -6,10 +6,15 @@ Monitors usage of AI resources (Copilot, Gemini, Local LLM) and provides recomme
 
 import argparse
 import json
+import logging
 import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
 class ResourceMonitor:
@@ -19,37 +24,63 @@ class ResourceMonitor:
         self.tracking_file = tracking_file
         self.data = self._load_tracking_data()
 
-    def _load_tracking_data(self) -> dict:
-        """Load usage tracking data"""
+    def _load_tracking_data(self) -> Dict:
+        """Load usage tracking data from JSON file.
+
+        Returns:
+            Dict containing tracking data for all AI providers.
+            Default structure if file doesn't exist.
+        """
         if self.tracking_file.exists():
-            with open(self.tracking_file) as f:
-                return json.load(f)
+            try:
+                with open(self.tracking_file, "r", encoding="utf-8") as f:
+                    return json.load(f)
+            except (json.JSONDecodeError, IOError) as e:
+                logger.warning("Failed to load tracking data: %s. Using defaults.", str(e))
         return {
             "copilot": {"daily": {}, "monthly_limit": 1500},
             "gemini": {"daily": {}, "daily_limit": 20},
             "local_llm": {"sessions": []},
         }
 
-    def _save_tracking_data(self):
-        """Save usage tracking data"""
-        with open(self.tracking_file, "w") as f:
-            json.dump(self.data, f, indent=2)
+    def _save_tracking_data(self) -> None:
+        """Save usage tracking data to JSON file.
 
-    def record_copilot_usage(self, count: int = 1):
-        """Record Copilot usage"""
+        Raises:
+            IOError: If file write fails.
+        """
+        try:
+            with open(self.tracking_file, "w", encoding="utf-8") as f:
+                json.dump(self.data, f, indent=2)
+        except IOError as e:
+            logger.error("Failed to save tracking data: %s", str(e))
+            raise
+
+    def record_copilot_usage(self, count: int = 1) -> None:
+        """Record Copilot usage for the current day.
+
+        Args:
+            count: Number of requests to record (default: 1).
+        """
         today = datetime.now().strftime("%Y-%m-%d")
         if today not in self.data["copilot"]["daily"]:
             self.data["copilot"]["daily"][today] = 0
         self.data["copilot"]["daily"][today] += count
         self._save_tracking_data()
+        logger.debug("Recorded %d Copilot request(s) for %s", count, today)
 
-    def record_gemini_usage(self, count: int = 1):
-        """Record Gemini API usage"""
+    def record_gemini_usage(self, count: int = 1) -> None:
+        """Record Gemini API usage for the current day.
+
+        Args:
+            count: Number of requests to record (default: 1).
+        """
         today = datetime.now().strftime("%Y-%m-%d")
         if today not in self.data["gemini"]["daily"]:
             self.data["gemini"]["daily"][today] = 0
         self.data["gemini"]["daily"][today] += count
         self._save_tracking_data()
+        logger.debug("Recorded %d Gemini request(s) for %s", count, today)
 
     def get_copilot_usage(self) -> Dict[str, int]:
         """Get Copilot usage stats"""
@@ -88,10 +119,14 @@ class ResourceMonitor:
             "percentage_used": (daily_usage / daily_limit) * 100 if daily_limit > 0 else 0,
         }
 
-    def check_ollama_status(self) -> Optional[dict]:
-        """Check Ollama server status and running models"""
+    def check_ollama_status(self) -> Optional[Dict]:
+        """Check Ollama server status and running models.
+
+        Returns:
+            Dict with status and models if Ollama is available, None otherwise.
+        """
         try:
-            result = subprocess.run(["ollama", "ps"], capture_output=True, text=True, check=False)
+            result = subprocess.run(["ollama", "ps"], capture_output=True, text=True, check=False, timeout=5)
 
             if result.returncode == 0:
                 lines = result.stdout.strip().split("\n")
@@ -111,14 +146,23 @@ class ResourceMonitor:
                     return {"status": "running", "models": running_models}
                 return {"status": "running", "models": []}
         except FileNotFoundError:
+            logger.debug("Ollama not installed")
             return {"status": "not_installed"}
-        except Exception as e:
+        except subprocess.TimeoutExpired:
+            logger.warning("Ollama command timed out")
+            return {"status": "timeout"}
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.error("Error checking Ollama status: %s", str(e))
             return {"status": "error", "error": str(e)}
 
         return {"status": "offline"}
 
-    def check_gpu_usage(self) -> Optional[dict]:
-        """Check GPU utilization"""
+    def check_gpu_usage(self) -> Optional[List[Dict]]:
+        """Check GPU utilization and memory usage.
+
+        Returns:
+            List of dicts with GPU metrics for each GPU, or None if nvidia-smi unavailable.
+        """
         try:
             result = subprocess.run(
                 [
@@ -146,10 +190,15 @@ class ResourceMonitor:
                                     "mem_total_mb": float(parts[3]),
                                 }
                             )
-                return gpus
-        except (FileNotFoundError, Exception):
-            # nvidia-smi not available or parsing failed - GPU monitoring is optional
-            pass
+                return gpus if gpus else None
+        except FileNotFoundError:
+            logger.debug("nvidia-smi not found, GPU monitoring unavailable")
+        except subprocess.TimeoutExpired:
+            logger.warning("nvidia-smi command timed out")
+        except (ValueError, IndexError) as e:
+            logger.error("Failed to parse GPU data: %s", str(e))
+        except (subprocess.SubprocessError, OSError) as e:
+            logger.error("Unexpected error checking GPU usage: %s", str(e))
 
         return None
 
@@ -212,8 +261,12 @@ class ResourceMonitor:
 
         return recommendations
 
-    def print_status(self):
-        """Print formatted status report"""
+    def print_status(self) -> None:
+        """Print formatted status report to console.
+
+        Note: This method uses print() for formatted console output.
+        For logging, use the logger instead.
+        """
         print("\n" + "=" * 60)
         print("AI Resource Usage Monitor")
         print("=" * 60 + "\n")
@@ -278,7 +331,8 @@ class ResourceMonitor:
             print()
 
 
-def main():
+def main() -> None:
+    """Main entry point for the resource monitor CLI."""
     parser = argparse.ArgumentParser(description="Monitor AI resource usage and get optimization recommendations")
     parser.add_argument("--record-copilot", type=int, metavar="COUNT", help="Record Copilot usage (number of requests)")
     parser.add_argument(

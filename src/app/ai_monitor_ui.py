@@ -6,12 +6,17 @@ Runs as a containerized service accessible via web browser.
 """
 
 import json
+import logging
 import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from flask import Flask, jsonify, render_template_string
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -357,12 +362,17 @@ class AIResourceMonitor:
         self.data = self._load_data()
 
     def _load_data(self) -> Dict:
-        """Load tracking data from JSON file."""
+        """Load tracking data from JSON file.
+
+        Returns:
+            Dict containing tracking data. Returns default structure if file missing or invalid.
+        """
         if self.tracking_file.exists():
             try:
                 with open(self.tracking_file, encoding="utf-8") as f:
                     return json.load(f)
-            except (json.JSONDecodeError, IOError):
+            except (json.JSONDecodeError, IOError) as e:
+                logger.warning("Failed to load tracking data: %s. Using defaults.", str(e))
                 return self._init_data()
         return self._init_data()
 
@@ -373,8 +383,12 @@ class AIResourceMonitor:
             "gemini": {"daily": []},
         }
 
-    def get_copilot_usage(self) -> Dict:
-        """Get Copilot usage statistics."""
+    def get_copilot_usage(self) -> Dict[str, float]:
+        """Get Copilot usage statistics.
+
+        Returns:
+            Dict with daily, monthly, monthly_limit, remaining, and percentage_used.
+        """
         today = datetime.now().strftime("%Y-%m-%d")
         current_month = datetime.now().strftime("%Y-%m")
 
@@ -392,8 +406,12 @@ class AIResourceMonitor:
             "percentage_used": (monthly_count / monthly_limit * 100) if monthly_limit > 0 else 0,
         }
 
-    def get_gemini_usage(self) -> Dict:
-        """Get Gemini API usage statistics."""
+    def get_gemini_usage(self) -> Dict[str, float]:
+        """Get Gemini API usage statistics.
+
+        Returns:
+            Dict with daily, daily_limit, remaining, and percentage_used.
+        """
         today = datetime.now().strftime("%Y-%m-%d")
         daily_count = sum(1 for entry in self.data.get("gemini", {}).get("daily", []) if entry["date"] == today)
 
@@ -406,7 +424,11 @@ class AIResourceMonitor:
         }
 
     def check_ollama_status(self) -> Optional[Dict]:
-        """Check Ollama server status and running models."""
+        """Check Ollama server status and running models.
+
+        Returns:
+            Dict with status, models list, and model_count if Ollama available, None otherwise.
+        """
         try:
             result = subprocess.run(
                 ["ollama", "ps"],
@@ -435,7 +457,11 @@ class AIResourceMonitor:
             return None
 
     def check_gpu_usage(self) -> Optional[Dict]:
-        """Check GPU utilization and memory usage."""
+        """Check GPU utilization and memory usage.
+
+        Returns:
+            Dict with GPU name, utilization, and memory stats if available, None otherwise.
+        """
         try:
             result = subprocess.run(
                 [
@@ -468,7 +494,11 @@ class AIResourceMonitor:
         return None
 
     def get_recommendations(self) -> List[str]:
-        """Generate optimization recommendations based on current usage."""
+        """Generate optimization recommendations based on current usage.
+
+        Returns:
+            List of recommendation strings for resource optimization.
+        """
         recommendations = []
 
         copilot = self.get_copilot_usage()
@@ -507,14 +537,22 @@ monitor = AIResourceMonitor()
 
 
 @app.route("/")
-def dashboard():
-    """Serve the dashboard HTML."""
+def dashboard() -> str:
+    """Serve the dashboard HTML page.
+
+    Returns:
+        Rendered HTML template.
+    """
     return render_template_string(DASHBOARD_HTML)
 
 
 @app.route("/api/metrics")
-def get_metrics():
-    """API endpoint for current metrics."""
+def get_metrics() -> Dict:
+    """API endpoint for current metrics.
+
+    Returns:
+        JSON response with all provider metrics and recommendations.
+    """
     return jsonify(
         {
             "copilot": monitor.get_copilot_usage(),
