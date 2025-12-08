@@ -169,6 +169,46 @@ data/
 
 See [PERSONAL_CONFIG_GUIDE.md](docs/PERSONAL_CONFIG_GUIDE.md) for details.
 
+## Testing Automated Job Discovery
+
+The background worker can automatically discover jobs based on your resume:
+
+**Manual test** (immediate):
+```powershell
+# 1. Start UI server
+docker compose up ui
+
+# 2. Upload resume via UI (http://localhost:8000) or API:
+curl -X POST http://localhost:8000/api/upload/resume -F "file=@your_resume.txt"
+
+# 3. Run test script
+python test_auto_discovery.py
+```
+
+The test script will:
+- Upload a sample resume
+- Trigger auto-discovery manually
+- Show discovered jobs with scores ≥ 60
+
+**Automatic mode** (background worker):
+```powershell
+# Start worker (runs discovery every 6 hours)
+docker compose up worker
+
+# Check status via API
+curl http://localhost:8000/api/auto-discover/status
+
+# Trigger immediately (don't wait 6 hours)
+curl -X POST http://localhost:8000/api/auto-discover/trigger
+```
+
+**Environment variables**:
+```env
+AUTO_DISCOVERY_INTERVAL_HOURS=6  # How often to search
+LINK_DISCOVERY_INTERVAL_MINUTES=60
+CLEANUP_INTERVAL_HOURS=24
+```
+
 ## License
 
 MIT

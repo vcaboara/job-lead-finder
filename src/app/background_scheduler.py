@@ -142,7 +142,8 @@ class BackgroundScheduler:
             tracker = JobTracker()
             new_jobs_count = 0
 
-            for query in search_queries[:3]:  # Limit to top 3 queries to avoid rate limits
+            # Limit to top 3 queries to avoid rate limits
+            for query in search_queries[:3]:
                 try:
                     logger.info(f"Searching for: {query}")
 
