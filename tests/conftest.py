@@ -171,12 +171,14 @@ def cleanup_test_files():
 
 
 @pytest.fixture
-def mock_resume_file(mocker):
+def mock_resume_file(monkeypatch):
     """Create a mock RESUME_FILE for testing.
 
     Returns:
         MagicMock: Mock Path object that can be configured per test
     """
-    mock_file = mocker.MagicMock()
-    mocker.patch("app.ui_server.RESUME_FILE", mock_file)
+    from unittest.mock import MagicMock
+
+    mock_file = MagicMock()
+    monkeypatch.setattr("app.ui_server.RESUME_FILE", mock_file)
     return mock_file
