@@ -84,6 +84,7 @@ def get_gpu_info() -> Optional[dict]:
                 vram_gb = int(vram.strip().split()[0]) / 1024
                 return {"vendor": "NVIDIA", "name": name.strip(), "vram_gb": vram_gb}
     except Exception:
+        # GPU detection failed (nvidia-smi not found, parsing error, etc.) - GPU is optional
         pass
 
     return None
