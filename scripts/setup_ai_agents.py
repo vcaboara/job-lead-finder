@@ -6,12 +6,17 @@ Works cross-platform: Windows, Linux, Mac
 """
 
 import argparse
+import logging
 import platform
 import shutil
 import subprocess
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
 class Colors:
@@ -27,41 +32,80 @@ class Colors:
     BOLD = "\033[1m"
 
 
-def print_header(text: str):
-    """Print a colored header"""
+def print_header(text: str) -> None:
+    """Print a styled header for CLI output.
+
+    Args:
+        text: Header text to display.    Note: Uses print() for formatted console output in interactive setup.
+    """
     print(f"\n{Colors.HEADER}{Colors.BOLD}{'='*60}{Colors.ENDC}")
     print(f"{Colors.HEADER}{Colors.BOLD}{text}{Colors.ENDC}")
     print(f"{Colors.HEADER}{Colors.BOLD}{'='*60}{Colors.ENDC}\n")
 
 
-def print_success(text: str):
-    """Print success message"""
+def print_success(text: str) -> None:
+    """Print success message with styled output.
+
+    Args:
+        text: Success message to display.
+    """
     print(f"{Colors.OKGREEN}✓ {text}{Colors.ENDC}")
 
 
-def print_info(text: str):
-    """Print info message"""
+def print_info(text: str) -> None:
+    """Print info message with styled output.
+
+    Args:
+        text: Info message to display.
+    """
     print(f"{Colors.OKBLUE}ℹ {text}{Colors.ENDC}")
 
 
-def print_warning(text: str):
-    """Print warning message"""
+def print_warning(text: str) -> None:
+    """Print warning message with styled output.
+
+    Args:
+        text: Warning message to display.
+    """
     print(f"{Colors.WARNING}⚠ {text}{Colors.ENDC}")
+    logger.warning(text)
 
 
-def print_error(text: str):
-    """Print error message"""
+def print_error(text: str) -> None:
+    """Print error message with styled output.
+
+    Args:
+        text: Error message to display.
+    """
     print(f"{Colors.FAIL}✗ {text}{Colors.ENDC}")
+    logger.error(text)
 
 
-def run_command(cmd: List[str], check: bool = True, capture_output: bool = False) -> Tuple[int, str, str]:
-    """Run a shell command and return exit code, stdout, stderr"""
+def run_command(
+    cmd: List[str], check: bool = True, capture_output: bool = False, timeout: Optional[int] = None
+) -> Tuple[int, str, str]:
+    """Run a shell command and return exit code, stdout, stderr.
+
+    Args:
+        cmd: Command and arguments as a list.
+        check: Whether to raise exception on non-zero exit (default: True).
+        capture_output: Whether to capture stdout/stderr (default: False).
+        timeout: Command timeout in seconds (default: None).
+
+    Returns:
+        Tuple of (exit_code, stdout, stderr).
+    """
     try:
-        result = subprocess.run(cmd, check=check, capture_output=capture_output, text=True)
+        result = subprocess.run(cmd, check=check, capture_output=capture_output, text=True, timeout=timeout)
         return result.returncode, result.stdout if capture_output else "", result.stderr if capture_output else ""
     except subprocess.CalledProcessError as e:
+        logger.debug("Command failed with code %d: %s", e.returncode, " ".join(cmd))
         return e.returncode, e.stdout if capture_output else "", e.stderr if capture_output else ""
+    except subprocess.TimeoutExpired:
+        logger.error("Command timed out after %ds: %s", timeout, " ".join(cmd))
+        return 124, "", f"Command timed out: {cmd[0]}"
     except FileNotFoundError:
+        logger.error("Command not found: %s", cmd[0])
         return 1, "", f"Command not found: {cmd[0]}"
 
 
@@ -70,8 +114,12 @@ def check_command_exists(cmd: str) -> bool:
     return shutil.which(cmd) is not None
 
 
-def get_gpu_info() -> Optional[dict]:
-    """Detect GPU and VRAM"""
+def get_gpu_info() -> Optional[Dict]:
+    """Detect GPU vendor, name, and VRAM.
+
+    Returns:
+        Dict with vendor, name, and vram_gb if GPU detected, None otherwise.
+    """
     try:
         # Try nvidia-smi for NVIDIA GPUs
         code, stdout, _ = run_command(
@@ -80,20 +128,34 @@ def get_gpu_info() -> Optional[dict]:
         if code == 0 and stdout:
             lines = stdout.strip().split("\n")
             if lines:
-                name, vram = lines[0].split(",")
-                vram_gb = int(vram.strip().split()[0]) / 1024
-                return {"vendor": "NVIDIA", "name": name.strip(), "vram_gb": vram_gb}
-    except Exception:
-        # GPU detection failed (nvidia-smi not found, parsing error, etc.) - GPU is optional
-        pass
+                parts = lines[0].split(",")
+                if len(parts) == 2:
+                    name, vram = parts
+                    vram_gb = int(vram.strip().split()[0]) / 1024
+                    return {"vendor": "NVIDIA", "name": name.strip(), "vram_gb": vram_gb}
+                else:
+                    logger.warning("Unexpected nvidia-smi output format (expected 2 values, got %d)", len(parts))
+    except FileNotFoundError:
+        logger.debug("nvidia-smi not found, no NVIDIA GPU detected")
+    except (ValueError, IndexError) as e:
+        logger.warning("Failed to parse GPU info: %s", str(e))
+    except (subprocess.SubprocessError, OSError) as e:
+        logger.error("Unexpected error detecting GPU: %s", str(e))
 
     return None
 
 
 def recommend_ollama_model(vram_gb: float) -> List[str]:
-    """Recommend Ollama models based on VRAM"""
+    """Recommend Ollama models based on VRAM
+
+    Args:
+        vram_gb: Available VRAM in gigabytes
+
+    Returns:
+        List of recommended model names for Ollama
+    """
     if vram_gb >= 16:
-        return ["qwen2.5:32b-instruct-q4_K_M", "qwen2.5:14b-instruct-q4_K_M"]
+        return ["qwen2.5:32b-instruct-fp16", "qwen2.5:32b-instruct-q4_K_M", "qwen2.5:14b-instruct-q4_K_M"]
     elif vram_gb >= 12:
         return ["qwen2.5:32b-instruct-q4_K_M", "qwen2.5:14b-instruct-q4_K_M"]
     elif vram_gb >= 8:
@@ -289,12 +351,16 @@ def verify_setup(project_root: Path) -> bool:
     env_file = project_root / ".env"
     checks.append(("Environment file (.env)", env_file.exists()))
 
-    # Check Docker services
+    # Check Docker services (expecting core services: ui, worker, ai-monitor)
     code, stdout, _ = run_command(["docker", "compose", "ps"], check=False, capture_output=True)
-    running_services = 0
+    expected_services = {"ui", "worker", "ai-monitor"}
     if code == 0 and stdout:
-        running_services = len([line for line in stdout.split("\n") if "Up" in line])
-    checks.append(("Docker services running", running_services >= 2))
+        # Check if expected services are running
+        running_service_names = {line.split()[0] for line in stdout.split("\n") if "Up" in line and line.strip()}
+        services_ok = len(expected_services.intersection(running_service_names)) >= 2
+        checks.append(("Docker services running", services_ok))
+    else:
+        checks.append(("Docker services running", False))
 
     # Check Ollama
     ollama_installed, _ = check_ollama()
@@ -312,7 +378,8 @@ def verify_setup(project_root: Path) -> bool:
     return all_passed
 
 
-def main():
+def main() -> None:
+    """Main entry point for the AI agent setup CLI."""
     parser = argparse.ArgumentParser(description="AI Agent Setup Utility - Automate parallel AI development setup")
     parser.add_argument("--skip-docker", action="store_true", help="Skip Docker setup and service startup")
     parser.add_argument("--skip-ollama", action="store_true", help="Skip Ollama setup")

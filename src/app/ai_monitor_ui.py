@@ -6,12 +6,17 @@ Runs as a containerized service accessible via web browser.
 """
 
 import json
+import logging
 import subprocess
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
 from flask import Flask, jsonify, render_template_string
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -312,7 +317,6 @@ DASHBOARD_HTML = """
                         const vramPercent = data.gpu.mem_total_mb
                             ? (data.gpu.mem_used_mb / data.gpu.mem_total_mb * 100)
                             : 0;
-                            : 0;
 
                         gpuChart.data.datasets[0].data = [
                             data.gpu.gpu_util || 0,
@@ -352,17 +356,26 @@ DASHBOARD_HTML = """
 class AIResourceMonitor:
     """Monitor AI resource usage across providers."""
 
-    def __init__(self, tracking_file: str = ".ai_usage_tracking.json"):
+    def __init__(self, tracking_file: Optional[str] = None):
+        if tracking_file is None:
+            import os
+
+            tracking_file = os.getenv("AI_TRACKING_FILE", ".ai_usage_tracking.json")
         self.tracking_file = Path(tracking_file)
         self.data = self._load_data()
 
     def _load_data(self) -> Dict:
-        """Load tracking data from JSON file."""
+        """Load tracking data from JSON file.
+
+        Returns:
+            Dict containing tracking data. Returns default structure if file missing or invalid.
+        """
         if self.tracking_file.exists():
             try:
                 with open(self.tracking_file, encoding="utf-8") as f:
                     return json.load(f)
-            except (json.JSONDecodeError, IOError):
+            except (json.JSONDecodeError, IOError) as e:
+                logger.warning("Failed to load tracking data: %s. Using defaults.", str(e))
                 return self._init_data()
         return self._init_data()
 
@@ -373,8 +386,12 @@ class AIResourceMonitor:
             "gemini": {"daily": []},
         }
 
-    def get_copilot_usage(self) -> Dict:
-        """Get Copilot usage statistics."""
+    def get_copilot_usage(self) -> Dict[str, float]:
+        """Get Copilot usage statistics.
+
+        Returns:
+            Dict with daily, monthly, monthly_limit, remaining, and percentage_used.
+        """
         today = datetime.now().strftime("%Y-%m-%d")
         current_month = datetime.now().strftime("%Y-%m")
 
@@ -384,29 +401,60 @@ class AIResourceMonitor:
         )
 
         monthly_limit = 1500
+
+        # Validate that limit is positive (future-proofing if limit becomes configurable)
+        if monthly_limit <= 0:
+            logger.warning("Copilot monthly_limit is %d, should be positive", monthly_limit)
+            return {
+                "daily": daily_count,
+                "monthly": monthly_count,
+                "monthly_limit": monthly_limit,
+                "remaining": 0,
+                "percentage_used": 100.0 if monthly_count > 0 else 0.0,
+            }
+
         return {
             "daily": daily_count,
             "monthly": monthly_count,
             "monthly_limit": monthly_limit,
             "remaining": max(0, monthly_limit - monthly_count),
-            "percentage_used": (monthly_count / monthly_limit * 100) if monthly_limit > 0 else 0,
+            "percentage_used": (monthly_count / monthly_limit * 100),
         }
 
-    def get_gemini_usage(self) -> Dict:
-        """Get Gemini API usage statistics."""
+    def get_gemini_usage(self) -> Dict[str, float]:
+        """Get Gemini API usage statistics.
+
+        Returns:
+            Dict with daily, daily_limit, remaining, and percentage_used.
+        """
         today = datetime.now().strftime("%Y-%m-%d")
         daily_count = sum(1 for entry in self.data.get("gemini", {}).get("daily", []) if entry["date"] == today)
 
         daily_limit = 20
+
+        # Validate that limit is positive (future-proofing if limit becomes configurable)
+        if daily_limit <= 0:
+            logger.warning("Gemini daily_limit is %d, should be positive", daily_limit)
+            return {
+                "daily": daily_count,
+                "daily_limit": daily_limit,
+                "remaining": 0,
+                "percentage_used": 100.0 if daily_count > 0 else 0.0,
+            }
+
         return {
             "daily": daily_count,
             "daily_limit": daily_limit,
             "remaining": max(0, daily_limit - daily_count),
-            "percentage_used": (daily_count / daily_limit * 100) if daily_limit > 0 else 0,
+            "percentage_used": (daily_count / daily_limit * 100),
         }
 
     def check_ollama_status(self) -> Optional[Dict]:
-        """Check Ollama server status and running models."""
+        """Check Ollama server status and running models.
+
+        Returns:
+            Dict with status, models list, and model_count if Ollama available, None otherwise.
+        """
         try:
             result = subprocess.run(
                 ["ollama", "ps"],
@@ -429,13 +477,24 @@ class AIResourceMonitor:
 
                 return {"status": "running", "models": models, "model_count": len(models)}
 
+            # Non-zero return code - Ollama not running or command failed
+            if result.stderr:
+                logger.debug("Ollama ps command failed (rc=%d): %s", result.returncode, result.stderr.strip())
             return {"status": "not running", "models": [], "model_count": 0}
 
-        except (FileNotFoundError, subprocess.TimeoutExpired):
+        except FileNotFoundError:
+            logger.debug("Ollama command not found - Ollama not installed")
+            return None
+        except subprocess.TimeoutExpired:
+            logger.warning("Ollama ps command timed out after 5 seconds")
             return None
 
     def check_gpu_usage(self) -> Optional[Dict]:
-        """Check GPU utilization and memory usage."""
+        """Check GPU utilization and memory usage.
+
+        Returns:
+            Dict with GPU name, utilization, and memory stats if available, None otherwise.
+        """
         try:
             result = subprocess.run(
                 [
@@ -461,25 +520,40 @@ class AIResourceMonitor:
                         "mem_total_mb": float(parts[3]),
                     }
 
-        except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
-            # nvidia-smi not available (no NVIDIA GPU) or command timeout - gracefully return None
-            pass
+            # Non-zero return code or empty output
+            if result.returncode != 0 and result.stderr:
+                logger.debug("nvidia-smi command failed (rc=%d): %s", result.returncode, result.stderr.strip())
+
+        except FileNotFoundError:
+            logger.debug("nvidia-smi command not found - NVIDIA GPU drivers not installed")
+        except subprocess.TimeoutExpired:
+            logger.warning("nvidia-smi command timed out after 5 seconds")
+        except ValueError as e:
+            logger.warning("Failed to parse nvidia-smi output: %s", e)
 
         return None
 
     def get_recommendations(self) -> List[str]:
-        """Generate optimization recommendations based on current usage."""
+        """Generate optimization recommendations based on current usage.
+
+        Returns:
+            List of recommendation strings for resource optimization.
+        """
         recommendations = []
 
         copilot = self.get_copilot_usage()
-        if copilot["percentage_used"] > 80:
+        if copilot["monthly_limit"] <= 0:
+            recommendations.append("⚠️ Copilot monthly_limit is invalid. Please update configuration.")
+        elif copilot["percentage_used"] > 80:
             recommendations.append(
                 f"⚠️ Copilot usage at {copilot['percentage_used']:.0f}% "
                 f"({copilot['remaining']} requests remaining) - Consider using Gemini or Local LLM"
             )
 
         gemini = self.get_gemini_usage()
-        if gemini["percentage_used"] > 80:
+        if gemini["daily_limit"] <= 0:
+            recommendations.append("⚠️ Gemini daily_limit is invalid. Please update configuration.")
+        elif gemini["percentage_used"] > 80:
             recommendations.append(
                 f"⚠️ Gemini API usage at {gemini['percentage_used']:.0f}% "
                 f"({gemini['remaining']} requests remaining) - Switch to Local LLM or Copilot"
@@ -493,7 +567,7 @@ class AIResourceMonitor:
             vram_usage = (gpu["mem_used_mb"] / gpu["mem_total_mb"]) * 100
             if vram_usage > 90:
                 recommendations.append(
-                    f"⚠️ VRAM usage high ({vram_usage:.0f}%) - " "Consider using smaller model or reducing batch size"
+                    f"⚠️ VRAM usage high ({vram_usage:.0f}%) - Consider using smaller model or reducing batch size"
                 )
 
         ollama = self.check_ollama_status()
@@ -507,14 +581,22 @@ monitor = AIResourceMonitor()
 
 
 @app.route("/")
-def dashboard():
-    """Serve the dashboard HTML."""
+def dashboard() -> str:
+    """Serve the dashboard HTML page.
+
+    Returns:
+        Rendered HTML template.
+    """
     return render_template_string(DASHBOARD_HTML)
 
 
 @app.route("/api/metrics")
-def get_metrics():
-    """API endpoint for current metrics."""
+def get_metrics() -> Dict:
+    """API endpoint for current metrics.
+
+    Returns:
+        JSON response with all provider metrics and recommendations.
+    """
     return jsonify(
         {
             "copilot": monitor.get_copilot_usage(),
@@ -528,4 +610,6 @@ def get_metrics():
 
 
 if __name__ == "__main__":
+    # Development server - for production, use a WSGI server like Gunicorn or Waitress
+    # Example: gunicorn app.ai_monitor_ui:app --bind 0.0.0.0:9000
     app.run(host="0.0.0.0", port=9000, debug=False)

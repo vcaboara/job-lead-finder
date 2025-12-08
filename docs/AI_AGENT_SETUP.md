@@ -65,6 +65,8 @@ Once running, access:
 
 - **Job Lead Finder UI**: <http://localhost:8000>
 - **AI Resource Monitor**: <http://localhost:9000> - Track usage quotas
+  - View tracked usage from local data
+  - For actual Copilot quota status: Check VS Code status bar or run `gh copilot status`
 - **Vibe Check MCP**: <http://localhost:3000> - Code review API
 - **Vibe Kanban**: <http://localhost:3001> - Task board
 
