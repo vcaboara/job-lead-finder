@@ -21,12 +21,12 @@
 
 **Conservative Estimates (assuming 70% AI assistance):**
 
-| Metric | If Done Solo | With AI Assistance | Savings |
-|--------|--------------|-------------------|---------|
-| **Total Time** | ~140 hours | ~42 hours | 98 hours |
-| **Keystrokes** | ~270,000 | ~40,000 | 230,000 |
-| **Typing Time** | ~22.5 hours | ~3.3 hours | 19.2 hours |
-| **Hand Strain** | Severe (Workrave limit hit) | Manageable | Major relief |
+| Metric          | If Done Solo                | With AI Assistance | Savings      |
+| --------------- | --------------------------- | ------------------ | ------------ |
+| **Total Time**  | ~140 hours                  | ~42 hours          | 98 hours     |
+| **Keystrokes**  | ~270,000                    | ~40,000            | 230,000      |
+| **Typing Time** | ~22.5 hours                 | ~3.3 hours         | 19.2 hours   |
+| **Hand Strain** | Severe (Workrave limit hit) | Manageable         | Major relief |
 
 **Accessibility Impact:**
 - **Typing reduction:** 85% fewer keystrokes
@@ -248,13 +248,13 @@ Alternative (If Server Storage Needed):
 
 **For Each Data Type:**
 
-| Data Type | Sensitivity | Client Encrypt? | Server Encrypt? | Retention |
-|-----------|-------------|-----------------|-----------------|-----------|
-| **Resume Text** | HIGH | ✅ REQUIRED | If stored: ✅ | User controlled |
-| **Job Tracking** | MEDIUM | ✅ Preferred | ✅ Required | User controlled |
-| **Search History** | LOW-MEDIUM | Optional | ✅ Hash/Encrypt | 30 days max |
-| **AI Metrics** | LOW | No (anonymize) | No needed | Indefinite |
-| **Error Logs** | LOW | No (scrub PII) | Optional | 90 days |
+| Data Type          | Sensitivity | Client Encrypt? | Server Encrypt? | Retention       |
+| ------------------ | ----------- | --------------- | --------------- | --------------- |
+| **Resume Text**    | HIGH        | ✅ REQUIRED      | If stored: ✅    | User controlled |
+| **Job Tracking**   | MEDIUM      | ✅ Preferred     | ✅ Required      | User controlled |
+| **Search History** | LOW-MEDIUM  | Optional        | ✅ Hash/Encrypt  | 30 days max     |
+| **AI Metrics**     | LOW         | No (anonymize)  | No needed       | Indefinite      |
+| **Error Logs**     | LOW         | No (scrub PII)  | Optional        | 90 days         |
 
 **Guiding Principles:**
 1. **Data minimization:** Only collect what's needed
