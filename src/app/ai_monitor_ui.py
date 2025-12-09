@@ -241,7 +241,7 @@ DASHBOARD_HTML = """
                     labels: ['Used', 'Remaining'],
                     datasets: [{
                         data: [0, 1500],
-                        backgroundColor: ['hsl(217 91% 60%)', 'hsl(217 33% 17%)'],
+                        backgroundColor: ['hsl(217 91% 60%)', 'hsl(217 33% 25%)'],
                         borderWidth: 2,
                         borderColor: 'hsl(222 47% 11%)'
                     }]
@@ -267,7 +267,7 @@ DASHBOARD_HTML = """
                     labels: ['Used', 'Remaining'],
                     datasets: [{
                         data: [0, 20],
-                        backgroundColor: ['hsl(172 66% 50%)', 'hsl(217 33% 17%)'],
+                        backgroundColor: ['hsl(172 66% 50%)', 'hsl(217 33% 25%)'],
                         borderWidth: 2,
                         borderColor: 'hsl(222 47% 11%)'
                     }]

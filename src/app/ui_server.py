@@ -133,6 +133,16 @@ def index():
     return serve_template("index.html")
 
 
+@app.get("/nav", response_class=HTMLResponse)
+def navigation():
+    """Serve the main navigation page with links to all services.
+
+    Returns:
+        HTMLResponse: Navigation page HTML.
+    """
+    return serve_template("nav.html")
+
+
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard():
     """Serve the dashboard index page showing all services.
