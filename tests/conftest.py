@@ -36,12 +36,14 @@ from app.ui_server import app  # noqa: E402
 @pytest.fixture(autouse=True)
 def clean_tracker():
     """Clean tracker state before and after each test."""
-    # Check both old and new locations to support tests
+    # Check all possible locations for tracking file
     tracking_files = [
-        Path("job_tracking.json"),  # Old location (tests)
-        Path("/app/data/job_tracking.json"),  # New production location
+        Path("job_tracking.json"),  # Current directory (tests)
+        Path("data/job_tracking.json"),  # Relative data directory
+        Path("/app/data/job_tracking.json"),  # Production location in container
     ]
 
+    # Clean before test
     for tracking_file in tracking_files:
         if tracking_file.exists():
             os.remove(tracking_file)
@@ -49,6 +51,7 @@ def clean_tracker():
 
     yield
 
+    # Clean after test
     for tracking_file in tracking_files:
         if tracking_file.exists():
             os.remove(tracking_file)
