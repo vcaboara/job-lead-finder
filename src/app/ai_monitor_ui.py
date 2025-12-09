@@ -20,82 +20,119 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-# HTML template with Chart.js for visualization
+# HTML template with Chart.js for visualization (lovable.dev dark theme)
 DASHBOARD_HTML = """
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Resource Monitor</title>
+    <title>🤖 AI Resource Monitor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --font-sans: 'DM Sans', system-ui, sans-serif;
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+            --background: 222 47% 11%;
+            --foreground: 210 20% 98%;
+            --card: 217 33% 17%;
+            --card-foreground: 210 20% 98%;
+            --primary: 217 91% 60%;
+            --accent: 172 66% 50%;
+            --muted: 215 16% 47%;
+            --border: 217 33% 17%;
+        }
+
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
-            padding: 20px;
+            font-family: var(--font-sans);
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            padding: 2rem;
             min-height: 100vh;
         }
+
         .container {
             max-width: 1400px;
             margin: 0 auto;
         }
+
         h1 {
-            color: white;
+            font-family: var(--font-display);
+            font-size: 2.5rem;
+            font-weight: 600;
             text-align: center;
-            margin-bottom: 30px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin-bottom: 2rem;
+            background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent)) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
+
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
         }
+
         .card {
-            background: white;
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
             border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            padding: 1.5rem;
+            transition: transform 0.2s, box-shadow 0.2s;
         }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(59, 130, 246, 0.15);
+        }
+
         .card h2 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.3em;
+            font-family: var(--font-display);
+            color: hsl(var(--primary));
+            margin-bottom: 1rem;
+            font-size: 1.25rem;
+            font-weight: 600;
         }
+
         .metric {
             display: flex;
             justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid hsl(var(--border));
         }
+
         .metric:last-child { border-bottom: none; }
-        .metric-label { color: #666; font-weight: 500; }
-        .metric-value { color: #333; font-weight: 600; }
+        .metric-label { color: hsl(var(--muted)); font-weight: 500; }
+        .metric-value { color: hsl(var(--foreground)); font-weight: 600; }
         .status-good { color: #10b981; }
         .status-warning { color: #f59e0b; }
         .status-danger { color: #ef4444; }
+
         .chart-container {
             position: relative;
             height: 300px;
-            margin-top: 15px;
+            margin-top: 1rem;
         }
-        .refresh-info {
+
+        .refresh-info, .timestamp {
             text-align: center;
-            color: white;
-            font-size: 0.9em;
-            margin-top: 20px;
+            color: hsl(var(--muted));
+            font-size: 0.875rem;
+            margin-top: 1rem;
         }
-        .timestamp {
-            text-align: center;
-            color: rgba(255,255,255,0.8);
-            font-size: 0.85em;
-            margin-top: 10px;
-        }
+
         @media (max-width: 768px) {
             .grid { grid-template-columns: 1fr; }
+            h1 { font-size: 2rem; }
         }
     </style>
 </head>
@@ -181,7 +218,7 @@ DASHBOARD_HTML = """
 
         <div class="card">
             <h2>💡 Recommendations</h2>
-            <div id="recommendations" style="line-height: 1.8; color: #666;"></div>
+            <div id="recommendations" style="line-height: 1.8; color: hsl(var(--muted));"></div>
         </div>
 
         <div class="timestamp" id="timestamp">Last updated: -</div>
@@ -190,6 +227,10 @@ DASHBOARD_HTML = """
 
     <script>
         let copilotChart, geminiChart, gpuChart;
+
+        // Chart.js dark theme defaults
+        Chart.defaults.color = 'hsl(210 20% 98%)';
+        Chart.defaults.borderColor = 'hsl(217 33% 17%)';
 
         function initCharts() {
             // Copilot Chart
@@ -200,15 +241,20 @@ DASHBOARD_HTML = """
                     labels: ['Used', 'Remaining'],
                     datasets: [{
                         data: [0, 1500],
-                        backgroundColor: ['#667eea', '#e5e7eb'],
-                        borderWidth: 0
+                        backgroundColor: ['hsl(217 91% 60%)', 'hsl(217 33% 17%)'],
+                        borderWidth: 2,
+                        borderColor: 'hsl(222 47% 11%)'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: true, position: 'bottom' }
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: { color: 'hsl(210 20% 98%)' }
+                        }
                     }
                 }
             });
@@ -221,15 +267,20 @@ DASHBOARD_HTML = """
                     labels: ['Used', 'Remaining'],
                     datasets: [{
                         data: [0, 20],
-                        backgroundColor: ['#764ba2', '#e5e7eb'],
-                        borderWidth: 0
+                        backgroundColor: ['hsl(172 66% 50%)', 'hsl(217 33% 17%)'],
+                        borderWidth: 2,
+                        borderColor: 'hsl(222 47% 11%)'
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
-                        legend: { display: true, position: 'bottom' }
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: { color: 'hsl(210 20% 98%)' }
+                        }
                     }
                 }
             });
@@ -243,7 +294,7 @@ DASHBOARD_HTML = """
                     datasets: [{
                         label: 'Usage %',
                         data: [0, 0],
-                        backgroundColor: ['#10b981', '#3b82f6'],
+                        backgroundColor: ['hsl(172 66% 50%)', 'hsl(217 91% 60%)'],
                         borderWidth: 0
                     }]
                 },
@@ -251,7 +302,16 @@ DASHBOARD_HTML = """
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true, max: 100 }
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { color: 'hsl(210 20% 98%)' },
+                            grid: { color: 'hsl(217 33% 17%)' }
+                        },
+                        x: {
+                            ticks: { color: 'hsl(210 20% 98%)' },
+                            grid: { color: 'hsl(217 33% 17%)' }
+                        }
                     },
                     plugins: {
                         legend: { display: false }
