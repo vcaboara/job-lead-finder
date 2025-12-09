@@ -353,6 +353,14 @@ Follow these foundational instructions. Goal: Be a helpful, rigorous, secure, ef
     *   If output shows errors/failures, STOP and investigate before proceeding
     *   Before pushing changes: verify tests pass, config is valid, build succeeds
     *   Document verification failures in `error-documentation.md`
+*   **AI ATTRIBUTION:** All commits and PRs MUST include AI attribution:
+    *   **Commit subject:** Prefix with `[AI]` tag (e.g., `[AI] feat: Add new feature`)
+    *   **Commit body/PR footer:** Add attribution line:
+        ```
+        ---
+        AI-Generated-By: GitHub Copilot (Claude Sonnet 4.5)
+        ```
+    *   This enables tracking AI contributions and measuring productivity impact
 
 ## III. Tools
 
