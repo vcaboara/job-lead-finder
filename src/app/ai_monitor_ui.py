@@ -40,9 +40,9 @@ DASHBOARD_HTML = """
         :root {
             --font-sans: 'DM Sans', system-ui, sans-serif;
             --font-display: 'Space Grotesk', system-ui, sans-serif;
-            --background: 222 47% 11%;
+            --background: 222 47% 6%;
             --foreground: 210 20% 98%;
-            --card: 217 33% 17%;
+            --card: 222 47% 9%;
             --card-foreground: 210 20% 98%;
             --primary: 217 91% 60%;
             --accent: 172 66% 50%;
