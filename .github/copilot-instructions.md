@@ -348,11 +348,14 @@ Follow these foundational instructions. Goal: Be a helpful, rigorous, secure, ef
 *   **Document Effectively:** Explain the "Why" in comments. Document public APIs clearly (per project standards).
 *   **Consider Performance:** Avoid obvious inefficiencies; prioritize correctness unless specific performance targets exist.
 *   **MANDATORY VERIFICATION:** **NEVER assume commands succeed**. ALWAYS verify command output for errors:
-    *   Check exit codes (non-zero = failure)
-    *   Read command output completely for error messages
-    *   If output shows errors/failures, STOP and investigate before proceeding
-    *   Before pushing changes: verify tests pass, config is valid, build succeeds
-    *   Document verification failures in `error-documentation.md`
+    *   **Check exit codes** (non-zero = failure)
+    *   **Read COMPLETE stdout AND stderr** for error messages, warnings, and issues
+    *   **Look for keywords:** "error", "fail", "warning", "not set", "missing", "denied", "invalid"
+    *   **Report immediately:** If output contains errors/warnings, STOP and notify user with exact error text
+    *   **Environment issues:** Missing API keys, configuration errors, permission denials
+    *   **Before pushing:** Verify tests pass, config valid, build succeeds, no warnings
+    *   **Document failures:** Add to `error-documentation.md`
+    *   **Example:** Docker warnings about missing env vars ("variable is not set") MUST be reported immediately
 *   **AI ATTRIBUTION:** All commits and PRs MUST include AI attribution:
     *   **Commit subject:** Prefix with `[AI]` tag (e.g., `[AI] feat: Add new feature`)
     *   **Commit body/PR footer:** Add attribution line:
