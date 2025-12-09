@@ -102,21 +102,55 @@ class ValidateLinkRequest(BaseModel):
     url: str
 
 
+def serve_template(template_name: str) -> HTMLResponse:
+    """Serve a static HTML template file.
+
+    Args:
+        template_name: Name of the template file (e.g., 'index.html', 'dashboard.html')
+
+    Returns:
+        HTMLResponse: The requested HTML template.
+
+    Raises:
+        HTTPException: 500 if template file cannot be read.
+    """
+    html_path = Path(__file__).parent / "templates" / template_name
+    try:
+        return HTMLResponse(html_path.read_text(encoding="utf-8"))
+    except Exception as exc:
+        # Extract readable template name for error message
+        template_display = template_name.replace(".html", "").replace("_", " ").title()
+        raise HTTPException(status_code=500, detail=f"{template_display} template not found") from exc
+
+
 @app.get("/", response_class=HTMLResponse)
 def index():
     """Serve the main web UI interface.
 
     Returns:
         HTMLResponse: The main application HTML page.
-
-    Raises:
-        HTTPException: 500 if template file cannot be read.
     """
-    html_path = Path(__file__).parent / "templates" / "index.html"
-    try:
-        return HTMLResponse(html_path.read_text(encoding="utf-8"))
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail="UI template not found") from exc
+    return serve_template("index.html")
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard():
+    """Serve the dashboard index page showing all services.
+
+    Returns:
+        HTMLResponse: Dashboard HTML page with service status and quick actions.
+    """
+    return serve_template("dashboard.html")
+
+
+@app.get("/visual-kanban", response_class=HTMLResponse)
+def visual_kanban():
+    """Serve the visual Kanban board for monitoring autonomous AI task progress.
+
+    Returns:
+        HTMLResponse: Visual Kanban board HTML page.
+    """
+    return serve_template("kanban.html")
 
 
 @app.get("/health", response_model=HealthResponse)

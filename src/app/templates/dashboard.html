@@ -1,15 +1,12 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - JobFlow</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         :root {
@@ -125,13 +122,8 @@
             color: hsl(var(--primary));
         }
 
-        .status-value.online {
-            color: hsl(142, 76%, 36%);
-        }
-
-        .status-value.offline {
-            color: hsl(0, 84%, 60%);
-        }
+        .status-value.online { color: hsl(142, 76%, 36%); }
+        .status-value.offline { color: hsl(0, 84%, 60%); }
 
         .services-grid {
             display: grid;
@@ -269,19 +261,19 @@
             <div class="status-grid">
                 <div class="status-item">
                     <div class="status-label">Containers</div>
-                    <div class="status-value" id="container-status">...</div>
+                    <div class="status-value" id="container-status" aria-live="polite" aria-atomic="true">...</div>
                 </div>
                 <div class="status-item">
                     <div class="status-label">Copilot Quota</div>
-                    <div class="status-value" id="copilot-quota">...</div>
+                    <div class="status-value" id="copilot-quota" aria-live="polite" aria-atomic="true">...</div>
                 </div>
                 <div class="status-item">
                     <div class="status-label">Gemini Quota</div>
-                    <div class="status-value" id="gemini-quota">...</div>
+                    <div class="status-value" id="gemini-quota" aria-live="polite" aria-atomic="true">...</div>
                 </div>
                 <div class="status-item">
                     <div class="status-label">Active Tasks</div>
-                    <div class="status-value" id="active-tasks">...</div>
+                    <div class="status-value" id="active-tasks" aria-live="polite" aria-atomic="true">...</div>
                 </div>
             </div>
         </div>
@@ -295,7 +287,7 @@
                 <div class="service-description">
                     Main web interface for searching jobs, managing leads, and tracking applications.
                 </div>
-                <span class="service-status running" id="ui-status">Checking...</span>
+                <span class="service-status running" id="ui-status" aria-live="polite" aria-atomic="true">Checking...</span>
                 <a href="/" class="service-link">Open UI →</a>
             </div>
 
@@ -307,7 +299,7 @@
                 <div class="service-description">
                     Real-time monitoring of AI quota usage (Copilot, Gemini, Ollama) with recommendations.
                 </div>
-                <span class="service-status running" id="monitor-status">Checking...</span>
+                <span class="service-status running" id="monitor-status" aria-live="polite" aria-atomic="true">Checking...</span>
                 <a href="http://localhost:9000" class="service-link" target="_blank">View Metrics →</a>
             </div>
 
@@ -319,7 +311,7 @@
                 <div class="service-description">
                     Task management board for autonomous AI execution. Track progress and status.
                 </div>
-                <span class="service-status running" id="kanban-status">Checking...</span>
+                <span class="service-status running" id="kanban-status" aria-live="polite" aria-atomic="true">Checking...</span>
                 <a href="http://localhost:3001" class="service-link" target="_blank">View Board →</a>
             </div>
 
@@ -331,7 +323,7 @@
                 <div class="service-description">
                     Code validation and quality checks via Model Context Protocol.
                 </div>
-                <span class="service-status running" id="vibe-status">Checking...</span>
+                <span class="service-status running" id="vibe-status" aria-live="polite" aria-atomic="true">Checking...</span>
                 <a href="http://localhost:3000" class="service-link" target="_blank">View Checks →</a>
             </div>
 
@@ -362,16 +354,16 @@
         <div class="quick-actions">
             <h2>⚡ Quick Actions</h2>
             <div class="action-grid">
-                <button class="action-btn" onclick="runCommand('python scripts/autonomous_task_executor.py')">
+                <button class="action-btn">
                     📋 Generate Execution Plan
                 </button>
-                <button class="action-btn" onclick="runCommand('python scripts/autonomous_task_executor.py --execute')">
+                <button class="action-btn">
                     🚀 Execute Tasks (Live)
                 </button>
-                <button class="action-btn" onclick="runCommand('python scripts/init_memory_bank.py')">
+                <button class="action-btn">
                     📁 Initialize Memory Bank
                 </button>
-                <button class="action-btn" onclick="runCommand('docker compose ps')">
+                <button class="action-btn">
                     🐳 Check Container Status
                 </button>
             </div>
@@ -384,21 +376,74 @@
     </div>
 
     <script>
-        function runCommand(cmd) {
-            alert(`Command to run in terminal:\n\n${cmd}\n\nPlease run this in your PowerShell terminal.`);
+        // Constants for quota limits and task statuses
+        const COPILOT_QUOTA_LIMIT = 1500;
+        const GEMINI_QUOTA_LIMIT = 20;
+        const TOTAL_CONTAINERS = 6;
+        const TASK_STATUS = {
+            IN_PROGRESS: 'in-progress',
+            TODO: 'todo'
+        };
+
+        // Copy to clipboard utility
+        async function copyToClipboard(text) {
+            try {
+                await navigator.clipboard.writeText(text);
+                showToast('Command copied to clipboard!');
+            } catch (error) {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = text;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                showToast('Command copied to clipboard!');
+            }
+        }
+
+        // Toast notification for user feedback
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.textContent = message;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 2rem;
+                right: 2rem;
+                background: hsl(142, 76%, 36%);
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 0.5rem;
+                font-weight: 600;
+                box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+                z-index: 1000;
+                animation: slideIn 0.3s ease-out;
+            `;
+            document.body.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'slideOut 0.3s ease-in';
+                setTimeout(() => document.body.removeChild(toast), 300);
+            }, 3000);
+        }
+
+        function handleCommandClick(cmd) {
+            copyToClipboard(cmd);
         }
 
         async function checkServiceStatus(url, statusElementId) {
+            const statusElement = document.getElementById(statusElementId);
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 2000);
                 const response = await fetch(url, { signal: controller.signal, mode: 'cors' });
                 clearTimeout(timeoutId);
-                document.getElementById(statusElementId).textContent = 'Running';
-                document.getElementById(statusElementId).className = 'service-status running';
+                statusElement.textContent = 'Running';
+                statusElement.className = 'service-status running';
             } catch (error) {
-                document.getElementById(statusElementId).textContent = 'Stopped';
-                document.getElementById(statusElementId).className = 'service-status stopped';
+                statusElement.textContent = 'Stopped';
+                statusElement.className = 'service-status stopped';
             }
         }
 
@@ -406,9 +451,9 @@
             try {
                 const response = await fetch('http://localhost:9000/api/metrics');
                 const data = await response.json();
-                document.getElementById('copilot-quota').textContent = `${data.copilot?.remaining || 0}/1500`;
-                document.getElementById('gemini-quota').textContent = `${data.gemini?.remaining || 0}/20`;
-                document.getElementById('container-status').textContent = '6/6';
+                document.getElementById('copilot-quota').textContent = `${data.copilot?.remaining || 0}/${COPILOT_QUOTA_LIMIT}`;
+                document.getElementById('gemini-quota').textContent = `${data.gemini?.remaining || 0}/${GEMINI_QUOTA_LIMIT}`;
+                document.getElementById('container-status').textContent = `${TOTAL_CONTAINERS}/${TOTAL_CONTAINERS}`;
                 document.getElementById('container-status').className = 'status-value online';
             } catch (error) {
                 document.getElementById('copilot-quota').textContent = 'N/A';
@@ -422,7 +467,7 @@
             try {
                 const response = await fetch('http://localhost:3001/api/tasks');
                 const tasks = await response.json();
-                const activeTasks = Array.isArray(tasks) ? tasks.filter(t => t.status === 'in-progress' || t.status === 'todo').length : 0;
+                const activeTasks = Array.isArray(tasks) ? tasks.filter(t => t.status === TASK_STATUS.IN_PROGRESS || t.status === TASK_STATUS.TODO).length : 0;
                 document.getElementById('active-tasks').textContent = activeTasks;
             } catch (error) {
                 document.getElementById('active-tasks').textContent = '0';
@@ -443,9 +488,48 @@
             checkServiceStatus('http://localhost:3000', 'vibe-status');
         }
 
+        // Add CSS animation for toast
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            @keyframes slideOut {
+                from {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+                to {
+                    transform: translateX(400px);
+                    opacity: 0;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        // Attach event listeners to action buttons
+        const commands = [
+            'python scripts/autonomous_task_executor.py',
+            'python scripts/autonomous_task_executor.py --execute',
+            'python scripts/init_memory_bank.py',
+            'docker compose ps'
+        ];
+
+        const buttons = document.querySelectorAll('.action-btn');
+        buttons.forEach((button, index) => {
+            button.addEventListener('click', () => handleCommandClick(commands[index]));
+        });
+
+        // Initialize dashboard
         refreshAll();
         setInterval(refreshAll, 30000);
     </script>
 </body>
-
 </html>

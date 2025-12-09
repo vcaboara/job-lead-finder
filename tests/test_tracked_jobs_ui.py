@@ -24,6 +24,7 @@ def _track_job_helper(client, job):
     return track_response.json()
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_endpoint_returns_all_jobs(client, mock_search_response):
     """Test that tracked jobs endpoint returns all tracked jobs."""
     # Track multiple jobs
@@ -59,6 +60,7 @@ def test_tracked_jobs_endpoint_returns_all_jobs(client, mock_search_response):
     assert len(tracked["jobs"]) >= len(job_ids)
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_includes_metadata(client, mock_search_response):
     """Test that tracked jobs include all necessary metadata."""
     # Create and track a job
@@ -104,6 +106,22 @@ def test_tracked_jobs_includes_metadata(client, mock_search_response):
 @pytest.mark.xdist_group(name="tracker")
 def test_filter_tracked_jobs_by_status(client, mock_search_response):
     """Test that tracked jobs can be filtered by status (client-side filtering test via API)."""
+    # Explicitly clear any existing tracked jobs to ensure clean state
+    import os
+
+    import app.job_tracker as job_tracker_module
+
+    # Force re-initialization of tracker to ensure clean state
+    job_tracker_module._tracker = None
+
+    # Get the actual tracking file path from the module
+    tracking_file = job_tracker_module.TRACKING_FILE
+    if tracking_file.exists():
+        os.remove(tracking_file)
+
+    # Re-initialize the tracker
+    job_tracker_module._tracker = None
+
     # Track two jobs with different statuses using mocked responses
 
     # First job - set to APPLIED
@@ -156,6 +174,7 @@ def test_filter_tracked_jobs_by_status(client, mock_search_response):
     assert interviewing_jobs[0]["job_id"] == job2_id
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_empty_when_none_tracked(client):
     """Test that tracked jobs endpoint returns empty when no jobs are tracked."""
     response = client.get("/api/jobs/tracked")
@@ -165,6 +184,7 @@ def test_tracked_jobs_empty_when_none_tracked(client):
     assert len(tracked["jobs"]) == 0
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_track_job_endpoint_creates_new_tracked_job(client):
     """Test that the /api/jobs/track endpoint creates a new tracked job."""
     job_data = {
