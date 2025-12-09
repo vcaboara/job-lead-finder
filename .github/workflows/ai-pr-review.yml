@@ -115,11 +115,24 @@ jobs:
 
                   cat pr.diff >> review_prompt.txt
 
-                  # Call vibe-check-mcp using npx
-                  REVIEW_OUTPUT=$(npx -y @pv-bhat/vibe-check-mcp review \
-                    --prompt "$(cat review_prompt.txt)" \
-                    --provider openai \
-                    --model gpt-4o 2>&1 || echo "Review failed")
+                  # Try Ollama first (free), fallback to OpenAI
+                  if [ -n "$OLLAMA_BASE_URL" ]; then
+                    echo "Attempting review with Ollama..."
+                    REVIEW_OUTPUT=$(curl -s "$OLLAMA_BASE_URL/api/generate" -d "{
+                      \"model\": \"qwen2.5-coder:14b\",
+                      \"prompt\": $(cat review_prompt.txt | jq -Rs .),
+                      \"stream\": false
+                    }" | jq -r '.response' 2>&1 || echo "")
+                  fi
+
+                  # Fallback to OpenAI if Ollama unavailable or failed
+                  if [ -z "$REVIEW_OUTPUT" ] || [ "$REVIEW_OUTPUT" = "" ]; then
+                    echo "Using OpenAI for review..."
+                    REVIEW_OUTPUT=$(npx -y @pv-bhat/vibe-check-mcp review \
+                      --prompt "$(cat review_prompt.txt)" \
+                      --provider openai \
+                      --model gpt-4o 2>&1 || echo "Review failed")
+                  fi
 
                   # Save review output
                   echo "$REVIEW_OUTPUT" > review_output.txt
@@ -129,6 +142,7 @@ jobs:
                   echo "review=$REVIEW_JSON" >> $GITHUB_OUTPUT
               env:
                   OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+                  OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
 
             - name: Post review comment
               if: steps.ai-review.outputs.review != ''
