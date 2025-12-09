@@ -1,0 +1,21 @@
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "python -m uvicorn app.ui_server:app --host 0.0.0.0 --port $PORT"
+healthcheckPath = "/"
+healthcheckTimeout = 30
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3
+
+[[services]]
+name = "jobforge-ui"
+
+[[services.volumes]]
+mountPath = "/app/data"
+name = "job-data"
+
+[[services.volumes]]
+mountPath = "/app/logs"
+name = "job-logs"
