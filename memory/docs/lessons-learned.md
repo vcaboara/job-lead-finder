@@ -6,6 +6,24 @@ This is the learning journal for the job-lead-finder project. It captures import
 
 ## AI Agent Workflows
 
+### AI Attribution in Commits and PRs
+**Pattern**: All AI-generated commits and PRs MUST include attribution tags.
+
+**Format**:
+- **Commit subject:** `[AI]` prefix (e.g., `[AI] feat: Add new feature`)
+- **Commit body/PR footer:**
+  ```
+  ---
+  AI-Generated-By: GitHub Copilot (Claude Sonnet 4.5)
+  ```
+
+**Purpose**:
+- Track which AI assistant made which contributions
+- Measure AI productivity impact for accessibility advocacy
+- Enable git analytics: `git log --grep="\[AI\]"`
+
+**Reference**: `.github/copilot-instructions.md` Section II
+
 ### Command Verification is Mandatory
 **Pattern**: Every command execution MUST be verified before proceeding.
 
