@@ -264,6 +264,8 @@ alwaysApply: true
 - **MCP Server Verification:** Confirm MCP server availability and correct configuration before attempting to use its tools.
 - **Task Planning:** Document tasks clearly in `tasks/tasks_plan.md` before starting implementation.
 - **Follow Instructions Precisely:** Adhere strictly to the instructions and guidelines provided, especially regarding tool usage and mode switching.
+- **ALWAYS Verify Fixes on GitHub CI:** Never assume a fix worked based on local reasoning alone. After pushing changes that fix CI failures, ALWAYS use `gh pr checks <PR#> --watch` to verify the fix actually works in CI before claiming success or moving on. The user should not have to ask for this verification - it should be automatic.
+- **Test Isolation with Module-Level State:** When tests share module-level state (singletons, file paths), fixtures must clean using the ACTUAL runtime values from the module (e.g., `job_tracker_module.TRACKING_FILE`) rather than hardcoded paths. Module initialization happens once, so cleanup must target the exact path the module resolved at load time.
 
 
 ---
@@ -464,7 +466,12 @@ If needed, you can further use the `web_scraper.py` file to scrape the web page 
 1.  **Prepare & Validate:** Confirm understanding of the approved plan and relevant context for the task. Verify planned steps align with current project context (arch, tech, active). Halt and report significant conflicts.
 2.  **Implement & Iterate:** Execute plan steps, applying all General Principles (File 6) including quality standards, security, and context consistency. Perform checks; self-correct or trigger **Debug Mode** if issues arise.
 3.  **Test & Document:** Implement tests per plan. Run tests; trigger **Debug Mode** on failure. Add required documentation.
-4.  **Report & Update:** Report task completion status (after any Debug). Propose necessary updates to Memory Files (`tasks_plan`, `active_context`, `error-doc`/`lessons`).
+4.  **Verify on CI:** After pushing changes that fix CI failures or implement new features:
+    *   **MANDATORY:** Use `gh pr checks <PR#> --watch` to verify the fix actually works in CI
+    *   **DO NOT assume success** based on local reasoning alone
+    *   Wait for CI to complete and actually check the results
+    *   Only report success after CI verification passes
+5.  **Report & Update:** Report task completion status (after CI verification). Propose necessary updates to Memory Files (`tasks_plan`, `active_context`, `error-doc`/`lessons`).
 
 **(End of Implementation Workflow - Advanced Simplified)**
 
