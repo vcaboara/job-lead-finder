@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+import pytest
+
 from app.job_tracker import STATUS_APPLIED, STATUS_HIDDEN
 
 
@@ -22,6 +24,7 @@ def _track_job_from_search_result(client, job):
     return track_response.json()
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_update_job_status(client, mock_search_response):
     """Test updating job status via API."""
     # First, create a job by searching
@@ -58,6 +61,7 @@ def test_update_job_status(client, mock_search_response):
     assert job_data["status"] == STATUS_APPLIED
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_hide_job(client, mock_search_response):
     """Test hiding a job via API."""
     # Create a job
@@ -92,6 +96,7 @@ def test_hide_job(client, mock_search_response):
     assert job_data["status"] == STATUS_HIDDEN
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_save_job_notes(client, mock_search_response):
     """Test saving notes for a job."""
     # Create a job
@@ -127,6 +132,7 @@ def test_save_job_notes(client, mock_search_response):
     assert job_data["notes"] == test_notes
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_save_job_notes_exceeds_max_length(client, mock_search_response):
     """Test that notes exceeding max length are rejected."""
     # Create a job - mock both job fetching and filtering to avoid slow API calls
@@ -156,6 +162,7 @@ def test_save_job_notes_exceeds_max_length(client, mock_search_response):
     assert response.status_code == 422  # Validation error
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_save_job_notes_nonexistent_job(client):
     """Test that updating notes for a non-existent job returns 404."""
     nonexistent_job_id = "nonexistent_job_12345"
@@ -164,6 +171,7 @@ def test_save_job_notes_nonexistent_job(client):
     assert "not found" in response.json()["detail"].lower()
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_job_tracking_persists_across_searches(client, mock_search_response):
     """Test that job tracking status persists when same job appears in multiple searches."""
     # First search
@@ -213,6 +221,7 @@ def test_job_tracking_persists_across_searches(client, mock_search_response):
         assert matching_job.get("tracking_status") == STATUS_APPLIED
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_invalid_status_rejected(client, mock_search_response):
     """Test that invalid status values are rejected."""
     # Create a job
@@ -238,6 +247,7 @@ def test_invalid_status_rejected(client, mock_search_response):
     assert "invalid" in response.json()["detail"].lower()
 
 
+@pytest.mark.xdist_group(name="tracker")
 def test_get_tracked_jobs(client, mock_search_response):
     """Test retrieving all tracked jobs."""
     # Track multiple jobs
