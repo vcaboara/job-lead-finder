@@ -82,13 +82,15 @@ markers = [
     "asyncio: marks tests as async (handled by pytest-asyncio)",
     "unit: marks pure unit tests (no I/O, no network, <0.1s)",
     "fast: marks tests optimized for quick feedback",
+    "xdist_group: marks tests that must run in the same worker group (pytest-xdist)",
 ]
 
 # Default test options - Optimized for speed
 # -n auto: parallel execution (uses all CPU cores)
 # --maxfail=3: stop after 3 failures (fail fast)
 # --ff: run failed tests first
-addopts = "-v --tb=short -m 'not slow' -n auto --maxfail=3 --ff"
+# --dist loadgroup: use loadgroup distribution to respect xdist_group markers
+addopts = "-v --tb=short -m 'not slow' -n auto --dist loadgroup --maxfail=3 --ff"
 
 # Warning filters
 filterwarnings = [
@@ -97,7 +99,6 @@ filterwarnings = [
     "ignore::DeprecationWarning:pkg_resources.*",
     "ignore::pytest.PytestUnraisableExceptionWarning",
     "ignore::ResourceWarning",
-    "ignore::pytest_benchmark.logger.PytestBenchmarkWarning",
 ]
 
 [tool.flake8]
