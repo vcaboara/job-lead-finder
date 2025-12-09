@@ -1,0 +1,179 @@
+name: AI PR Review
+
+on:
+    pull_request:
+        types: [opened, synchronize, reopened]
+        branches: [main]
+
+jobs:
+    ai-review:
+        runs-on: ubuntu-latest
+        permissions:
+            pull-requests: write
+            contents: read
+
+        steps:
+            - name: Checkout PR code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+                  ref: ${{ github.event.pull_request.head.sha }}
+
+            - name: Get changed files
+              id: changed-files
+              run: |
+                  # Get list of changed files compared to base branch
+                  git fetch origin ${{ github.event.pull_request.base.ref }}
+                  CHANGED_FILES=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | grep -E '\.(py|js|ts|tsx|jsx|html|css)$' || echo "")
+
+                  if [ -z "$CHANGED_FILES" ]; then
+                    echo "No reviewable files changed"
+                    echo "files=" >> $GITHUB_OUTPUT
+                  else
+                    # Convert to JSON array for easier processing
+                    FILES_JSON=$(echo "$CHANGED_FILES" | jq -R -s -c 'split("\n")[:-1]')
+                    echo "files=$FILES_JSON" >> $GITHUB_OUTPUT
+                    echo "Changed files: $CHANGED_FILES"
+                  fi
+
+            - name: Get PR diff
+              id: pr-diff
+              if: steps.changed-files.outputs.files != ''
+              run: |
+                  # Get unified diff for review
+                  git diff origin/${{ github.event.pull_request.base.ref }}...HEAD > pr.diff
+
+                  # Truncate if too large (>50KB) to avoid API limits
+                  if [ $(stat -f%z pr.diff 2>/dev/null || stat -c%s pr.diff) -gt 51200 ]; then
+                    echo "Diff too large, truncating to 50KB"
+                    head -c 51200 pr.diff > pr.diff.tmp
+                    mv pr.diff.tmp pr.diff
+                    echo "...[truncated]" >> pr.diff
+                  fi
+
+                  # Escape for JSON
+                  DIFF_CONTENT=$(cat pr.diff | jq -R -s .)
+                  echo "diff=$DIFF_CONTENT" >> $GITHUB_OUTPUT
+
+            - name: Review with vibe-check-mcp
+              id: ai-review
+              if: steps.changed-files.outputs.files != ''
+              run: |
+                  # Install Node.js for npx
+                  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+                  sudo apt-get install -y nodejs
+
+                  # Create review prompt based on PR review criteria
+                  cat > review_prompt.txt << 'EOF'
+                  Review this pull request against these criteria:
+
+                  CODE STRUCTURE:
+                  - Complex conditionals that could be simplified
+                  - Nested blocks reducing readability
+                  - Function size and single responsibility
+
+                  CODE QUALITY:
+                  - Simplicity and conciseness
+                  - DRY principle violations
+                  - Modularity and readability
+
+                  BEST PRACTICES:
+                  - Proper logging (not print statements)
+                  - Error handling with specific exceptions
+                  - Type hints and docstrings
+                  - Resource management (context managers)
+
+                  PYTHON-SPECIFIC:
+                  - Pythonic patterns (comprehensions, generators)
+                  - Standard library usage
+                  - Performance anti-patterns
+
+                  ARCHITECTURE:
+                  - Separation of concerns
+                  - Testability
+                  - Scalability considerations
+
+                  TESTING:
+                  - Coverage of critical paths
+                  - Test quality and organization
+
+                  Provide specific, actionable feedback. Format as:
+                  ## Summary
+                  [Brief overview]
+
+                  ## Issues Found
+                  - **File:Line** - [Issue description and suggestion]
+
+                  ## Suggestions
+                  - [Improvement suggestions]
+
+                  ## Approval Status
+                  - [ ] Approved / [ ] Changes Requested / [ ] Comment
+
+                  PR Diff:
+                  EOF
+
+                  cat pr.diff >> review_prompt.txt
+
+                  # Try Ollama first (free), fallback to OpenAI
+                  if [ -n "$OLLAMA_BASE_URL" ]; then
+                    echo "Attempting review with Ollama..."
+                    REVIEW_OUTPUT=$(curl -s "$OLLAMA_BASE_URL/api/generate" -d "{
+                      \"model\": \"qwen2.5-coder:14b\",
+                      \"prompt\": $(cat review_prompt.txt | jq -Rs .),
+                      \"stream\": false
+                    }" | jq -r '.response' 2>&1 || echo "")
+                  fi
+
+                  # Fallback to OpenAI if Ollama unavailable or failed
+                  if [ -z "$REVIEW_OUTPUT" ] || [ "$REVIEW_OUTPUT" = "" ]; then
+                    echo "Using OpenAI for review..."
+                    REVIEW_OUTPUT=$(npx -y @pv-bhat/vibe-check-mcp review \
+                      --prompt "$(cat review_prompt.txt)" \
+                      --provider openai \
+                      --model gpt-4o 2>&1 || echo "Review failed")
+                  fi
+
+                  # Save review output
+                  echo "$REVIEW_OUTPUT" > review_output.txt
+
+                  # Escape for GitHub output
+                  REVIEW_JSON=$(cat review_output.txt | jq -R -s .)
+                  echo "review=$REVIEW_JSON" >> $GITHUB_OUTPUT
+              env:
+                  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+                  OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
+
+            - name: Post review comment
+              if: steps.ai-review.outputs.review != ''
+              uses: actions/github-script@v7
+              with:
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      const review = ${{ steps.ai-review.outputs.review }};
+
+                      const comment = `## 🤖 AI Code Review (vibe-check-mcp)
+
+                      ${review}
+
+                      ---
+                      *This review was automatically generated by vibe-check-mcp. Please verify suggestions before applying.*
+                      `;
+
+                      await github.rest.issues.createComment({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        issue_number: context.issue.number,
+                        body: comment
+                      });
+
+            - name: Upload review artifacts
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ai-review-artifacts
+                  path: |
+                      pr.diff
+                      review_prompt.txt
+                      review_output.txt
+                  if-no-files-found: ignore

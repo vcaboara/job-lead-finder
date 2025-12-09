@@ -1,0 +1,69 @@
+---
+name: AI Development Task
+description: Request AI to implement a feature or fix autonomously
+title: "[AI Task] "
+labels: ["ai-task"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## AI Task Request
+
+        This issue will be processed by the AI Task Dispatcher, which will:
+        1. Analyze your request
+        2. Create a feature branch
+        3. Implement the changes
+        4. Write tests
+        5. Create a PR for review
+
+        Please provide clear, specific requirements for best results.
+
+  - type: textarea
+    id: task-description
+    attributes:
+      label: Task Description
+      description: What should the AI implement?
+      placeholder: |
+        Add a new feature to export job leads as CSV...
+        Fix the issue where job tracking doesn't update status...
+        Refactor the search provider to support pagination...
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Additional context, related files, or background information
+      placeholder: |
+        Related to issue #123
+        Affects files: src/app/job_tracker.py
+        See docs/PROVIDERS.md for current implementation
+    validations:
+      required: false
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: Specific requirements or constraints
+      placeholder: |
+        - Must maintain backwards compatibility
+        - Include unit tests with >80% coverage
+        - Update documentation in docs/
+        - Follow existing code style
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Confirm these items before submitting
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: I have provided a clear, specific task description
+          required: true
+        - label: I understand this will create an automated PR that requires human review
+          required: true

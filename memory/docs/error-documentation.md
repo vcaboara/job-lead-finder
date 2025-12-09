@@ -47,6 +47,50 @@ PRs #60, #59, #66 all passed individually because of lucky test ordering, not ac
 
 ---
 
+## 2025-12-09: Missed Docker Warning About Missing Environment Variables
+
+### The Error
+
+Docker compose output showed warnings but AI didn't report them:
+```
+level=warning msg="The \"OPENAI_API_KEY\" variable is not set. Defaulting to a blank string."
+level=warning msg="The \"OPENROUTER_API_KEY\" variable is not set. Defaulting to a blank string."
+```
+
+Container started successfully (exit code 0) but would fail at runtime due to missing credentials.
+
+### Root Cause
+
+AI verified exit code (0 = success) but didn't read stderr/stdout for warnings. Docker warnings are written to stderr even when command succeeds.
+
+### The Fix
+
+Updated `.github/copilot-instructions.md` MANDATORY VERIFICATION section:
+- **Read COMPLETE stdout AND stderr** (not just exit codes)
+- **Look for keywords:** "error", "fail", "warning", "not set", "missing", "denied", "invalid"
+- **Report immediately:** If warnings detected, STOP and notify user
+- **Example added:** Docker env var warnings must be reported
+
+### Lesson Learned
+
+**Exit code 0 doesn't mean "no issues"** - it means "command didn't crash". Warnings, missing config, and environment issues can exist even when exit code is 0.
+
+**MUST check stdout/stderr for:**
+- Warnings about configuration
+- Missing environment variables
+- Deprecated features
+- Security issues
+- Performance problems
+
+### Prevention
+
+- Read ALL command output, not just exit codes
+- Search output for warning keywords
+- Report ANY warnings/issues to user immediately
+- Don't assume "command ran" means "command configured correctly"
+
+---
+
 ## 2025-12-09: Failed to Verify Command Output Before Pushing
 
 ### The Error

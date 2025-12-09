@@ -1,0 +1,327 @@
+name: AI Task Dispatcher
+
+on:
+  issues:
+    types: [opened, labeled]
+  workflow_dispatch:
+    inputs:
+      issue_number:
+        description: 'Issue number to process'
+        required: true
+        type: number
+
+jobs:
+  dispatch-task:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'ai-task') || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install anthropic openai PyGithub
+
+      - name: Parse task from issue
+        id: parse-task
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issueNumber = context.payload.issue?.number || ${{ inputs.issue_number }};
+            const issue = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber
+            });
+
+            const title = issue.data.title;
+            const body = issue.data.body || '';
+
+            // Extract task details from issue
+            const taskMatch = body.match(/## Task Description\s+([\s\S]+?)(?=\n##|$)/);
+            const contextMatch = body.match(/## Context\s+([\s\S]+?)(?=\n##|$)/);
+            const requirementsMatch = body.match(/## Requirements\s+([\s\S]+?)(?=\n##|$)/);
+
+            const task = {
+              number: issueNumber,
+              title: title,
+              description: taskMatch ? taskMatch[1].trim() : body,
+              context: contextMatch ? contextMatch[1].trim() : '',
+              requirements: requirementsMatch ? requirementsMatch[1].trim() : ''
+            };
+
+            core.setOutput('task_json', JSON.stringify(task));
+            core.setOutput('issue_number', issueNumber);
+            core.setOutput('task_title', title);
+
+      - name: Create task branch
+        id: create-branch
+        run: |
+          ISSUE_NUMBER="${{ steps.parse-task.outputs.issue_number }}"
+          BRANCH_NAME="ai-task/${ISSUE_NUMBER}-$(echo '${{ steps.parse-task.outputs.task_title }}' | sed 's/[^a-zA-Z0-9]/-/g' | tr '[:upper:]' '[:lower:]' | cut -c1-50)"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git checkout -b "$BRANCH_NAME"
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Execute AI task
+        id: execute-task
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TASK_JSON: ${{ steps.parse-task.outputs.task_json }}
+        run: |
+          # Create AI task execution script
+          cat > ai_task_executor.py << 'EOFPYTHON'
+          import os
+          import json
+          import subprocess
+          from pathlib import Path
+
+          def execute_ai_task(task):
+              """Execute AI task using available LLM providers."""
+
+              # Read copilot instructions for context
+              instructions_path = Path('.github/copilot-instructions.md')
+              context = ''
+              if instructions_path.exists():
+                  context = instructions_path.read_text()
+
+              # Build prompt for AI to implement task
+              prompt = f"""You are an AI assistant implementing a development task.
+
+          TASK:
+          Title: {task['title']}
+          Description: {task['description']}
+
+          CONTEXT:
+          {task.get('context', 'No additional context provided')}
+
+          REQUIREMENTS:
+          {task.get('requirements', 'No specific requirements')}
+
+          PROJECT CONTEXT:
+          {context[:5000]}  # Truncate to avoid token limits
+
+          INSTRUCTIONS:
+          1. Read relevant files to understand current codebase
+          2. Implement the requested changes
+          3. Follow project coding standards and best practices
+          4. Write tests for new functionality
+          5. Update documentation as needed
+          6. Create a detailed commit message
+
+          Execute this task and provide:
+          1. List of files to create/modify
+          2. Complete file contents
+          3. Commit message
+          4. Summary of changes
+
+          Format your response as JSON:
+          {{
+            "files": [
+              {{"path": "file/path.py", "content": "complete file content", "action": "create|modify"}}
+            ],
+            "commit_message": "commit message with details",
+            "summary": "brief summary of changes",
+            "tests_added": true/false
+          }}
+          """
+
+              # Try Ollama first (free local GPU), then Anthropic, then OpenAI
+              result = None
+
+              # Try Ollama
+              if os.getenv('OLLAMA_BASE_URL'):
+                  try:
+                      import requests
+                      response = requests.post(
+                          f"{os.getenv('OLLAMA_BASE_URL')}/api/generate",
+                          json={
+                              "model": "qwen2.5-coder:14b",
+                              "prompt": prompt,
+                              "stream": False
+                          },
+                          timeout=300
+                      )
+                      if response.status_code == 200:
+                          result = response.json().get('response')
+                          print("Used Ollama (local GPU) for task")
+                  except Exception as e:
+                      print(f"Ollama failed: {e}")
+
+              # Try Anthropic
+              if not result and os.getenv('ANTHROPIC_API_KEY'):
+                  try:
+                      import anthropic
+                      client = anthropic.Anthropic(api_key=os.getenv('ANTHROPIC_API_KEY'))
+                      response = client.messages.create(
+                          model="claude-sonnet-4-20250514",
+                          max_tokens=8000,
+                          messages=[{"role": "user", "content": prompt}]
+                      )
+                      result = response.content[0].text
+                      print("Used Anthropic Claude for task")
+                  except Exception as e:
+                      print(f"Anthropic failed: {e}")
+
+              # Try OpenAI
+              if not result and os.getenv('OPENAI_API_KEY'):
+                  try:
+                      import openai
+                      client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+                      response = client.chat.completions.create(
+                          model="gpt-4o",
+                          max_tokens=8000,
+                          messages=[{"role": "user", "content": prompt}]
+                      )
+                      result = response.choices[0].message.content
+                      print("Used OpenAI GPT-4 for task")
+                  except Exception as e:
+                      print(f"OpenAI failed: {e}")
+
+              if not result:
+                  raise Exception("No LLM provider available")
+
+              # Parse JSON response
+              # Extract JSON from markdown code blocks if present
+              if '```json' in result:
+                  result = result.split('```json')[1].split('```')[0].strip()
+              elif '```' in result:
+                  result = result.split('```')[1].split('```')[0].strip()
+
+              return json.loads(result)
+
+          def apply_changes(changes):
+              """Apply the AI-generated changes to files."""
+              files_modified = []
+
+              for file_change in changes['files']:
+                  file_path = Path(file_change['path'])
+                  file_path.parent.mkdir(parents=True, exist_ok=True)
+
+                  file_path.write_text(file_change['content'])
+                  files_modified.append(str(file_path))
+                  print(f"{'Created' if file_change['action'] == 'create' else 'Modified'}: {file_path}")
+
+              # Git add all modified files
+              if files_modified:
+                  subprocess.run(['git', 'add'] + files_modified, check=True)
+
+              return files_modified
+
+          if __name__ == '__main__':
+              task = json.loads(os.getenv('TASK_JSON'))
+
+              print(f"Executing AI task: {task['title']}")
+
+              try:
+                  changes = execute_ai_task(task)
+                  files = apply_changes(changes)
+
+                  # Commit changes
+                  commit_msg = f"[AI] {changes['commit_message']}\n\n---\nAI-Generated-By: GitHub Copilot (Claude Sonnet 4.5)\nTask: #{task['number']}"
+                  subprocess.run(['git', 'commit', '-m', commit_msg], check=True)
+
+                  # Output results
+                  output = {
+                      'success': True,
+                      'files': files,
+                      'commit_message': changes['commit_message'],
+                      'summary': changes['summary'],
+                      'tests_added': changes.get('tests_added', False)
+                  }
+                  print(f"::set-output name=result::{json.dumps(output)}")
+
+              except Exception as e:
+                  print(f"Error executing task: {e}")
+                  output = {'success': False, 'error': str(e)}
+                  print(f"::set-output name=result::{json.dumps(output)}")
+                  exit(1)
+          EOFPYTHON
+
+          python ai_task_executor.py
+
+      - name: Push changes
+        if: success()
+        run: |
+          git push origin ${{ steps.create-branch.outputs.branch }}
+
+      - name: Create pull request
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const result = JSON.parse('${{ steps.execute-task.outputs.result }}');
+
+            const pr = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `[AI Task #${{ steps.parse-task.outputs.issue_number }}] ${{ steps.parse-task.outputs.task_title }}`,
+              head: '${{ steps.create-branch.outputs.branch }}',
+              base: 'main',
+              body: `## AI-Implemented Task
+
+            Closes #${{ steps.parse-task.outputs.issue_number }}
+
+            ### Summary
+            ${result.summary}
+
+            ### Changes
+            ${result.files.map(f => `- \`${f}\``).join('\n')}
+
+            ### Tests
+            ${result.tests_added ? '✅ Tests added' : '⚠️ No tests added'}
+
+            ### Review Notes
+            This PR was automatically generated by the AI Task Dispatcher. Please review:
+            1. Code quality and correctness
+            2. Test coverage
+            3. Documentation updates
+            4. Alignment with project standards
+
+            ---
+            **AI-Generated-By**: GitHub Copilot (Claude Sonnet 4.5)
+            **Task**: #${{ steps.parse-task.outputs.issue_number }}
+            `
+            });
+
+            // Add comment to original issue
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.parse-task.outputs.issue_number }},
+              body: `🤖 AI task dispatcher has created PR #${pr.data.number} to address this issue.\n\nReview the implementation and provide feedback!`
+            });
+
+      - name: Report failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: ${{ steps.parse-task.outputs.issue_number }},
+              body: `❌ AI task dispatcher failed to implement this task.\n\nCheck the [workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`
+            });

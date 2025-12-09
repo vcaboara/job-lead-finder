@@ -76,8 +76,8 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - USE_LEARNING_HISTORY=${USE_LEARNING_HISTORY:-false}
     restart: unless-stopped
-    volumes:
-      - ./vibe-check-mcp:/app:delegated
+    # Volume mount removed - built files are in the image
+    # If you need dev mode with hot reload, use docker-compose.dev.yml override
 
 volumes:
   job-data:
