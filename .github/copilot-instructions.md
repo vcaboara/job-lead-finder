@@ -347,6 +347,12 @@ Follow these foundational instructions. Goal: Be a helpful, rigorous, secure, ef
 *   **Prioritize Security:** Treat input as untrusted, prevent injections, use least privilege, manage secrets securely (no hardcoding).
 *   **Document Effectively:** Explain the "Why" in comments. Document public APIs clearly (per project standards).
 *   **Consider Performance:** Avoid obvious inefficiencies; prioritize correctness unless specific performance targets exist.
+*   **MANDATORY VERIFICATION:** **NEVER assume commands succeed**. ALWAYS verify command output for errors:
+    *   Check exit codes (non-zero = failure)
+    *   Read command output completely for error messages
+    *   If output shows errors/failures, STOP and investigate before proceeding
+    *   Before pushing changes: verify tests pass, config is valid, build succeeds
+    *   Document verification failures in `error-documentation.md`
 
 ## III. Tools
 
@@ -462,8 +468,8 @@ If needed, you can further use the `web_scraper.py` file to scrape the web page 
 ## Process:
 
 1.  **Prepare & Validate:** Confirm understanding of the approved plan and relevant context for the task. Verify planned steps align with current project context (arch, tech, active). Halt and report significant conflicts.
-2.  **Implement & Iterate:** Execute plan steps, applying all General Principles (File 6) including quality standards, security, and context consistency. Perform checks; self-correct or trigger **Debug Mode** if issues arise.
-3.  **Test & Document:** Implement tests per plan. Run tests; trigger **Debug Mode** on failure. Add required documentation.
+2.  **Implement & Iterate:** Execute plan steps, applying all General Principles (File 6) including quality standards, security, and context consistency. **VERIFY each command/operation** - check exit codes, read output for errors, halt on failures. Self-correct or trigger **Debug Mode** if issues arise.
+3.  **Test & Document:** Implement tests per plan. **VERIFY tests pass** - check exit codes and output. Trigger **Debug Mode** on failure. Add required documentation.
 4.  **Report & Update:** Report task completion status (after any Debug). Propose necessary updates to Memory Files (`tasks_plan`, `active_context`, `error-doc`/`lessons`).
 
 **(End of Implementation Workflow - Advanced Simplified)**
@@ -482,7 +488,7 @@ If needed, you can further use the `web_scraper.py` file to scrape the web page 
 1.  **Understand & Contextualize:** Gather error details, steps to reproduce. Check relevant Memory Files (`tasks_plan`, `active_context`, `error-doc`). Reproduce if possible.
 2.  **Analyze & Hypothesize:** Analyze failure within project context (`arch`, `tech`). Formulate potential root causes based on evidence and context.
 3.  **Identify Cause & Plan Fix:** Pinpoint root cause. Plan minimal fix, ensuring it aligns with project context (`arch`, `tech`). Note any related documentation issues found.
-4.  **Implement & Verify:** Apply fix per standards. Run relevant tests (failed, related, new).
+4.  **Implement & Verify:** Apply fix per standards. **VERIFY fix works** - run relevant tests (failed, related, new), check exit codes, read output completely for errors/warnings.
 5.  **Report & Update:** Report outcome. Provide fix/tests if successful. Propose updates: **`error-documentation.md` (Mandatory)**, `tasks_plan`, `active_context`, potentially `lessons` or flags for core docs. Handle getting stuck by reporting findings and requesting help.
 
 **(End of Debugging Workflow - Advanced Simplified)**
