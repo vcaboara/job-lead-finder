@@ -90,7 +90,8 @@ markers = [
 # --maxfail=3: stop after 3 failures (fail fast)
 # --ff: run failed tests first
 # --dist loadgroup: use loadgroup distribution to respect xdist_group markers
-addopts = "-v --tb=short -m 'not slow' -n auto --dist loadgroup --maxfail=3 --ff"
+# -p no:benchmark: disable pytest-benchmark (incompatible with xdist)
+addopts = "-v --tb=short -m 'not slow' -n auto --dist loadgroup -p no:benchmark --maxfail=3 --ff"
 
 # Warning filters
 filterwarnings = [
