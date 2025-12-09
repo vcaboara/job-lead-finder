@@ -79,6 +79,57 @@ All AI agents MUST follow these verification steps.
 
 ---
 
+## 2025-12-09: pytest-benchmark Incompatible with pytest-xdist
+
+### The Error
+
+CI failed with INTERNALERROR during pytest configuration:
+
+```text
+pytest_benchmark.logger.PytestBenchmarkWarning: Benchmarks are automatically disabled
+because xdist plugin is active. Benchmarks cannot be performed reliably in a
+parallelized environment.
+```
+
+### Root Cause
+
+pytest-benchmark raises a warning during `pytest_configure` hook when it detects pytest-xdist is active. Our `filterwarnings = ["error", ...]` configuration treats ALL warnings as errors, causing fatal INTERNALERROR.
+
+The warning filter in pyproject.toml (`ignore::pytest_benchmark.logger.PytestBenchmarkWarning`) cannot catch this because the warning is raised during pytest configuration, **before** warning filters are applied.
+
+### The Fix (PR #67)
+
+Disable pytest-benchmark plugin when using xdist with `-p no:benchmark`:
+
+**.github/workflows/ci.yml**:
+
+```yaml
+pytest -n auto -p no:benchmark -m "" --cov=app --cov-report=xml --cov-report=term
+```
+
+**pyproject.toml**:
+
+```toml
+addopts = "-v --tb=short -m 'not slow' -n auto --dist loadgroup -p no:benchmark --maxfail=3 --ff"
+```
+
+### Lesson Learned
+
+pytest-benchmark and pytest-xdist are **mutually exclusive**:
+- pytest-benchmark: For performance benchmarking (requires serial execution)
+- pytest-xdist: For parallel test execution
+
+Cannot use both simultaneously. Benchmarks require deterministic, non-parallel environment.
+
+### Prevention
+
+- Document plugin incompatibilities in project docs
+- Use `-p no:plugin_name` to disable conflicting plugins
+- Be aware that warning filters don't catch configuration-time warnings
+- Consider separate test suites for benchmarks vs. functional tests
+
+---
+
 ## Template for Future Errors
 
 ### The Error
