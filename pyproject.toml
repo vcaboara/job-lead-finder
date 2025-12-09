@@ -99,6 +99,7 @@ filterwarnings = [
     "ignore::DeprecationWarning:pkg_resources.*",
     "ignore::pytest.PytestUnraisableExceptionWarning",
     "ignore::ResourceWarning",
+    "ignore::pytest_benchmark.logger.PytestBenchmarkWarning",
 ]
 
 [tool.flake8]
