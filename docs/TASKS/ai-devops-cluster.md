@@ -309,6 +309,56 @@ charts/
 
 ---
 
+### 4.4 AI Agent Metrics & Productivity Tracking
+**Goal:** Track AI agent contributions and productivity gains (Workrave-style)
+
+**Tasks:**
+- [ ] Create `scripts/ai_metrics_tracker.py` for agent statistics
+- [ ] Track per-agent metrics:
+  - Time saved (estimated vs actual)
+  - Keystrokes saved
+  - Lines of code written
+  - PRs created/reviewed
+  - Commits made
+- [ ] Create dashboard for AI agent productivity
+  - Individual agent statistics
+  - Comparative analysis (human vs AI)
+  - Hand health metrics (typing time saved)
+- [ ] Integration with Workrave for human metrics comparison
+- [ ] Generate weekly/monthly reports
+- [ ] Export to JSON/CSV for analysis
+
+**Implementation:**
+```python
+# AI Agent Activity Log Format
+{
+  "agent_id": "github-copilot",
+  "session_start": "2025-12-08T16:00:00Z",
+  "session_end": "2025-12-08T18:15:00Z",
+  "metrics": {
+    "time_saved_hours": 12.3,
+    "keystrokes_saved": 44600,
+    "lines_written": 1400,
+    "prs_created": 1,
+    "prs_reviewed": 5,
+    "commits": 11,
+    "acceleration_factor": 6.6
+  }
+}
+```
+
+**Deliverables:**
+- Real-time metrics API endpoint
+- Daily summary emails
+- Visual dashboard (integrate with existing UI)
+- Comparative charts (multiple AIs working together)
+- "Hand health score" tracking keystroke reduction
+
+**Estimated Solo Time:** 8-10 hours
+**Estimated Keystrokes:** ~7,000
+
+---
+
 ## 📊 Total Effort Estimation
 
 ### Time Investment (Solo Development)
