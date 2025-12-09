@@ -22,15 +22,15 @@
 
 ## Platform Comparison Matrix
 
-| Platform | Free Tier | Cold Start | GitHub Integration | Notes |
-|----------|-----------|------------|-------------------|-------|
-| **Fly.io** | ✅ 3 VMs, 256MB RAM each | ~1-2s | ✅ flyctl + GitHub Actions | Edge deployment, global |
-| **Railway.app** | ✅ $5/month credit | ~2-3s | ✅ Native integration | Simple, dev-friendly |
-| **Render** | ✅ 750 hours/month | ~30-60s (free tier) | ✅ Auto-deploy on push | Spins down after 15min idle |
-| **Cloud Run (GCP)** | ✅ 2M requests/month | ~1-3s | ✅ Via Cloud Build | Serverless, pay-per-use |
-| **AWS Fargate** | ❌ Pay-per-use only | ~3-5s | ✅ Via ECS + CodePipeline | AWS ecosystem integration |
-| **Azure Container Instances** | ❌ Pay-per-second | ~5-10s | ✅ Via Container Registry | Pay-per-second billing |
-| **Heroku** | ⚠️ Free tier removed | N/A | ✅ Git push to deploy | Now paid only |
+| Platform                      | Free Tier               | Cold Start          | GitHub Integration        | Notes                       |
+| ----------------------------- | ----------------------- | ------------------- | ------------------------- | --------------------------- |
+| **Fly.io**                    | ✅ 3 VMs, 256MB RAM each | ~1-2s               | ✅ flyctl + GitHub Actions | Edge deployment, global     |
+| **Railway.app**               | ✅ $5/month credit       | ~2-3s               | ✅ Native integration      | Simple, dev-friendly        |
+| **Render**                    | ✅ 750 hours/month       | ~30-60s (free tier) | ✅ Auto-deploy on push     | Spins down after 15min idle |
+| **Cloud Run (GCP)**           | ✅ 2M requests/month     | ~1-3s               | ✅ Via Cloud Build         | Serverless, pay-per-use     |
+| **AWS Fargate**               | ❌ Pay-per-use only      | ~3-5s               | ✅ Via ECS + CodePipeline  | AWS ecosystem integration   |
+| **Azure Container Instances** | ❌ Pay-per-second        | ~5-10s              | ✅ Via Container Registry  | Pay-per-second billing      |
+| **Heroku**                    | ⚠️ Free tier removed     | N/A                 | ✅ Git push to deploy      | Now paid only               |
 
 ---
 
@@ -118,13 +118,13 @@ gcloud run deploy job-lead-finder \
 - minikube: Feature-rich, easy debugging
 
 ### Cloud Kubernetes Options
-| Provider | Service | Free Tier | Notes |
-|----------|---------|-----------|-------|
-| **Google** | GKE Autopilot | ❌ $70/month minimum | Most managed |
-| **AWS** | EKS | ❌ $75/month for control plane | Industry standard |
-| **Azure** | AKS | ✅ Free control plane | Pay for nodes only |
-| **Civo** | Civo Kubernetes | ✅ $5 credit | Lightweight K8s |
-| **Digital Ocean** | DOKS | ❌ $12/month minimum | Simple, predictable |
+| Provider          | Service         | Free Tier                     | Notes               |
+| ----------------- | --------------- | ----------------------------- | ------------------- |
+| **Google**        | GKE Autopilot   | ❌ $70/month minimum           | Most managed        |
+| **AWS**           | EKS             | ❌ $75/month for control plane | Industry standard   |
+| **Azure**         | AKS             | ✅ Free control plane          | Pay for nodes only  |
+| **Civo**          | Civo Kubernetes | ✅ $5 credit                   | Lightweight K8s     |
+| **Digital Ocean** | DOKS            | ❌ $12/month minimum           | Simple, predictable |
 
 **Reality Check:** For job-lead-finder scale, Kubernetes is overkill initially. Start with:
 1. **Now:** Docker on Fly.io/Railway

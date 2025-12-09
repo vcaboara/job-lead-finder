@@ -1,6 +1,5 @@
 """Pytest configuration and fixtures."""
 
-import os
 import sys
 from datetime import datetime, timezone
 from io import BytesIO
@@ -33,22 +32,49 @@ import app.job_tracker as job_tracker_module  # noqa: E402
 from app.ui_server import app  # noqa: E402
 
 
-@pytest.fixture(autouse=True)
-def clean_tracker():
-    """Clean tracker state before and after each test."""
-    # Use the actual tracking file path that job_tracker module is configured to use
+@pytest.fixture(scope="session", autouse=True)
+def clean_tracker_session():
+    """Clean tracker state at session start and end."""
     tracking_file = job_tracker_module.TRACKING_FILE
 
-    # Clean before test
+    # Clean at session start
     if tracking_file.exists():
         tracking_file.unlink()
     job_tracker_module._tracker = None
 
     yield
 
-    # Clean after test
+    # Clean at session end
     if tracking_file.exists():
         tracking_file.unlink()
+    job_tracker_module._tracker = None
+
+
+@pytest.fixture(autouse=True)
+def clean_tracker():
+    """Clean tracker state before and after each test."""
+    # Use the actual tracking file path that job_tracker module is configured to use
+    tracking_file = job_tracker_module.TRACKING_FILE
+
+    # Clean before test - force a small delay for file system sync
+    import time
+
+    if tracking_file.exists():
+        try:
+            tracking_file.unlink()
+        except (FileNotFoundError, PermissionError):
+            pass  # Already deleted or locked
+    time.sleep(0.01)  # 10ms delay to ensure file system sync
+    job_tracker_module._tracker = None
+
+    yield
+
+    # Clean after test
+    if tracking_file.exists():
+        try:
+            tracking_file.unlink()
+        except (FileNotFoundError, PermissionError):
+            pass
     job_tracker_module._tracker = None
 
 
