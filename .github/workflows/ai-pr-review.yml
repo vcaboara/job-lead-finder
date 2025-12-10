@@ -224,11 +224,23 @@ jobs:
           if [ -z "$REVIEW_OUTPUT" ] || [ "$REVIEW_OUTPUT" = "" ]; then
             if [ -n "$OLLAMA_BASE_URL" ]; then
               echo "Attempting review with local Ollama..."
-              REVIEW_OUTPUT=$(curl -s "$OLLAMA_BASE_URL/api/generate" -d "{
+              # Add timeout and better error handling
+              API_RESPONSE=$(curl -s --max-time 120 "$OLLAMA_BASE_URL/api/generate" -d "{
                 \"model\": \"deepseek-coder:6.7b\",
                 \"prompt\": $(cat review_prompt.txt | jq -Rs .),
                 \"stream\": false
-              }" | jq -r '.response' 2>&1 || echo "")
+              }" 2>&1 || echo "")
+
+              # Save response for debugging
+              echo "$API_RESPONSE" > ollama_response.json
+
+              # Only parse if we got valid JSON
+              if echo "$API_RESPONSE" | jq -e '.response' > /dev/null 2>&1; then
+                REVIEW_OUTPUT=$(echo "$API_RESPONSE" | jq -r '.response')
+              else
+                echo "⚠️ Ollama Error or Timeout: $API_RESPONSE"
+                REVIEW_OUTPUT=""
+              fi
             fi
           fi
 
