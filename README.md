@@ -27,7 +27,8 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 - [Company Discovery Guide](docs/AGGREGATOR_TO_COMPANY_GUIDE.md) - Using the JSearch integration
 
 🤖 **AI & Development**
-- [Local Coding Assistant](docs/CODING_ASSISTANT.md) - **NEW!** Free local code generation with Ollama
+- [Token Optimization Guide](docs/TOKEN_OPTIMIZATION.md) - **CRITICAL!** Save 50% on Copilot quota
+- [Local Coding Assistant](docs/CODING_ASSISTANT.md) - Free local code generation with Ollama
 - [Ollama Tunnel Setup](docs/OLLAMA_TUNNEL_SETUP.md) - Free AI PR reviews with local models
 - [Claude AI Guide](docs/CLAUDE.md) - Guidelines for AI assistants working on this project
 - [Rulebook-AI Integration](docs/RULEBOOK_INTEGRATION.md) - AI assistant context management
