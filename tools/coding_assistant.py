@@ -59,21 +59,25 @@ class CodingAssistant:
                 # Check server
                 response = client.get(f"{self.base_url}/api/tags")
                 if response.status_code != 200:
-                    logger.error("Ollama server not responding. Is it running?")
+                    logger.error(f"Ollama server returned HTTP {response.status_code}: {response.text}")
+                    logger.error("Is Ollama running? Check: docker compose ps ollama")
                     return False
 
                 # Check model
                 models = response.json().get("models", [])
                 model_names = [m.get("name") for m in models]
                 if self.model not in model_names:
-                    logger.error(f"Model {self.model} not found. Available: {model_names}")
+                    logger.error(f"Model '{self.model}' not installed. Available models: {model_names or 'none'}")
                     logger.error("Run: python scripts/setup_ollama_models.py")
                     return False
 
                 return True
-        except Exception as e:
-            logger.error(f"Cannot connect to Ollama: {e}")
+        except httpx.ConnectError as e:
+            logger.error(f"Cannot connect to Ollama at {self.base_url}: {e}")
             logger.error("Make sure Ollama is running: docker compose up -d ollama")
+            return False
+        except Exception as e:
+            logger.error(f"Error checking Ollama: {type(e).__name__}: {e}")
             return False
 
     def _generate(self, prompt: str, system_prompt: str = "") -> Optional[str]:
@@ -105,10 +109,19 @@ class CodingAssistant:
                 response.raise_for_status()
 
                 result = response.json()
-                return result.get("response", "").strip()
+                generated = result.get("response", "").strip()
+                if not generated:
+                    logger.error(f"Empty response from Ollama. Full result: {result}")
+                return generated
 
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Generation failed - HTTP {e.response.status_code}: {e.response.text}")
+            return None
+        except httpx.TimeoutException:
+            logger.error(f"Generation timed out after {self.timeout}s")
+            return None
         except Exception as e:
-            logger.error(f"Generation failed: {e}")
+            logger.error(f"Generation failed: {type(e).__name__}: {e}")
             return None
 
     def generate_code(self, description: str) -> Optional[str]:

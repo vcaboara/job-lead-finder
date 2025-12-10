@@ -80,7 +80,7 @@ class OllamaSetup:
                     logger.info("✓ Ollama server is running")
                     return True
                 else:
-                    logger.error(f"Ollama server returned status {response.status_code}")
+                    logger.error(f"Ollama server failed with status code {response.status_code}: {response.text}")
                     return False
         except httpx.ConnectError:
             logger.error("✗ Cannot connect to Ollama server")
@@ -103,8 +103,11 @@ class OllamaSetup:
                 response.raise_for_status()
                 models = response.json().get("models", [])
                 return [m.get("name") for m in models if m.get("name")]
+        except httpx.HTTPStatusError as e:
+            logger.error(f"Failed to list models - HTTP {e.response.status_code}: {e.response.text}")
+            return []
         except Exception as e:
-            logger.error(f"Failed to list models: {e}")
+            logger.error(f"Failed to list models: {type(e).__name__}: {e}")
             return []
 
     def is_model_installed(self, model_name: str) -> bool:
@@ -139,7 +142,9 @@ class OllamaSetup:
                 logger.info(f"✓ Successfully downloaded {model_name}")
                 return True
             else:
-                logger.error(f"✗ Failed to download {model_name}")
+                logger.error(f"✗ Failed to download {model_name} (exit code: {result.returncode})")
+                if result.stderr:
+                    logger.error(f"  Error details: {result.stderr}")
                 return False
 
         except FileNotFoundError:
@@ -178,11 +183,14 @@ class OllamaSetup:
                     logger.info(f"✓ {model_name} is working correctly")
                     return True
                 else:
-                    logger.error(f"✗ {model_name} returned empty response")
+                    logger.error(f"✗ {model_name} returned empty response. Full result: {result}")
                     return False
 
+        except httpx.HTTPStatusError as e:
+            logger.error(f"✗ Error verifying model - HTTP {e.response.status_code}: {e.response.text}")
+            return False
         except Exception as e:
-            logger.error(f"✗ Error verifying model: {e}")
+            logger.error(f"✗ Error verifying model: {type(e).__name__}: {e}")
             return False
 
     def setup_models(self, model_keys: Optional[List[str]] = None) -> bool:
