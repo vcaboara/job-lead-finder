@@ -129,7 +129,7 @@ jobs:
           if [ -z "$REVIEW_OUTPUT" ] || [ "$REVIEW_OUTPUT" = "" ]; then
             echo "Using OpenAI for review..."
             # Use OpenAI API directly since vibe-check-mcp CLI doesn't support --prompt
-            REVIEW_OUTPUT=$(curl -s https://api.openai.com/v1/chat/completions \
+            API_RESPONSE=$(curl -s https://api.openai.com/v1/chat/completions \
               -H "Content-Type: application/json" \
               -H "Authorization: Bearer $OPENAI_API_KEY" \
               -d "{
@@ -142,7 +142,18 @@ jobs:
                   \"content\": $(cat review_prompt.txt | jq -Rs .)
                 }],
                 \"temperature\": 0.3
-              }" | jq -r '.choices[0].message.content' 2>&1 || echo "Review failed")
+              }")
+
+            # Save full API response for debugging
+            echo "$API_RESPONSE" > api_response.json
+
+            # Check for API errors
+            if echo "$API_RESPONSE" | jq -e '.error' > /dev/null 2>&1; then
+              ERROR_MSG=$(echo "$API_RESPONSE" | jq -r '.error.message')
+              REVIEW_OUTPUT="⚠️ OpenAI API Error: $ERROR_MSG"
+            else
+              REVIEW_OUTPUT=$(echo "$API_RESPONSE" | jq -r '.choices[0].message.content' 2>&1 || echo "Failed to parse API response")
+            fi
           fi
 
           # Save review output
@@ -153,7 +164,6 @@ jobs:
           echo "review=$REVIEW_JSON" >> $GITHUB_OUTPUT
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OLLAMA_BASE_URL: ${{ secrets.OLLAMA_BASE_URL }}
 
       - name: Post review comment
         if: steps.ai-review.outputs.review != ''
@@ -187,4 +197,5 @@ jobs:
             pr.diff
             review_prompt.txt
             review_output.txt
+            api_response.json
           if-no-files-found: ignore
