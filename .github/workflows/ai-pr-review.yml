@@ -280,8 +280,9 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const review = `${{ steps.ai-review.outputs.review }}`;
-            const provider = `${{ steps.ai-review.outputs.provider }}` || 'AI';
+            // Parse JSON-escaped outputs (they're already escaped by jq -R -s .)
+            const review = JSON.parse('${{ steps.ai-review.outputs.review }}');
+            const provider = '${{ steps.ai-review.outputs.provider }}' || 'AI';
 
             const comment = `## 🤖 AI Code Review (${provider})
 
