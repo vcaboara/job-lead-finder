@@ -4,12 +4,12 @@ Automated utilities for setting up and monitoring parallel AI development enviro
 
 ## Overview
 
-This directory contains two complementary tools:
+This directory contains two complementary tools for AI development:
 
 1. **`setup_ai_agents.py`** - One-time automated setup
 2. **`monitor_ai_resources.py`** - CLI tool for tracking usage
 
-For **graphical monitoring**, see the **[AI Resource Monitor Dashboard](../docs/AI_MONITOR_DASHBOARD.md)** - a containerized web UI accessible at <http://localhost:9000> when running `docker compose up -d`.
+For **graphical monitoring**, access the **AI Resource Monitor Dashboard** at <http://localhost:9000> when running `docker compose up -d ai-monitor`.
 
 ## Scripts
 
@@ -272,6 +272,7 @@ recommendations = monitor.get_recommendations()
 
 ## See Also
 
-- [`AI_AGENT_SETUP.md`](../docs/AI_AGENT_SETUP.md) - Complete setup guide
-- [`PARALLEL_WORK_STRATEGY.md`](../PARALLEL_WORK_STRATEGY.md) - Execution strategy
-- [`docs/TODO.md`](../docs/TODO.md) - Feature roadmap
+- [Main README](../README.md) - Complete project documentation
+- [Ollama Setup Guide](../OLLAMA_SETUP.md) - Local AI model setup
+- [Free Hosting Options](../docs/FREE_HOSTING_OPTIONS.md) - Deployment guides
+- [TODO & Roadmap](../docs/TODO.md) - Feature roadmap

@@ -1,12 +1,15 @@
 <!DOCTYPE html>
 <html lang="en" class="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - JobFlow</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
 
     <style>
         :root {
@@ -122,8 +125,13 @@
             color: hsl(var(--primary));
         }
 
-        .status-value.online { color: hsl(142, 76%, 36%); }
-        .status-value.offline { color: hsl(0, 84%, 60%); }
+        .status-value.online {
+            color: hsl(142, 76%, 36%);
+        }
+
+        .status-value.offline {
+            color: hsl(0, 84%, 60%);
+        }
 
         .services-grid {
             display: grid;
@@ -287,7 +295,8 @@
                 <div class="service-description">
                     Main web interface for searching jobs, managing leads, and tracking applications.
                 </div>
-                <span class="service-status running" id="ui-status" aria-live="polite" aria-atomic="true">Checking...</span>
+                <span class="service-status running" id="ui-status" aria-live="polite"
+                    aria-atomic="true">Checking...</span>
                 <a href="/" class="service-link">Open UI →</a>
             </div>
 
@@ -299,7 +308,8 @@
                 <div class="service-description">
                     Real-time monitoring of AI quota usage (Copilot, Gemini, Ollama) with recommendations.
                 </div>
-                <span class="service-status running" id="monitor-status" aria-live="polite" aria-atomic="true">Checking...</span>
+                <span class="service-status running" id="monitor-status" aria-live="polite"
+                    aria-atomic="true">Checking...</span>
                 <a href="http://localhost:9000" class="service-link" target="_blank">View Metrics →</a>
             </div>
 
@@ -311,7 +321,8 @@
                 <div class="service-description">
                     Task management board for autonomous AI execution. Track progress and status.
                 </div>
-                <span class="service-status running" id="kanban-status" aria-live="polite" aria-atomic="true">Checking...</span>
+                <span class="service-status running" id="kanban-status" aria-live="polite"
+                    aria-atomic="true">Checking...</span>
                 <a href="http://localhost:3001" class="service-link" target="_blank">View Board →</a>
             </div>
 
@@ -323,7 +334,8 @@
                 <div class="service-description">
                     Code validation and quality checks via Model Context Protocol.
                 </div>
-                <span class="service-status running" id="vibe-status" aria-live="polite" aria-atomic="true">Checking...</span>
+                <span class="service-status running" id="vibe-status" aria-live="polite"
+                    aria-atomic="true">Checking...</span>
                 <a href="http://localhost:3000" class="service-link" target="_blank">View Checks →</a>
             </div>
 
@@ -532,4 +544,5 @@
         setInterval(refreshAll, 30000);
     </script>
 </body>
+
 </html>

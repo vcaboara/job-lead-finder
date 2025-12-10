@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JobFlow - Navigation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --font-sans: 'DM Sans', system-ui, sans-serif;
+            --font-display: 'Space Grotesk', system-ui, sans-serif;
+
+            --background: 210 20% 98%;
+            --foreground: 222 47% 11%;
+            --card: 0 0% 100%;
+            --primary: 217 91% 60%;
+            --accent: 172 66% 50%;
+            --muted: 210 40% 96%;
+            --border: 214 32% 91%;
+        }
+
+        .dark {
+            --background: 222 47% 6%;
+            --foreground: 210 40% 98%;
+            --card: 222 47% 9%;
+            --primary: 217 91% 60%;
+            --accent: 172 66% 50%;
+            --muted: 217 33% 17%;
+            --border: 217 33% 17%;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font-sans);
+            background: hsl(var(--background));
+            color: hsl(var(--foreground));
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        h1 {
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, hsl(217, 91%, 60%) 0%, hsl(172, 66%, 50%) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            font-size: 1.25rem;
+            color: hsl(var(--muted-foreground, 215 20% 65%));
+            margin-bottom: 3rem;
+        }
+
+        .nav-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .nav-card {
+            background: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            border-radius: 1rem;
+            padding: 2rem;
+            text-decoration: none;
+            color: hsl(var(--foreground));
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .nav-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, hsl(217, 91%, 60%) 0%, hsl(172, 66%, 50%) 100%);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform 0.3s ease;
+        }
+
+        .nav-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .nav-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 24px hsl(222 47% 11% / 0.2);
+            border-color: hsl(var(--primary));
+        }
+
+        .nav-card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        .nav-card-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: hsl(var(--foreground));
+        }
+
+        .nav-card-description {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: hsl(var(--muted-foreground, 215 20% 65%));
+        }
+
+        .nav-card-status {
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background: hsl(var(--muted));
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            display: inline-block;
+        }
+
+        .status-active {
+            background: hsl(142 76% 36% / 0.1);
+            color: hsl(142 76% 36%);
+        }
+
+        .status-monitoring {
+            background: hsl(217 91% 60% / 0.1);
+            color: hsl(217 91% 60%);
+        }
+
+        .footer {
+            margin-top: 3rem;
+            text-align: center;
+            color: hsl(var(--muted-foreground, 215 20% 65%));
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+
+            .nav-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 JobFlow</h1>
+        <p class="subtitle">AI-Powered Job Search & Application Management</p>
+
+        <div class="nav-grid">
+            <a href="/" class="nav-card">
+                <span class="nav-card-icon">🔍</span>
+                <h2 class="nav-card-title">Job Search</h2>
+                <p class="nav-card-description">
+                    Discover job opportunities matched to your resume using AI. Track applications through every stage.
+                </p>
+                <span class="nav-card-status status-active">Main Application</span>
+            </a>
+
+            <a href="/dashboard" class="nav-card">
+                <span class="nav-card-icon">📊</span>
+                <h2 class="nav-card-title">Dashboard</h2>
+                <p class="nav-card-description">
+                    View all services, system status, and quick actions. Monitor your job search progress.
+                </p>
+                <span class="nav-card-status status-active">Service Overview</span>
+            </a>
+
+            <a href="http://localhost:9000" target="_blank" class="nav-card">
+                <span class="nav-card-icon">🤖</span>
+                <h2 class="nav-card-title">AI Resource Monitor</h2>
+                <p class="nav-card-description">
+                    Track GitHub Copilot, Gemini API, Ollama usage, and GPU performance in real-time.
+                </p>
+                <span class="nav-card-status status-monitoring">Port 9000</span>
+            </a>
+
+            <a href="/visual-kanban" class="nav-card">
+                <span class="nav-card-icon">📋</span>
+                <h2 class="nav-card-title">Visual Kanban</h2>
+                <p class="nav-card-description">
+                    Monitor autonomous AI task progress, feature development, and code reviews.
+                </p>
+                <span class="nav-card-status status-active">AI Tasks</span>
+            </a>
+
+            <a href="http://localhost:3000" target="_blank" class="nav-card">
+                <span class="nav-card-icon">🔌</span>
+                <h2 class="nav-card-title">Vibe Check MCP</h2>
+                <p class="nav-card-description">
+                    Model Context Protocol server for AI integration and resource management.
+                </p>
+                <span class="nav-card-status status-monitoring">Port 3000</span>
+            </a>
+
+            <a href="/health" class="nav-card">
+                <span class="nav-card-icon">💚</span>
+                <h2 class="nav-card-title">Health Check</h2>
+                <p class="nav-card-description">
+                    System health status, API configurations, and service availability.
+                </p>
+                <span class="nav-card-status status-active">API Endpoint</span>
+            </a>
+        </div>
+
+        <div class="footer">
+            <p>JobFlow v0.1.1 • Autonomous AI Development System</p>
+            <p style="margin-top: 0.5rem;">Powered by Ollama, Anthropic, and OpenAI</p>
+        </div>
+    </div>
+</body>
+</html>

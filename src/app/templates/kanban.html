@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Kanban - AI Task Progress</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        border: "hsl(var(--border))",
+                        input: "hsl(var(--input))",
+                        ring: "hsl(var(--ring))",
+                        background: "hsl(var(--background))",
+                        foreground: "hsl(var(--foreground))",
+                        primary: {
+                            DEFAULT: "hsl(var(--primary))",
+                            foreground: "hsl(var(--primary-foreground))",
+                        },
+                        secondary: {
+                            DEFAULT: "hsl(var(--secondary))",
+                            foreground: "hsl(var(--secondary-foreground))",
+                        },
+                        accent: {
+                            DEFAULT: "hsl(var(--accent))",
+                            foreground: "hsl(var(--accent-foreground))",
+                        },
+                        muted: {
+                            DEFAULT: "hsl(var(--muted))",
+                            foreground: "hsl(var(--muted-foreground))",
+                        },
+                        card: {
+                            DEFAULT: "hsl(var(--card))",
+                            foreground: "hsl(var(--card-foreground))",
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['DM Sans', 'sans-serif'],
+                        heading: ['Space Grotesk', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --background: 0 0% 100%;
+            --foreground: 222 47% 11%;
+            --card: 0 0% 100%;
+            --card-foreground: 222 47% 11%;
+            --primary: 217 91% 60%;
+            --primary-foreground: 210 40% 98%;
+            --secondary: 210 40% 96%;
+            --secondary-foreground: 222 47% 11%;
+            --muted: 210 40% 96%;
+            --muted-foreground: 215 16% 47%;
+            --accent: 172 66% 50%;
+            --accent-foreground: 222 47% 11%;
+            --border: 214 32% 91%;
+            --input: 214 32% 91%;
+            --ring: 217 91% 60%;
+        }
+
+        .dark {
+            --background: 222 47% 6%;
+            --foreground: 210 40% 98%;
+            --card: 222 47% 9%;
+            --card-foreground: 210 40% 98%;
+            --primary: 217 91% 60%;
+            --primary-foreground: 222 47% 11%;
+            --secondary: 222 47% 12%;
+            --secondary-foreground: 210 40% 98%;
+            --muted: 223 47% 11%;
+            --muted-foreground: 215 20% 65%;
+            --accent: 172 66% 50%;
+            --accent-foreground: 222 47% 11%;
+            --border: 223 47% 15%;
+            --input: 223 47% 15%;
+            --ring: 217 91% 60%;
+        }
+
+        * {
+            border-color: hsl(var(--border));
+        }
+
+        body {
+            background-color: hsl(var(--background));
+            color: hsl(var(--foreground));
+            font-family: 'DM Sans', sans-serif;
+        }
+
+        .kanban-column {
+            min-width: 300px;
+            max-width: 350px;
+        }
+
+        .kanban-card {
+            background-color: hsl(var(--card));
+            border: 1px solid hsl(var(--border));
+            transition: all 0.2s ease;
+        }
+
+        .kanban-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            border-color: hsl(var(--primary));
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-backlog {
+            background-color: hsl(215 20% 25%);
+            color: hsl(215 20% 85%);
+        }
+
+        .status-progress {
+            background-color: hsl(217 91% 20%);
+            color: hsl(217 91% 80%);
+        }
+
+        .status-review {
+            background-color: hsl(172 66% 20%);
+            color: hsl(172 66% 80%);
+        }
+
+        .status-done {
+            background-color: hsl(142 71% 20%);
+            color: hsl(142 71% 80%);
+        }
+
+        .priority-high {
+            border-left: 4px solid hsl(0 84% 60%);
+        }
+
+        .priority-medium {
+            border-left: 4px solid hsl(38 92% 50%);
+        }
+
+        .priority-low {
+            border-left: 4px solid hsl(142 71% 45%);
+        }
+
+        .column-header {
+            background: linear-gradient(135deg, hsl(var(--card)) 0%, hsl(222 47% 11%) 100%);
+            border-bottom: 2px solid hsl(var(--border));
+        }
+
+        .header-backlog {
+            border-bottom-color: hsl(215 20% 45%);
+        }
+
+        .header-progress {
+            border-bottom-color: hsl(var(--primary));
+        }
+
+        .header-review {
+            border-bottom-color: hsl(var(--accent));
+        }
+
+        .header-done {
+            border-bottom-color: hsl(142 71% 45%);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-6">
+    <div class="max-w-[1600px] mx-auto">
+        <!-- Header -->
+        <div class="mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h1 class="text-4xl font-heading font-bold mb-2">Visual Kanban</h1>
+                    <p class="text-muted-foreground">Monitor autonomous AI task progress</p>
+                </div>
+                <div class="flex gap-3">
+                    <a href="/nav" class="px-4 py-2 bg-card border border-border rounded-lg hover:bg-secondary transition-colors">
+                        ← Back to Navigation
+                    </a>
+                    <button id="refreshBtn" class="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:opacity-90 transition-opacity">
+                        🔄 Refresh
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-card border border-border rounded-lg p-4">
+                    <div class="text-muted-foreground text-sm mb-1">Backlog</div>
+                    <div class="text-2xl font-bold" id="backlogCount">0</div>
+                </div>
+                <div class="bg-card border border-border rounded-lg p-4">
+                    <div class="text-muted-foreground text-sm mb-1">In Progress</div>
+                    <div class="text-2xl font-bold text-primary" id="progressCount">0</div>
+                </div>
+                <div class="bg-card border border-border rounded-lg p-4">
+                    <div class="text-muted-foreground text-sm mb-1">In Review</div>
+                    <div class="text-2xl font-bold" style="color: hsl(var(--accent))" id="reviewCount">0</div>
+                </div>
+                <div class="bg-card border border-border rounded-lg p-4">
+                    <div class="text-muted-foreground text-sm mb-1">Done</div>
+                    <div class="text-2xl font-bold text-green-500" id="doneCount">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Kanban Board -->
+        <div class="flex gap-6 overflow-x-auto pb-6">
+            <!-- Backlog -->
+            <div class="kanban-column flex-shrink-0">
+                <div class="column-header header-backlog rounded-t-lg p-4 mb-4">
+                    <h2 class="text-xl font-heading font-bold mb-1">📋 Backlog</h2>
+                    <p class="text-sm text-muted-foreground">Tasks waiting to start</p>
+                </div>
+                <div id="backlogColumn" class="space-y-3 min-h-[200px]">
+                    <!-- Cards will be inserted here -->
+                </div>
+            </div>
+
+            <!-- In Progress -->
+            <div class="kanban-column flex-shrink-0">
+                <div class="column-header header-progress rounded-t-lg p-4 mb-4">
+                    <h2 class="text-xl font-heading font-bold mb-1">🚀 In Progress</h2>
+                    <p class="text-sm text-muted-foreground">Currently being worked on</p>
+                </div>
+                <div id="progressColumn" class="space-y-3 min-h-[200px]">
+                    <!-- Cards will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Review -->
+            <div class="kanban-column flex-shrink-0">
+                <div class="column-header header-review rounded-t-lg p-4 mb-4">
+                    <h2 class="text-xl font-heading font-bold mb-1">👀 Review</h2>
+                    <p class="text-sm text-muted-foreground">Awaiting review</p>
+                </div>
+                <div id="reviewColumn" class="space-y-3 min-h-[200px]">
+                    <!-- Cards will be inserted here -->
+                </div>
+            </div>
+
+            <!-- Done -->
+            <div class="kanban-column flex-shrink-0">
+                <div class="column-header header-done rounded-t-lg p-4 mb-4">
+                    <h2 class="text-xl font-heading font-bold mb-1">✅ Done</h2>
+                    <p class="text-sm text-muted-foreground">Completed tasks</p>
+                </div>
+                <div id="doneColumn" class="space-y-3 min-h-[200px]">
+                    <!-- Cards will be inserted here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample tasks - in a real implementation, this would fetch from GitHub Issues API
+        const sampleTasks = [
+            {
+                id: 1,
+                title: "Unified lovable.dev theme across all pages",
+                description: "Apply consistent dark theme to AI monitor, dashboard, and job search pages",
+                status: "review",
+                priority: "high",
+                assignee: "GitHub Copilot",
+                labels: ["ui", "theme"],
+                prNumber: 71,
+                createdAt: "2025-12-08T10:00:00Z"
+            },
+            {
+                id: 2,
+                title: "Fix AI PR review workflow",
+                description: "Replace broken vibe-check-mcp CLI with direct OpenAI API calls",
+                status: "done",
+                priority: "high",
+                assignee: "GitHub Copilot",
+                labels: ["workflow", "ai"],
+                prNumber: 71,
+                createdAt: "2025-12-08T14:00:00Z"
+            },
+            {
+                id: 3,
+                title: "Implement Slack integration for async work",
+                description: "Create Slack bot with /ai-task commands for submitting work without VS Code",
+                status: "backlog",
+                priority: "medium",
+                assignee: null,
+                labels: ["integration", "slack", "future"],
+                prNumber: null,
+                createdAt: "2025-12-08T16:00:00Z"
+            },
+            {
+                id: 4,
+                title: "Create GitHub issue templates",
+                description: "Add issue templates for ai-task label to streamline task submission",
+                status: "backlog",
+                priority: "low",
+                assignee: null,
+                labels: ["github", "templates"],
+                prNumber: null,
+                createdAt: "2025-12-08T16:30:00Z"
+            },
+            {
+                id: 5,
+                title: "Ollama model downloads",
+                description: "Download qwen2.5-coder:14b and deepseek-r1:14b for local AI operations",
+                status: "progress",
+                priority: "medium",
+                assignee: "System",
+                labels: ["ollama", "ai"],
+                prNumber: null,
+                createdAt: "2025-12-08T12:00:00Z"
+            }
+        ];
+
+        function createTaskCard(task) {
+            const priorityClass = `priority-${task.priority}`;
+            const statusClass = `status-${task.status}`;
+
+            const labelsHtml = task.labels.map(label =>
+                `<span class="bg-secondary text-secondary-foreground px-2 py-1 rounded text-xs">${label}</span>`
+            ).join(' ');
+
+            const prBadge = task.prNumber
+                ? `<a href="https://github.com/vcaboara/job-lead-finder/pull/${task.prNumber}" target="_blank" class="text-xs text-primary hover:underline">PR #${task.prNumber}</a>`
+                : '';
+
+            const assigneeBadge = task.assignee
+                ? `<div class="flex items-center gap-2 text-sm text-muted-foreground"><span>👤</span>${task.assignee}</div>`
+                : '<div class="text-sm text-muted-foreground italic">Unassigned</div>';
+
+            const timeSince = getTimeSince(new Date(task.createdAt));
+
+            return `
+                <div class="kanban-card ${priorityClass} rounded-lg p-4 cursor-pointer">
+                    <div class="flex items-start justify-between mb-2">
+                        <h3 class="font-semibold text-sm leading-tight flex-1">${task.title}</h3>
+                        <span class="status-badge ${statusClass} ml-2">${task.priority}</span>
+                    </div>
+                    <p class="text-sm text-muted-foreground mb-3 line-clamp-2">${task.description}</p>
+                    <div class="flex flex-wrap gap-1 mb-3">
+                        ${labelsHtml}
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        ${assigneeBadge}
+                        <div class="text-muted-foreground">${timeSince}</div>
+                    </div>
+                    ${prBadge ? `<div class="mt-2 pt-2 border-t border-border">${prBadge}</div>` : ''}
+                </div>
+            `;
+        }
+
+        function getTimeSince(date) {
+            const seconds = Math.floor((new Date() - date) / 1000);
+            const intervals = {
+                year: 31536000,
+                month: 2592000,
+                week: 604800,
+                day: 86400,
+                hour: 3600,
+                minute: 60
+            };
+
+            for (const [name, seconds_in_interval] of Object.entries(intervals)) {
+                const interval = Math.floor(seconds / seconds_in_interval);
+                if (interval >= 1) {
+                    return interval === 1 ? `1 ${name} ago` : `${interval} ${name}s ago`;
+                }
+            }
+            return 'just now';
+        }
+
+        function renderTasks() {
+            // Clear columns
+            document.getElementById('backlogColumn').innerHTML = '';
+            document.getElementById('progressColumn').innerHTML = '';
+            document.getElementById('reviewColumn').innerHTML = '';
+            document.getElementById('doneColumn').innerHTML = '';
+
+            // Count tasks by status
+            const counts = { backlog: 0, progress: 0, review: 0, done: 0 };
+
+            // Render tasks
+            sampleTasks.forEach(task => {
+                const card = createTaskCard(task);
+                const columnId = task.status === 'backlog' ? 'backlogColumn' :
+                               task.status === 'progress' ? 'progressColumn' :
+                               task.status === 'review' ? 'reviewColumn' :
+                               'doneColumn';
+
+                document.getElementById(columnId).innerHTML += card;
+                counts[task.status]++;
+            });
+
+            // Update counts
+            document.getElementById('backlogCount').textContent = counts.backlog;
+            document.getElementById('progressCount').textContent = counts.progress;
+            document.getElementById('reviewCount').textContent = counts.review;
+            document.getElementById('doneCount').textContent = counts.done;
+
+            // Show empty state if column is empty
+            ['backlog', 'progress', 'review', 'done'].forEach(status => {
+                const columnId = `${status}Column`;
+                const column = document.getElementById(columnId);
+                if (column.children.length === 0) {
+                    column.innerHTML = '<div class="text-center text-muted-foreground text-sm italic py-8">No tasks</div>';
+                }
+            });
+        }
+
+        // Initial render
+        renderTasks();
+
+        // Refresh button
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            console.log('Refreshing tasks...');
+            // In a real implementation, this would fetch from the API
+            renderTasks();
+        });
+
+        // Auto-refresh every 30 seconds
+        setInterval(() => {
+            console.log('Auto-refreshing tasks...');
+            // In a real implementation, this would fetch from the API
+            renderTasks();
+        }, 30000);
+    </script>
+</body>
+</html>
