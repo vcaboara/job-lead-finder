@@ -71,21 +71,29 @@ python tools/coding_assistant.py generate "Create a function to..."
    - File: `src/app/job_finder.py` (lines 28-51)
    - Priority: Ollama → Gemini → None
 
-2. **AI PR Reviews:** Uses Gemini → OpenAI → Ollama → Skip
+2. **Vibe-Check MCP:** Uses Ollama by default (100% FREE)
+   - File: `docker-compose.yml` (lines 65-79)
+   - File: `vibe-check-mcp/src/utils/llm.ts` (native Ollama support)
+   - Priority: Ollama (deepseek-coder:6.7b) → Gemini → OpenAI
+   - Tested and validated with REAL behavior ✅
+   - Provides metacognitive questioning with zero API costs
+
+3. **AI PR Reviews:** Uses Gemini → OpenAI → Ollama → Skip
    - File: `.github/workflows/ai-pr-review.yml`
    - Triggers: Only on PR open/ready (not every push)
    - Skips: draft PRs, test commits, chore commits
+   - **Now includes OLLAMA_BASE_URL** for free tunnel-based reviews
 
-3. **Local Coding Assistant:** Always uses Ollama (free)
+4. **Local Coding Assistant:** Always uses Ollama (free)
    - Tool: `tools/coding_assistant.py`
    - Models: DeepSeek Coder, CodeLlama
 
 ### ⚠️ Needs Configuration
 
-1. **Add OLLAMA_BASE_URL to GitHub Actions**
-   - Currently missing from workflow environment
-   - Prevents free Ollama reviews from working
-   - **Fix required:** See "Missing Configuration" section below
+1. **Add OLLAMA_BASE_URL to GitHub Actions** ✅ DONE
+   - Now configured in workflow environment
+   - Enables free Ollama reviews via cloudflare tunnel
+   - See: `.github/workflows/ai-pr-review.yml` line 210
 
 2. **Configure .env file** (if not exists)
    - Create `.env` file with API priorities
@@ -351,12 +359,12 @@ python -c "from src.app.job_finder import _get_evaluation_provider; print(type(_
 
 Monthly costs with different strategies:
 
-| Strategy | Copilot | Gemini | OpenAI | Ollama | Total |
-|----------|---------|--------|--------|--------|-------|
-| **All Copilot** | $40 (100% quota) | $0 | $0 | $0 | **$40** |
-| **All Cloud APIs** | $40 | $0 (free) | $30 | $0 | **$70** |
-| **Optimized (Recommended)** | $20 (50% quota) | $0 (free) | $0 | $0 | **$20** |
-| **100% Local** | $10 (minimal inline) | $0 | $0 | $0 | **$10** |
+| Strategy                    | Copilot              | Gemini    | OpenAI | Ollama | Total   |
+| --------------------------- | -------------------- | --------- | ------ | ------ | ------- |
+| **All Copilot**             | $40 (100% quota)     | $0        | $0     | $0     | **$40** |
+| **All Cloud APIs**          | $40                  | $0 (free) | $30    | $0     | **$70** |
+| **Optimized (Recommended)** | $20 (50% quota)      | $0 (free) | $0     | $0     | **$20** |
+| **100% Local**              | $10 (minimal inline) | $0        | $0     | $0     | **$10** |
 
 **Recommended:** Optimized strategy
 - Use Ollama for 80% of tasks
