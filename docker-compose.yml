@@ -79,6 +79,14 @@ services:
     # Volume mount removed - built files are in the image
     # If you need dev mode with hot reload, use docker-compose.dev.yml override
 
+  ollama-tunnel:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://host.docker.internal:11434
+    restart: unless-stopped
+    # Logs will show the public HTTPS URL for GitHub Actions
+    # Run: docker compose logs ollama-tunnel | grep "https://"
+    # Then: gh secret set OLLAMA_BASE_URL --body "https://your-url.trycloudflare.com"
+
 volumes:
   job-data:
   job-logs:
