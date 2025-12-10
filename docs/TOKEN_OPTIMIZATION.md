@@ -46,9 +46,9 @@ python tools/coding_assistant.py generate "Create a function to..."
 
 **Current Config:** Already set as fallback in AI PR reviews
 
-### 3. **GitHub Copilot** (PAID - Save for interactive coding)
-- **Cost:** $10/month or enterprise quota
-- **Quota:** Limited monthly (you've used 25% in 9 days)
+### 3. **GitHub Copilot** (EXPENSIVE - Save for interactive coding)
+- **Cost:** $40/month for 1.5k premium tokens (upgraded from $10/month for 300 tokens)
+- **Quota:** 1,500 premium tokens/month (you've used 25% in 9 days)
 - **Speed:** Real-time
 - **Use for:**
   - ✅ Line-by-line autocomplete in VS Code
@@ -353,16 +353,16 @@ Monthly costs with different strategies:
 
 | Strategy | Copilot | Gemini | OpenAI | Ollama | Total |
 |----------|---------|--------|--------|--------|-------|
-| **All Copilot** | $10 (quota used) | $0 | $0 | $0 | **$10** |
-| **All Cloud APIs** | $10 | $0 (free) | $15 | $0 | **$25** |
-| **Optimized (Recommended)** | $5 (50% quota) | $0 (free) | $0 | $0 | **$5** |
-| **100% Local** | $0 (minimal) | $0 | $0 | $0 | **$0** |
+| **All Copilot** | $40 (100% quota) | $0 | $0 | $0 | **$40** |
+| **All Cloud APIs** | $40 | $0 (free) | $30 | $0 | **$70** |
+| **Optimized (Recommended)** | $20 (50% quota) | $0 (free) | $0 | $0 | **$20** |
+| **100% Local** | $10 (minimal inline) | $0 | $0 | $0 | **$10** |
 
 **Recommended:** Optimized strategy
 - Use Ollama for 80% of tasks
-- Use Copilot for inline completions
+- Use Copilot for inline completions only
 - Use Gemini free tier for emergencies
-- Save 50% on Copilot quota
+- Save 50% on Copilot quota ($20/month savings = $240/year)
 
 ## Action Items
 
@@ -402,7 +402,7 @@ Monthly costs with different strategies:
 - 🎯 15% use Gemini free tier
 - 🎯 5% use Copilot for inline help
 - 🎯 0% use paid APIs (OpenAI/Anthropic)
-- 🎯 Save 50% on Copilot quota monthly
+- 🎯 Save 50% on Copilot quota ($20/month = $240/year)
 - 🎯 Hands get more rest while AI works 24/7!
 
 ---
