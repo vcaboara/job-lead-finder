@@ -2,7 +2,7 @@ name: AI PR Review
 
 on:
   pull_request:
-    types: [opened, ready_for_review]  # Only review when opened or marked ready (not on every push)
+    types: [opened, reopened, ready_for_review] # Only review when opened or marked ready (not on every push)
     branches: [main]
 
 jobs:
