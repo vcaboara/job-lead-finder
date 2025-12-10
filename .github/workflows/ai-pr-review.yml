@@ -2,18 +2,12 @@ name: AI PR Review
 
 on:
   pull_request:
-    types: [opened, ready_for_review]  # Only review when opened or marked ready (not on every push)
+    types: [opened, synchronize, reopened]
     branches: [main]
 
 jobs:
   ai-review:
     runs-on: ubuntu-latest
-    # Skip draft PRs and test commits to save quota
-    if: |
-      github.event.pull_request.draft == false &&
-      !contains(github.event.pull_request.title, '[skip review]') &&
-      !contains(github.event.pull_request.title, 'test:') &&
-      !contains(github.event.pull_request.title, 'chore:')
     permissions:
       pull-requests: write
       contents: read
