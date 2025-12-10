@@ -61,6 +61,39 @@ jobs:
           DIFF_CONTENT=$(cat pr.diff | jq -R -s .)
           echo "diff=$DIFF_CONTENT" >> $GITHUB_OUTPUT
 
+      - name: Get PR comments and reviews
+        id: pr-comments
+        if: steps.changed-files.outputs.files != ''
+        run: |
+          # Fetch PR comments (issue comments)
+          echo "Fetching PR comments..."
+          COMMENTS=$(gh api "/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments" \
+            --jq '.[] | "**\(.user.login)** (\(.created_at | split("T")[0])):\n\(.body)\n"' 2>/dev/null || echo "")
+
+          # Fetch review comments (inline code comments)
+          echo "Fetching review comments..."
+          REVIEW_COMMENTS=$(gh api "/repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments" \
+            --jq '.[] | "**\(.user.login)** on \(.path):\(.position // ""):\n> \(.body)\n"' 2>/dev/null || echo "")
+
+          # Combine and save
+          if [ -n "$COMMENTS" ] || [ -n "$REVIEW_COMMENTS" ]; then
+            echo "## PR Discussion Context" > pr_discussion.txt
+            if [ -n "$COMMENTS" ]; then
+              echo -e "\n### General Comments:\n$COMMENTS" >> pr_discussion.txt
+            fi
+            if [ -n "$REVIEW_COMMENTS" ]; then
+              echo -e "\n### Code Review Comments:\n$REVIEW_COMMENTS" >> pr_discussion.txt
+            fi
+            HAS_DISCUSSION="true"
+          else
+            echo "No PR discussion found" > pr_discussion.txt
+            HAS_DISCUSSION="false"
+          fi
+
+          echo "has_discussion=$HAS_DISCUSSION" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ github.token }}
+
       - name: Review with vibe-check-mcp
         id: ai-review
         if: steps.changed-files.outputs.files != ''
@@ -120,6 +153,13 @@ jobs:
           EOF
 
           cat pr.diff >> review_prompt.txt
+
+          # Include PR discussion if available
+          if [ -f pr_discussion.txt ] && [ "${{ steps.pr-comments.outputs.has_discussion }}" = "true" ]; then
+            echo -e "\n---\n" >> review_prompt.txt
+            cat pr_discussion.txt >> review_prompt.txt
+            echo -e "\nPlease address any questions or concerns raised in the discussion above.\n" >> review_prompt.txt
+          fi
 
           # Try Gemini first (you have credits), then OpenAI, then Ollama
           if [ -n "$GEMINI_API_KEY" ]; then
