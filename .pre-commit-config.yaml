@@ -50,7 +50,7 @@ repos:
             current_branch = current_branch.replace('refs/heads/', '')
             if current_branch in protected_branches:
                 print("")
-                print(f"❌ ERROR: Direct pushes to '{current_branch}' are not allowed!")
+                print(f"ERROR: Direct pushes to '{current_branch}' are not allowed!")
                 print("")
                 print("Please use feature branches and Pull Requests.")
                 print("See docs/VERSIONING.md for the workflow.")
