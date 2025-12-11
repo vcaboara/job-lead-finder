@@ -194,9 +194,10 @@ class TestGeminiCliMain:
 
         with patch("sys.argv", test_args):
             # Import module first to ensure it's in sys.modules
-            from app import gemini_cli
             import importlib
-            
+
+            from app import gemini_cli
+
             # Mock both SDK imports to fail
             with patch.dict("sys.modules", {"google.genai": None, "google.generativeai": None}):
                 with pytest.raises(SystemExit):

@@ -1,9 +1,6 @@
 """Tests for email processor and job tracking integration."""
+import time
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
 
 from app.email_processor import EmailProcessor
 from app.email_webhook import InboundEmail
@@ -90,8 +87,7 @@ class TestEmailProcessor:
             to_address="user-abc123@jobforge.com",
             from_address="noreply@myworkdayjobs.com",
             subject="Application Received: Senior Engineer",
-            body_text="Thank you for applying to Senior Engineer at Salesforce\n"
-            "https://salesforce.com/jobs/123",
+            body_text="Thank you for applying to Senior Engineer at Salesforce\n" "https://salesforce.com/jobs/123",
             body_html=None,
             received_at=datetime.now(),
         )
@@ -207,9 +203,8 @@ class TestEmailProcessor:
     def test_match_job_by_company_and_title(self, tmp_path):
         """Test matching job by company and title."""
         # Ensure clean test isolation with fresh tracker
-        import time
         time.sleep(0.05)
-        
+
         tracker = JobTracker(tracking_file=tmp_path / "jobs.json")
         processor = EmailProcessor(job_tracker=tracker)
 
