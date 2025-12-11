@@ -1,6 +1,13 @@
-# Framework Extraction Guide
+# AI Search-Match Framework - Extraction Plan
 
-**Goal:** Extract reusable AI-powered lead generation framework from job-lead-finder for new IP commercialization repo.
+**Framework Name:** `ai-search-match-framework`
+
+**Goal:** Extract reusable AI-powered search, match, and tracking infrastructure from job-lead-finder into a standalone framework that can be used for:
+- Job lead generation
+- IP commercialization
+- Customer prospecting
+- Market research
+- Any "search entities → match against criteria → track results" workflow
 
 ## What to Extract
 

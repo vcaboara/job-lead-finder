@@ -71,14 +71,11 @@ class EmailIntegration:
         """
         try:
             if self.config.use_ssl:
-                self.connection = imaplib.IMAP4_SSL(
-                    self.config.imap_server, self.config.port)
+                self.connection = imaplib.IMAP4_SSL(self.config.imap_server, self.config.port)
             else:
-                self.connection = imaplib.IMAP4(
-                    self.config.imap_server, self.config.port)
+                self.connection = imaplib.IMAP4(self.config.imap_server, self.config.port)
 
-            self.connection.login(
-                self.config.email_address, self.config.password)
+            self.connection.login(self.config.email_address, self.config.password)
             logger.info(f"Connected to {self.config.imap_server}")
             return True
 
@@ -110,8 +107,7 @@ class EmailIntegration:
 
         try:
             # Select sent folder (Gmail uses "[Gmail]/Sent Mail")
-            sent_folders = ["INBOX.Sent",
-                            "[Gmail]/Sent Mail", "Sent", "Sent Items"]
+            sent_folders = ["INBOX.Sent", "[Gmail]/Sent Mail", "Sent", "Sent Items"]
 
             folder_selected = False
             for folder in sent_folders:
@@ -130,10 +126,8 @@ class EmailIntegration:
             # Search for emails from last N days
             from datetime import timedelta
 
-            since_date = (datetime.now() - timedelta(days=days)
-                          ).strftime("%d-%b-%Y")
-            _, message_ids = self.connection.search(
-                None, f"SINCE {since_date}")
+            since_date = (datetime.now() - timedelta(days=days)).strftime("%d-%b-%Y")
+            _, message_ids = self.connection.search(None, f"SINCE {since_date}")
 
             emails = []
             for msg_id in message_ids[0].split():
@@ -238,14 +232,12 @@ class EmailIntegration:
                 content_type = part.get_content_type()
                 if content_type == "text/plain":
                     try:
-                        body += part.get_payload(decode=True).decode(
-                            "utf-8", errors="ignore")
+                        body += part.get_payload(decode=True).decode("utf-8", errors="ignore")
                     except Exception:
                         continue
         else:
             try:
-                body = message.get_payload(decode=True).decode(
-                    "utf-8", errors="ignore")
+                body = message.get_payload(decode=True).decode("utf-8", errors="ignore")
             except Exception:
                 pass
 
@@ -322,8 +314,7 @@ class EmailIntegration:
         urls = re.findall(url_pattern, body)
 
         # Filter for job-related URLs
-        job_keywords = ["greenhouse", "lever", "workday",
-                        "careers", "jobs", "apply", "application", "taleo"]
+        job_keywords = ["greenhouse", "lever", "workday", "careers", "jobs", "apply", "application", "taleo"]
 
         for url in urls:
             url_lower = url.lower()

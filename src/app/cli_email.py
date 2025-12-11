@@ -12,8 +12,7 @@ import sys
 
 from app.email_integration import EmailIntegration, create_email_config_from_env
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -122,10 +121,8 @@ Environment Variables:
         """,
     )
 
-    parser.add_argument("command", choices=[
-                        "test", "check", "sync"], help="Command to run")
-    parser.add_argument("--days", type=int, default=7,
-                        help="Number of days to look back (default: 7)")
+    parser.add_argument("command", choices=["test", "check", "sync"], help="Command to run")
+    parser.add_argument("--days", type=int, default=7, help="Number of days to look back (default: 7)")
 
     args = parser.parse_args()
 
