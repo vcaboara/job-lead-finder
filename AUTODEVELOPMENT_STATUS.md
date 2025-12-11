@@ -88,20 +88,35 @@ Since we can't directly invoke Gemini from this context, you'll need to:
 
 7. **Run Review Chain:**
    ```bash
+   # Step 1: Ollama review
+   python scripts/ai_review_chain.py <PR_NUMBER>
+
+   # Step 2: If Ollama passes, request Copilot
+   python scripts/ai_review_chain.py <PR_NUMBER> --request-copilot
+   # OR comment: @copilot review
+
+   # Step 3: Wait ~1 min, check status
    python scripts/ai_review_chain.py <PR_NUMBER>
    ```
 
    The script will:
-   - Run Ollama review (auto-trigger, pass/fail feedback)
-   - Check Copilot review (auto-triggered by GitHub Actions)
-   - Request human review (posts comment mentioning @vcaboara)
+   - Run Ollama review (auto-executes locally)
+   - Check if Copilot review requested (manual trigger saves quota!)
+   - Request human review when both pass
    - Provide next steps for each stage
 
 8. **Respond to AI Feedback:**
 
-   **If Ollama or Copilot find issues:**
+   **If Ollama finds issues:**
+   - Fix code, push, re-run: `python scripts/ai_review_chain.py <PR_NUMBER>`
+
+   **If Copilot not requested:**
+   - Request when ready: `gh pr comment <PR_NUMBER> --body '@copilot review'`
+   - Saves quota by not reviewing WIP/test commits
+
+   **If Copilot finds issues:**
    - Comment on PR: `@gemini-agent please address: <issue>`
-   - Or fix manually, push, and re-run review chain
+   - Or fix manually, push, re-run Ollama, then request Copilot again
 
    **When human review is requested:**
    - Review PR on GitHub: `gh pr view <PR_NUMBER> --web`

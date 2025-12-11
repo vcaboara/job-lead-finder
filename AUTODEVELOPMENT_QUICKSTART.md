@@ -59,20 +59,33 @@ Gemini → Ollama → Copilot → Human
 
 **Run review:**
 ```bash
+# Step 1: Run Ollama review
+python scripts/ai_review_chain.py <PR_NUMBER>
+
+# Step 2: If Ollama passes, request Copilot review
+python scripts/ai_review_chain.py <PR_NUMBER> --request-copilot
+# OR comment on PR: @copilot review
+
+# Step 3: Wait ~1 min, then check Copilot status
 python scripts/ai_review_chain.py <PR_NUMBER>
 ```
 
 **Respond to feedback:**
 ```powershell
-# If Ollama/Copilot find issues:
+# If Ollama finds issues:
+# Fix, push, re-run Ollama
+
+# If Copilot finds issues:
 gh pr comment <PR_NUMBER> --body "@gemini-agent please address: <issue>"
-# OR fix manually, push, and re-run review
+# OR fix manually, push, re-run Ollama, then request Copilot again
 
 # When human review requested:
 gh pr view <PR_NUMBER> --web        # Review on GitHub
 gh pr merge <PR_NUMBER> --squash    # Approve & merge
 # OR comment with @gemini-agent for changes
 ```
+
+**Quota-Saving Tip:** Only request `@copilot review` after Ollama passes!
 
 **See full trigger workflow:** [AI_REVIEW_TRIGGERS.md](.github/AI_REVIEW_TRIGGERS.md)
 

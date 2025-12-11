@@ -81,7 +81,7 @@ def check_copilot_review(pr_number: int):
 
         if "AI PR Review" in checks:
             if "✓" in checks or "passed" in checks.lower():
-                logger.info("✅ Copilot AI PR Review: PASSED")
+                logger.info("✅ Copilot AI PR Review: COMPLETED")
                 return True
             elif "X" in checks or "failed" in checks.lower():
                 logger.error("❌ Copilot AI PR Review: FAILED")
@@ -92,7 +92,9 @@ def check_copilot_review(pr_number: int):
                 logger.info("   Wait for completion, then run this script again")
                 return None
         else:
-            logger.warning("⚠️  Copilot AI PR Review not found in checks")
+            logger.info("ℹ️  Copilot review not yet requested")
+            logger.info("   To request: gh pr comment %s --body '@copilot review'", pr_number)
+            logger.info("   Or use: --request-copilot flag with this script")
             return None
     except subprocess.CalledProcessError as e:
         logger.error("❌ Failed to check PR status: %s", e)
@@ -135,6 +137,7 @@ def main():
     parser.add_argument("pr_number", type=int, help="Pull request number")
     parser.add_argument("--skip-ollama", action="store_true", help="Skip Ollama review")
     parser.add_argument("--model", default="deepseek-coder:6.7b", help="Ollama model to use")
+    parser.add_argument("--request-copilot", action="store_true", help="Request Copilot review via comment")
 
     args = parser.parse_args()
 
@@ -156,7 +159,21 @@ def main():
     # Step 2: Copilot review
     copilot_status = check_copilot_review(args.pr_number)
     if copilot_status is None:
-        logger.info("⏸️  Waiting for Copilot review to start/complete")
+        if args.request_copilot:
+            logger.info("📝 Requesting Copilot review via comment...")
+            try:
+                subprocess.run(
+                    ["gh", "pr", "comment", str(args.pr_number), "--body", "@copilot review"],
+                    check=True,
+                    capture_output=True,
+                )
+                logger.info("✅ Copilot review requested. Re-run this script after ~1 minute.")
+            except subprocess.CalledProcessError as e:
+                logger.error("❌ Failed to request Copilot review: %s", e)
+        else:
+            logger.info("⏸️  Copilot review not requested yet")
+            logger.info("   Option 1: Manually comment '@copilot review' on PR")
+            logger.info("   Option 2: Re-run with --request-copilot flag")
         sys.exit(0)
     elif not copilot_status:
         logger.error("❌ Copilot review failed. Check and fix issues.")

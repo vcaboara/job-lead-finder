@@ -25,12 +25,17 @@ Human Review → Requested via comment, human decides next action
 - **On Success**: Proceeds to check Copilot review status
 
 ### 2. Copilot PR Review Trigger
-- **Trigger**: Automatic on push to PR branch
-- **Workflow**: `.github/workflows/ai-pr-review.yml`
+- **Trigger**: Manual via PR comment (saves quota!)
+- **Commands**:
+  - Comment on PR: `@copilot review` or `@ai-review`
+  - Or use script: `python scripts/ai_review_chain.py <PR_NUMBER> --request-copilot`
+- **Workflow**: `.github/workflows/ai-pr-review.yml` (triggered by comment)
 - **Action**: GitHub Copilot reviews code changes
 - **Output**: Comments on PR with suggestions
 - **On Failure**: Review script detects failed check, developer must address
 - **On Success**: Proceeds to human review request
+
+**Why comment-triggered?** Prevents wasting quota on WIP commits, test pushes, or expected failures.
 
 ### 3. Human Review Request Trigger
 - **Trigger**: Automatic when Ollama + Copilot both pass
@@ -41,6 +46,24 @@ Human Review → Requested via comment, human decides next action
 ## Human Interaction Points
 
 ### Response to AI Feedback
+
+#### Comment Format to Request Copilot Review
+Trigger Copilot review when your code is ready:
+
+```markdown
+@copilot review
+```
+
+or
+
+```markdown
+@ai-review
+```
+
+**When to request:**
+- After Ollama review passes
+- When code is ready for thorough review
+- Skip for WIP commits or expected failures (saves quota)
 
 #### Comment Format for AI Agent
 When AI reviews find issues, use these comment formats to delegate fixes:
@@ -102,9 +125,15 @@ git add .
 git commit -m "fix: Address AI review feedback"
 git push
 
-# Re-run review chain
+# Re-run review chain (Ollama only)
 python scripts/ai_review_chain.py <PR_NUMBER>
+
+# If Ollama passes, request Copilot review
+python scripts/ai_review_chain.py <PR_NUMBER> --request-copilot
+# OR comment on PR: @copilot review
 ```
+
+**Quota-Saving Tip:** Only request Copilot review after Ollama passes and you're confident in the code.
 
 ## Workflow States
 
@@ -113,12 +142,20 @@ python scripts/ai_review_chain.py <PR_NUMBER>
 - **Action**: Fix issues mentioned in Ollama feedback
 - **Next**: Push changes, re-run review script
 
-### State 2: Copilot Review Failed
+### State 2: Copilot Review Not Requested
+- **Who Acts**: Developer
+- **Action**: Request Copilot review when code is ready
+- **Options**:
+  - Comment: `@copilot review` on PR
+  - Script: `python scripts/ai_review_chain.py <PR_NUMBER> --request-copilot`
+- **Next**: Wait ~1 minute, then re-run review script
+
+### State 3: Copilot Review Failed
 - **Who Acts**: Developer or Gemini (for Track tasks)
 - **Action**: Address comments in GitHub PR
-- **Next**: Push changes, re-run review script
+- **Next**: Push changes, re-run Ollama, then request Copilot again
 
-### State 3: Ready for Human Review
+### State 4: Ready for Human Review
 - **Who Acts**: Human (@vcaboara)
 - **Action**: Review PR on GitHub
 - **Options**:
