@@ -86,6 +86,7 @@ class EmailParser:
     # Job title patterns
     TITLE_PATTERNS = [
         r"(?:position|role|opportunity):\s*([A-Z][A-Za-z\s]+(?:Engineer|Developer|Manager|Designer|Analyst|Scientist))",
+        r"(?:applying|applied)\s+(?:to|for)\s+(?:the\s+)?([A-Z][A-Za-z\s]+(?:Engineer|Developer|Manager|Designer|Analyst|Scientist))",
         r"([A-Z][A-Za-z\s]+(?:Engineer|Developer|Manager|Designer|Analyst|Scientist))\s+(?:at|with|position)",
         r"(?:Senior|Junior|Lead|Staff|Principal)\s+([A-Z][A-Za-z\s]+)",
     ]

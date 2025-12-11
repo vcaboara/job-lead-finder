@@ -1520,3 +1520,70 @@ def get_email_stats(user_id: str = "default"):
 
     manager = EmailWebhookManager()
     return JSONResponse(manager.get_user_stats(user_id))
+
+
+@app.post("/api/email/inbound")
+async def receive_inbound_email(request: dict):
+    """Webhook endpoint for SendGrid Inbound Parse.
+
+    Receives emails forwarded to user addresses and processes them
+    for job tracking.
+    """
+    from datetime import datetime
+
+    from .email_processor import EmailProcessor
+    from .email_webhook import EmailWebhookManager, InboundEmail
+
+    try:
+        # Parse SendGrid webhook format
+        to_addr = request.get("to", "")
+        from_addr = request.get("from", "")
+        subject = request.get("subject", "")
+        text_body = request.get("text", "")
+        html_body = request.get("html")
+        headers = request.get("headers", {})
+
+        # Validate forwarding address
+        manager = EmailWebhookManager()
+        if not manager.validate_address(to_addr):
+            logger.warning("Email received for invalid address: %s", to_addr)
+            raise HTTPException(status_code=400, detail="Invalid forwarding address")
+
+        # Create inbound email object
+        email = InboundEmail(
+            to_address=to_addr,
+            from_address=from_addr,
+            subject=subject,
+            body_text=text_body,
+            body_html=html_body,
+            received_at=datetime.now(),
+            headers=headers,
+        )
+
+        # Store email
+        email_id = manager.store_inbound_email(email)
+
+        # Process email for job tracking
+        processor = EmailProcessor()
+        result = processor.process_inbound_email(email)
+
+        logger.info(
+            "Processed email %s: type=%s action=%s",
+            email_id,
+            result["email_type"],
+            result["action"],
+        )
+
+        return JSONResponse(
+            {
+                "status": "success",
+                "email_id": email_id,
+                "processing_result": result,
+            }
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error("Failed to process inbound email: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to process email: {str(e)}") from e
