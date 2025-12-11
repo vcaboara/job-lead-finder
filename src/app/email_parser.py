@@ -8,12 +8,16 @@ Classifies inbound emails into:
 """
 import logging
 import re
+import signal
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
+
+# Security: Regex timeout to prevent ReDoS
+REGEX_TIMEOUT_SECONDS = 2
 
 
 class EmailType(Enum):
@@ -76,18 +80,18 @@ class EmailParser:
         r"I'm reaching out",
     ]
 
-    # Company extraction patterns
+    # Company extraction patterns (simplified to avoid ReDoS)
     COMPANY_PATTERNS = [
-        r"at ([A-Z][A-Za-z0-9\s&]+(?:Inc|LLC|Ltd|Corp)?)",
-        r"with ([A-Z][A-Za-z0-9\s&]+(?:Inc|LLC|Ltd|Corp)?)",
-        r"from ([A-Z][A-Za-z0-9\s&]+(?:Inc|LLC|Ltd|Corp)?)",
+        r"at ([A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?)",
+        r"with ([A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?)",
+        r"from ([A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?)",
     ]
 
-    # Job title patterns
+    # Job title patterns (simplified with bounded quantifiers)
     TITLE_PATTERNS = [
-        r"(?:position|role|opportunity):\s*([A-Z][A-Za-z\s]+(?:Engineer|Developer|Manager|Designer|Analyst|Scientist))",
-        r"([A-Z][A-Za-z\s]+(?:Engineer|Developer|Manager|Designer|Analyst|Scientist))\s+(?:at|with|position)",
-        r"(?:Senior|Junior|Lead|Staff|Principal)\s+([A-Z][A-Za-z\s]+)",
+        r"(?:position|role|opportunity):\s*([A-Z][A-Za-z\s]{2,50}(?:Engineer|Developer|Manager|Designer|Analyst|Scientist))",
+        r"([A-Z][A-Za-z\s]{2,50}(?:Engineer|Developer|Manager|Designer|Analyst|Scientist))\s+(?:at|with|position)",
+        r"(?:Senior|Junior|Lead|Staff|Principal)\s+([A-Z][A-Za-z\s]{2,50})",
     ]
 
     # URL patterns for job boards
@@ -134,6 +138,40 @@ class EmailParser:
         self.title_regex = [re.compile(p) for p in self.TITLE_PATTERNS]
         self.url_regex = [re.compile(p) for p in self.URL_PATTERNS]
 
+    def _safe_search(self, pattern: re.Pattern, text: str, timeout: int = REGEX_TIMEOUT_SECONDS) -> Optional[re.Match]:
+        """Execute regex search with timeout protection.
+
+        Args:
+            pattern: Compiled regex pattern
+            text: Text to search
+            timeout: Timeout in seconds
+
+        Returns:
+            Match object or None
+
+        Raises:
+            TimeoutError: If regex takes too long (potential ReDoS)
+        """
+
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Regex search timeout")
+
+        # Set alarm for timeout (Unix only)
+        try:
+            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(timeout)
+            try:
+                match = pattern.search(text)
+                signal.alarm(0)  # Cancel alarm
+                return match
+            finally:
+                signal.signal(signal.SIGALRM, old_handler)
+        except (AttributeError, ValueError):
+            # SIGALRM not available (Windows) - fall back to direct search
+            # In production, consider using threading or subprocess for timeout
+            logger.warning("Timeout protection not available on this platform")
+            return pattern.search(text)
+
     def detect_email_type(self, subject: str, body: str, from_addr: str) -> tuple:
         """Classify email type.
 
@@ -145,23 +183,46 @@ class EmailParser:
         Returns:
             Tuple of (EmailType, confidence)
         """
-        text = f"{subject} {body}".lower()
+        # Truncate text to prevent ReDoS on very long inputs
+        max_text_length = 10000
+        text = f"{subject} {body}"[:max_text_length].lower()
 
         # Check for job listing patterns
-        job_listing_score = sum(1 for p in self.job_listing_regex if p.search(text))
+        job_listing_score = 0
+        for p in self.job_listing_regex:
+            try:
+                if self._safe_search(p, text):
+                    job_listing_score += 1
+            except TimeoutError:
+                logger.warning("Regex timeout in job listing pattern")
+
         # Check sender domain
         for domain in self.JOB_BOARD_DOMAINS:
             if domain in from_addr.lower():
                 job_listing_score += 2
 
         # Check for application confirmation
-        confirm_score = sum(1 for p in self.application_confirm_regex if p.search(text))
+        confirm_score = 0
+        for p in self.application_confirm_regex:
+            try:
+                if self._safe_search(p, text):
+                    confirm_score += 1
+            except TimeoutError:
+                logger.warning("Regex timeout in application confirm pattern")
+
         for domain in self.ATS_DOMAINS:
             if domain in from_addr.lower():
                 confirm_score += 2
 
         # Check for recruiter outreach
-        recruiter_score = sum(1 for p in self.recruiter_outreach_regex if p.search(text))
+        recruiter_score = 0
+        for p in self.recruiter_outreach_regex:
+            try:
+                if self._safe_search(p, text):
+                    recruiter_score += 1
+            except TimeoutError:
+                logger.warning("Regex timeout in recruiter pattern")
+
         # Personal emails (not from job boards/ATS)
         is_personal = not any(d in from_addr.lower() for d in self.JOB_BOARD_DOMAINS + self.ATS_DOMAINS)
         if is_personal and recruiter_score > 0:
@@ -200,14 +261,18 @@ class EmailParser:
             if len(company) > 2:
                 return company.title()
 
-        # Try regex patterns in body
+        # Try regex patterns in body (limit body size for safety)
+        body_excerpt = body[:2000]
         for pattern in self.company_regex:
-            match = pattern.search(body)
-            if match:
-                company = match.group(1).strip()
-                # Filter out common false positives
-                if len(company) > 2 and company.lower() not in ["the", "a", "an"]:
-                    return company
+            try:
+                match = self._safe_search(pattern, body_excerpt)
+                if match:
+                    company = match.group(1).strip()
+                    # Filter out common false positives
+                    if len(company) > 2 and company.lower() not in ["the", "a", "an"]:
+                        return company
+            except TimeoutError:
+                logger.warning("Regex timeout in company extraction")
 
         return None
 
@@ -223,15 +288,22 @@ class EmailParser:
         """
         # Try subject first (most likely location)
         for pattern in self.title_regex:
-            match = pattern.search(subject)
-            if match:
-                return match.group(1).strip()
+            try:
+                match = self._safe_search(pattern, subject)
+                if match:
+                    return match.group(1).strip()
+            except TimeoutError:
+                logger.warning("Regex timeout in title extraction (subject)")
 
-        # Try body
+        # Try body (first 500 chars)
+        body_excerpt = body[:500]
         for pattern in self.title_regex:
-            match = pattern.search(body[:500])  # First 500 chars
-            if match:
-                return match.group(1).strip()
+            try:
+                match = self._safe_search(pattern, body_excerpt)
+                if match:
+                    return match.group(1).strip()
+            except TimeoutError:
+                logger.warning("Regex timeout in title extraction (body)")
 
         return None
 
@@ -245,9 +317,16 @@ class EmailParser:
             List of URLs found
         """
         urls = []
+        # Limit body size for URL extraction
+        body_excerpt = body[:5000]
+
         for pattern in self.url_regex:
-            matches = pattern.findall(body)
-            urls.extend(matches)
+            try:
+                matches = pattern.findall(body_excerpt)
+                urls.extend(matches)
+            except TimeoutError:
+                logger.warning("Regex timeout in URL extraction")
+
         return list(set(urls))  # Remove duplicates
 
     def parse(
