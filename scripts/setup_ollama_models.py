@@ -22,8 +22,7 @@ from typing import List, Optional
 
 import httpx
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -81,8 +80,7 @@ class OllamaSetup:
                     logger.info("✓ Ollama server is running")
                     return True
                 else:
-                    logger.error(
-                        f"Ollama server failed with status code {response.status_code}: {response.text}")
+                    logger.error(f"Ollama server failed with status code {response.status_code}: {response.text}")
                     return False
         except httpx.ConnectError:
             logger.error("✗ Cannot connect to Ollama server")
@@ -106,8 +104,7 @@ class OllamaSetup:
                 models = response.json().get("models", [])
                 return [m.get("name") for m in models if m.get("name")]
         except httpx.HTTPStatusError as e:
-            logger.error(
-                f"Failed to list models - HTTP {e.response.status_code}: {e.response.text}")
+            logger.error(f"Failed to list models - HTTP {e.response.status_code}: {e.response.text}")
             return []
         except Exception as e:
             logger.error(f"Failed to list models: {type(e).__name__}: {e}")
@@ -135,8 +132,7 @@ class OllamaSetup:
             True if successful, False otherwise
         """
         try:
-            logger.info(
-                f"Downloading {model_name}... (this may take several minutes)")
+            logger.info(f"Downloading {model_name}... (this may take several minutes)")
 
             # Use subprocess to show progress
             cmd = ["ollama", "pull", model_name]
@@ -146,8 +142,7 @@ class OllamaSetup:
                 logger.info(f"✓ Successfully downloaded {model_name}")
                 return True
             else:
-                logger.error(
-                    f"✗ Failed to download {model_name} (exit code: {result.returncode})")
+                logger.error(f"✗ Failed to download {model_name} (exit code: {result.returncode})")
                 if result.stderr:
                     logger.error(f"  Error details: {result.stderr}")
                 return False
@@ -180,8 +175,7 @@ class OllamaSetup:
                     "prompt": "Say 'OK' if you can read this.",
                     "stream": False,
                 }
-                response = client.post(
-                    f"{self.base_url}/api/generate", json=payload)
+                response = client.post(f"{self.base_url}/api/generate", json=payload)
                 response.raise_for_status()
 
                 result = response.json()
@@ -189,13 +183,11 @@ class OllamaSetup:
                     logger.info(f"✓ {model_name} is working correctly")
                     return True
                 else:
-                    logger.error(
-                        f"✗ {model_name} returned empty response. Full result: {result}")
+                    logger.error(f"✗ {model_name} returned empty response. Full result: {result}")
                     return False
 
         except httpx.HTTPStatusError as e:
-            logger.error(
-                f"✗ Error verifying model - HTTP {e.response.status_code}: {e.response.text}")
+            logger.error(f"✗ Error verifying model - HTTP {e.response.status_code}: {e.response.text}")
             return False
         except Exception as e:
             logger.error(f"✗ Error verifying model: {type(e).__name__}: {e}")
@@ -217,13 +209,11 @@ class OllamaSetup:
         # Determine which models to setup
         if model_keys is None:
             # Default: high priority models
-            model_keys = [
-                k for k, v in MODELS.items() if v["priority"] == "high"]
+            model_keys = [k for k, v in MODELS.items() if v["priority"] == "high"]
 
         # List currently installed
         installed = self.list_installed_models()
-        logger.info(
-            f"\nCurrently installed models: {installed if installed else 'None'}\n")
+        logger.info(f"\nCurrently installed models: {installed if installed else 'None'}\n")
 
         # Setup each model
         success = True
@@ -286,8 +276,7 @@ class OllamaSetup:
         logger.info("NEXT STEPS")
         logger.info("=" * 80)
         logger.info("\n1. Test the coding assistant:")
-        logger.info(
-            '   python tools/coding_assistant.py generate "Create a function to sum two numbers"')
+        logger.info('   python tools/coding_assistant.py generate "Create a function to sum two numbers"')
         logger.info("\n2. Create a test PR to verify AI reviews:")
         logger.info("   git checkout -b test/ai-review")
         logger.info("   # Make a small change")
@@ -297,8 +286,7 @@ class OllamaSetup:
         logger.info("\n3. Check Ollama tunnel is running:")
         logger.info("   docker compose logs ollama-tunnel | grep https://")
         logger.info("\n4. Update GitHub secret if tunnel URL changed:")
-        logger.info(
-            "   gh secret set OLLAMA_BASE_URL --body 'https://your-tunnel-url.trycloudflare.com'")
+        logger.info("   gh secret set OLLAMA_BASE_URL --body 'https://your-tunnel-url.trycloudflare.com'")
         logger.info("\n" + "=" * 80)
 
 
@@ -325,14 +313,10 @@ Examples:
         """,
     )
 
-    parser.add_argument("--reviews-only", action="store_true",
-                        help="Setup only code review models")
-    parser.add_argument("--coding-only", action="store_true",
-                        help="Setup only coding assistant models")
-    parser.add_argument("--models", nargs="+",
-                        choices=list(MODELS.keys()), help="Specific models to setup")
-    parser.add_argument(
-        "--base-url", default="http://localhost:11434", help="Ollama server URL")
+    parser.add_argument("--reviews-only", action="store_true", help="Setup only code review models")
+    parser.add_argument("--coding-only", action="store_true", help="Setup only coding assistant models")
+    parser.add_argument("--models", nargs="+", choices=list(MODELS.keys()), help="Specific models to setup")
+    parser.add_argument("--base-url", default="http://localhost:11434", help="Ollama server URL")
 
     args = parser.parse_args()
 

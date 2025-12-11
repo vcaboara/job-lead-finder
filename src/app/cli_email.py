@@ -9,7 +9,6 @@ Usage:
 import argparse
 import logging
 import sys
-from pathlib import Path
 
 from app.email_integration import EmailIntegration, create_email_config_from_env
 
@@ -86,13 +85,13 @@ def sync_job_status(days: int = 7):
     logger.info(f"Syncing job status from last {days} days...")
     stats = integration.auto_update_job_status(days)
 
-    logger.info(f"\nSync Results:")
+    logger.info("\nSync Results:")
     logger.info(f"  Emails checked: {stats['emails_checked']}")
     logger.info(f"  Jobs updated: {stats['jobs_updated']}")
     logger.info(f"  Jobs not found: {stats['jobs_not_found']}")
 
     if stats["jobs_updated"] > 0:
-        logger.info(f"✓ Successfully updated {stats['jobs_updated']} jobs")
+        logger.info("✓ Successfully updated %d jobs", stats["jobs_updated"])
     else:
         logger.warning("No jobs were updated")
 

@@ -339,10 +339,10 @@ Example for a senior Python developer:
         self.is_running = True
 
         logger.info("Background scheduler started:")
-        logger.info(f"  - Direct link discovery: every {find_links_interval_minutes} minutes")
-        logger.info(f"  - Hidden job cleanup: every {cleanup_interval_hours} hours")
-        logger.info(f"  - Automated job discovery: every {auto_discover_interval_hours} hours")
-        logger.info(f"  - Email sync: every 6 hours")
+        logger.info("  - Direct link discovery: every %d minutes", find_links_interval_minutes)
+        logger.info("  - Hidden job cleanup: every %d hours", cleanup_interval_hours)
+        logger.info("  - Automated job discovery: every %d hours", auto_discover_interval_hours)
+        logger.info("  - Email sync: every 6 hours")
 
     def stop(self):
         """Stop the background scheduler."""

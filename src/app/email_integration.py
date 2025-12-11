@@ -17,7 +17,6 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from email.header import decode_header
-from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from app.job_tracker import JobTracker
