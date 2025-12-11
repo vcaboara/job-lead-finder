@@ -248,8 +248,14 @@ class EmailProcessor:
 
         Returns:
             Training data ID
+
+        Note:
+            This is a placeholder for future ML training data pipeline.
+            Implementation would involve:
+            - Storing email samples with classifications
+            - Building labeled dataset for model improvement
+            - Tracking classification accuracy over time
+            - See GitHub issue #TBD for implementation roadmap
         """
-        # TODO: Implement ML training data storage
-        # This would store emails with their classifications for model improvement
-        logger.info("Training data storage not yet implemented")
+        logger.debug("Training data storage not yet implemented")
         return ""

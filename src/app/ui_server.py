@@ -1522,8 +1522,19 @@ def get_email_stats(user_id: str = "default"):
     return JSONResponse(manager.get_user_stats(user_id))
 
 
+class InboundEmailRequest(BaseModel):
+    """SendGrid Inbound Parse webhook request."""
+
+    to: str = Field(..., description="Recipient email address")
+    from_field: str = Field(..., alias="from", description="Sender email address")
+    subject: str = Field(default="", description="Email subject")
+    text: str = Field(default="", description="Plain text body")
+    html: str | None = Field(default=None, description="HTML body")
+    headers: dict = Field(default_factory=dict, description="Email headers")
+
+
 @app.post("/api/email/inbound")
-async def receive_inbound_email(request: dict):
+async def receive_inbound_email(request: InboundEmailRequest):
     """Webhook endpoint for SendGrid Inbound Parse.
 
     Receives emails forwarded to user addresses and processes them
@@ -1536,12 +1547,12 @@ async def receive_inbound_email(request: dict):
 
     try:
         # Parse SendGrid webhook format
-        to_addr = request.get("to", "")
-        from_addr = request.get("from", "")
-        subject = request.get("subject", "")
-        text_body = request.get("text", "")
-        html_body = request.get("html")
-        headers = request.get("headers", {})
+        to_addr = request.to
+        from_addr = request.from_field
+        subject = request.subject
+        text_body = request.text
+        html_body = request.html
+        headers = request.headers
 
         # Validate forwarding address
         manager = EmailWebhookManager()
