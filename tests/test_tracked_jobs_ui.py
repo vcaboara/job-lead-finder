@@ -108,8 +108,12 @@ def test_filter_tracked_jobs_by_status(client, mock_search_response):
     """Test that tracked jobs can be filtered by status (client-side filtering test via API)."""
     # Explicitly clear any existing tracked jobs to ensure clean state
     import os
+    import time
 
     import app.job_tracker as job_tracker_module
+
+    # Small delay to ensure other tests have finished writing
+    time.sleep(0.1)
 
     # Force re-initialization of tracker to ensure clean state
     job_tracker_module._tracker = None
