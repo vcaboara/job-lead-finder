@@ -359,6 +359,30 @@ class TestSecurityFixes:
         assert "<iframe>" not in email.body_html
         assert "evil.com" not in email.body_html
 
+    def test_html_sanitization_with_whitespace(self):
+        """Test that script tags with whitespace variations are sanitized."""
+        # Test various whitespace patterns in closing tags
+        test_cases = [
+            '<script>alert(1)</script >',  # Space before >
+            '<script>alert(2)</script\t>',  # Tab before >
+            '<script>alert(3)</script\n>',  # Newline before >
+            '<iframe>content</iframe >',  # Space in iframe closing
+        ]
+
+        for html in test_cases:
+            email = InboundEmail(
+                to_address="valid@example.com",
+                from_address="sender@example.com",
+                subject="Test",
+                body_text="Body",
+                body_html=html,
+                received_at=datetime.now(),
+            )
+            # All variations should be removed
+            assert "<script>" not in email.body_html.lower()
+            assert "<iframe>" not in email.body_html.lower()
+            assert "alert" not in email.body_html
+
     def test_rate_limiting(self, tmp_path):
         """Test that rate limiting is enforced."""
         manager = EmailWebhookManager(data_dir=tmp_path)

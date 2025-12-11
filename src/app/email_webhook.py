@@ -107,9 +107,10 @@ class InboundEmail:
         Returns:
             Sanitized HTML content
         """
-        # Remove script tags and event handlers
-        html = re.sub(r"<script[^>]*>.*?</script>", "", html, flags=re.IGNORECASE | re.DOTALL)
-        html = re.sub(r"<iframe[^>]*>.*?</iframe>", "", html, flags=re.IGNORECASE | re.DOTALL)
+        # Remove script tags and event handlers (handle variations with whitespace)
+        # Pattern handles </script>, </script >, </script\t\n>, etc.
+        html = re.sub(r"<script[^>]*>.*?</script[\s\S]*?>", "", html, flags=re.IGNORECASE | re.DOTALL)
+        html = re.sub(r"<iframe[^>]*>.*?</iframe[\s\S]*?>", "", html, flags=re.IGNORECASE | re.DOTALL)
         html = re.sub(r'on\w+\s*=\s*["\'].*?["\']', "", html, flags=re.IGNORECASE)
         html = re.sub(r"javascript:", "", html, flags=re.IGNORECASE)
         return html
