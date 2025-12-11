@@ -86,14 +86,30 @@ Since we can't directly invoke Gemini from this context, you'll need to:
    gh pr create --title "feat: Add company logo placeholders" --body "<screenshots>"
    ```
 
-7. **Review Chain:**
+7. **Run Review Chain:**
    ```bash
-   # Ollama review
-   docker compose exec ollama ollama run deepseek-coder:6.7b "Review this PR: <paste diff>"
-
-   # Copilot review (automatic via GitHub Actions)
-   # Then human review
+   python scripts/ai_review_chain.py <PR_NUMBER>
    ```
+
+   The script will:
+   - Run Ollama review (auto-trigger, pass/fail feedback)
+   - Check Copilot review (auto-triggered by GitHub Actions)
+   - Request human review (posts comment mentioning @vcaboara)
+   - Provide next steps for each stage
+
+8. **Respond to AI Feedback:**
+
+   **If Ollama or Copilot find issues:**
+   - Comment on PR: `@gemini-agent please address: <issue>`
+   - Or fix manually, push, and re-run review chain
+
+   **When human review is requested:**
+   - Review PR on GitHub: `gh pr view <PR_NUMBER> --web`
+   - Approve: `gh pr merge <PR_NUMBER> --squash`
+   - Request changes: Comment with `@gemini-agent` tag
+   - Manual fix: Checkout branch, fix, push, re-run review
+
+   See [AI_REVIEW_TRIGGERS.md](.github/AI_REVIEW_TRIGGERS.md) for detailed trigger workflow.
 
 ### Option B: Full Autonomous (Requires Setup)
 To enable full automation:

@@ -59,8 +59,22 @@ Gemini → Ollama → Copilot → Human
 
 **Run review:**
 ```bash
-python scripts/ai_review_chain.py 85
+python scripts/ai_review_chain.py <PR_NUMBER>
 ```
+
+**Respond to feedback:**
+```powershell
+# If Ollama/Copilot find issues:
+gh pr comment <PR_NUMBER> --body "@gemini-agent please address: <issue>"
+# OR fix manually, push, and re-run review
+
+# When human review requested:
+gh pr view <PR_NUMBER> --web        # Review on GitHub
+gh pr merge <PR_NUMBER> --squash    # Approve & merge
+# OR comment with @gemini-agent for changes
+```
+
+**See full trigger workflow:** [AI_REVIEW_TRIGGERS.md](.github/AI_REVIEW_TRIGGERS.md)
 
 ---
 

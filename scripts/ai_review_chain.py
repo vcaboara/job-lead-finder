@@ -170,6 +170,10 @@ def main():
         logger.info("✅ REVIEW CHAIN COMPLETE - READY FOR HUMAN APPROVAL")
         logger.info("=" * 70)
         logger.info("View PR: gh pr view %s --web", args.pr_number)
+        logger.info("\n📋 Next Steps:")
+        logger.info("1. Review PR on GitHub")
+        logger.info("2. If changes needed: Comment on PR with '@ai-agent please fix: <issue>'")
+        logger.info("3. If approved: Merge PR via GitHub or 'gh pr merge %s'", args.pr_number)
     else:
         logger.warning("⚠️  Review chain incomplete")
         sys.exit(1)
