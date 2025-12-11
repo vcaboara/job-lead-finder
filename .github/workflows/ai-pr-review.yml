@@ -121,7 +121,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
 
-      - name: Review with vibe-check-mcp
+      - name: AI Code Review (Gemini/OpenAI/Ollama)
         id: ai-review
         if: steps.changed-files.outputs.files != ''
         run: |
