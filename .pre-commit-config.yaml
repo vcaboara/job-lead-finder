@@ -69,10 +69,10 @@ repos:
         stages: [pre-commit]
       - id: pytest
         name: pytest (fast tests)
-        entry: python -m pytest
+        entry: uv run pytest
         language: system
         pass_filenames: false
         types: [python]
         files: ^(src/|tests/)
-        args: [-m, "not slow", --maxfail=3, --tb=short, -q]
+        args: [-m, "not slow", --maxfail=3, --tb=short, -q, -p, "no:xdist", -p, "no:benchmark"]
         stages: [pre-commit]

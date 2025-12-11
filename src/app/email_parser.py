@@ -150,15 +150,13 @@ class EmailParser:
         # Check for job listing patterns
         job_listing_score = sum(1 for p in self.job_listing_regex if p.search(text))
         # Check sender domain
-        for domain in self.JOB_BOARD_DOMAINS:
-            if domain in from_addr.lower():
-                job_listing_score += 2
+        if any(domain in from_addr.lower() for domain in self.JOB_BOARD_DOMAINS):
+            job_listing_score += 2
 
         # Check for application confirmation
         confirm_score = sum(1 for p in self.application_confirm_regex if p.search(text))
-        for domain in self.ATS_DOMAINS:
-            if domain in from_addr.lower():
-                confirm_score += 2
+        if any(domain in from_addr.lower() for domain in self.ATS_DOMAINS):
+            confirm_score += 2
 
         # Check for recruiter outreach
         recruiter_score = sum(1 for p in self.recruiter_outreach_regex if p.search(text))
@@ -280,14 +278,9 @@ class EmailParser:
         application_url = urls[0] if urls else None
 
         # Extract description (first paragraph or first 500 chars)
-        lines = body.strip().split("\n")
-        description_lines = []
-        for line in lines:
-            line = line.strip()
-            if line and len(line) > 20:  # Skip short lines
-                description_lines.append(line)
-                if len("\n".join(description_lines)) > 500:
-                    break
+        description_lines = [
+            line.strip() for line in body.strip().split("\n") if line.strip() and len(line.strip()) > 20
+        ]
         job_description = "\n".join(description_lines[:5]) if description_lines else None
 
         parsed = ParsedEmail(
