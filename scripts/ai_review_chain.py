@@ -5,24 +5,28 @@ Orchestrates multi-agent code review: Ollama → Copilot → Human
 """
 
 import argparse
+import logging
 import subprocess
 import sys
+
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 
 def run_ollama_review(pr_number: int, model: str = "deepseek-coder:6.7b"):
     """Run Ollama code review on PR diff."""
-    print(f"\n🤖 Running Ollama review with {model}...")
+    logger.info("🤖 Running Ollama review with %s...", model)
 
     # Get PR diff
     try:
         result = subprocess.run(["gh", "pr", "diff", str(pr_number)], capture_output=True, text=True, check=True)
         diff = result.stdout
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to get PR diff: {e}")
+        logger.error("❌ Failed to get PR diff: %s", e)
         return False
 
     if not diff:
-        print("⚠️  No diff found")
+        logger.warning("⚠️  No diff found")
         return False
 
     # Prepare review prompt
@@ -54,22 +58,22 @@ Provide:
             timeout=60,
         )
         review = result.stdout
-        print("\n" + "=" * 70)
-        print("📝 OLLAMA REVIEW:")
-        print("=" * 70)
-        print(review)
+        logger.info("\n" + "=" * 70)
+        logger.info("📝 OLLAMA REVIEW:")
+        logger.info("=" * 70)
+        logger.info(review)
         return True
     except subprocess.TimeoutExpired:
-        print("❌ Ollama review timed out (60s)")
+        logger.error("❌ Ollama review timed out (60s)")
         return False
     except Exception as e:
-        print(f"❌ Ollama review failed: {e}")
+        logger.error("❌ Ollama review failed: %s", e)
         return False
 
 
 def check_copilot_review(pr_number: int):
     """Check if Copilot AI PR Review has run."""
-    print("\n🤖 Checking Copilot PR Review status...")
+    logger.info("🤖 Checking Copilot PR Review status...")
 
     try:
         result = subprocess.run(["gh", "pr", "checks", str(pr_number)], capture_output=True, text=True, check=True)
@@ -77,27 +81,27 @@ def check_copilot_review(pr_number: int):
 
         if "AI PR Review" in checks:
             if "✓" in checks or "passed" in checks.lower():
-                print("✅ Copilot AI PR Review: PASSED")
+                logger.info("✅ Copilot AI PR Review: PASSED")
                 return True
             elif "X" in checks or "failed" in checks.lower():
-                print("❌ Copilot AI PR Review: FAILED")
-                print("\nView details: gh pr checks " + str(pr_number))
+                logger.error("❌ Copilot AI PR Review: FAILED")
+                logger.info("View details: gh pr checks %s", pr_number)
                 return False
             else:
-                print("⏳ Copilot AI PR Review: RUNNING")
-                print("   Wait for completion, then run this script again")
+                logger.info("⏳ Copilot AI PR Review: RUNNING")
+                logger.info("   Wait for completion, then run this script again")
                 return None
         else:
-            print("⚠️  Copilot AI PR Review not found in checks")
+            logger.warning("⚠️  Copilot AI PR Review not found in checks")
             return None
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to check PR status: {e}")
+        logger.error("❌ Failed to check PR status: %s", e)
         return None
 
 
 def request_human_review(pr_number: int):
     """Request human review on PR."""
-    print("\n👤 Requesting human review...")
+    logger.info("👤 Requesting human review...")
 
     try:
         # Add review request comment
@@ -119,10 +123,10 @@ def request_human_review(pr_number: int):
 **Reminder:** Try using lovable.dev to design company logos 🎨
 """
         subprocess.run(["gh", "pr", "comment", str(pr_number), "--body", comment], check=True)
-        print("✅ Human review requested")
+        logger.info("✅ Human review requested")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"❌ Failed to request human review: {e}")
+        logger.error("❌ Failed to request human review: %s", e)
         return False
 
 
@@ -134,40 +138,40 @@ def main():
 
     args = parser.parse_args()
 
-    print("\n" + "=" * 70)
-    print("🔍 AI REVIEW CHAIN")
-    print("=" * 70)
-    print(f"PR #{args.pr_number}")
-    print("Review order: Ollama → Copilot → Human")
+    logger.info("\n" + "=" * 70)
+    logger.info("🔍 AI REVIEW CHAIN")
+    logger.info("=" * 70)
+    logger.info("PR #%s", args.pr_number)
+    logger.info("Review order: Ollama → Copilot → Human")
 
     # Step 1: Ollama review
     if not args.skip_ollama:
         ollama_pass = run_ollama_review(args.pr_number, args.model)
         if not ollama_pass:
-            print("\n❌ Ollama review failed. Fix issues and try again.")
+            logger.error("\n❌ Ollama review failed. Fix issues and try again.")
             sys.exit(1)
     else:
-        print("\n⏭️  Skipping Ollama review (--skip-ollama)")
+        logger.info("⏭️  Skipping Ollama review (--skip-ollama)")
 
     # Step 2: Copilot review
     copilot_status = check_copilot_review(args.pr_number)
     if copilot_status is None:
-        print("\n⏸️  Waiting for Copilot review to start/complete")
+        logger.info("⏸️  Waiting for Copilot review to start/complete")
         sys.exit(0)
     elif not copilot_status:
-        print("\n❌ Copilot review failed. Check and fix issues.")
+        logger.error("❌ Copilot review failed. Check and fix issues.")
         sys.exit(1)
 
     # Step 3: Request human review
     human_requested = request_human_review(args.pr_number)
 
     if human_requested:
-        print("\n" + "=" * 70)
-        print("✅ REVIEW CHAIN COMPLETE - READY FOR HUMAN APPROVAL")
-        print("=" * 70)
-        print(f"\nView PR: gh pr view {args.pr_number} --web")
+        logger.info("\n" + "=" * 70)
+        logger.info("✅ REVIEW CHAIN COMPLETE - READY FOR HUMAN APPROVAL")
+        logger.info("=" * 70)
+        logger.info("View PR: gh pr view %s --web", args.pr_number)
     else:
-        print("\n⚠️  Review chain incomplete")
+        logger.warning("⚠️  Review chain incomplete")
         sys.exit(1)
 
 
