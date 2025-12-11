@@ -1505,16 +1505,18 @@ async def get_auto_discover_status():
 # ============================================================================
 
 
-@app.post('/api/email/setup')
-def setup_email_forwarding(user_id: str = 'default'):
+@app.post("/api/email/setup")
+def setup_email_forwarding(user_id: str = "default"):
     from .email_webhook import EmailWebhookManager
+
     manager = EmailWebhookManager()
     forwarding_address = manager.generate_forwarding_address(user_id)
-    return JSONResponse({'forwarding_address': forwarding_address})
+    return JSONResponse({"forwarding_address": forwarding_address})
 
 
-@app.get('/api/email/stats')
-def get_email_stats(user_id: str = 'default'):
+@app.get("/api/email/stats")
+def get_email_stats(user_id: str = "default"):
     from .email_webhook import EmailWebhookManager
+
     manager = EmailWebhookManager()
     return JSONResponse(manager.get_user_stats(user_id))

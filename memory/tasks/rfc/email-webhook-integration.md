@@ -1,9 +1,9 @@
 # RFC: Inbound Email Webhook Integration
 
-**Status**: Proposed  
-**Priority**: P1 Track 2 (Revised)  
-**Estimated Effort**: 3-4 hours  
-**Created**: 2025-12-10  
+**Status**: Proposed
+**Priority**: P1 Track 2 (Revised)
+**Estimated Effort**: 3-4 hours
+**Created**: 2025-12-10
 **AI Task**: Yes - For AI MLOps evaluation
 
 ## Problem Statement
@@ -27,7 +27,7 @@ Implement an **inbound email webhook system** where each user gets a unique forw
 │  User's Email   │
 │  (Gmail, etc.)  │
 └────────┬────────┘
-         │ Forward rule: 
+         │ Forward rule:
          │ from:linkedin.com → user-abc123@jobforge.com
          ▼
 ┌─────────────────┐
@@ -61,7 +61,7 @@ Implement an **inbound email webhook system** where each user gets a unique forw
   - Free tier: 100 emails/day
   - Simple webhook integration
   - Parses multipart emails automatically
-  
+
 - **AWS SES** (for production scale)
   - Pay-per-email ($0.10/1000)
   - Store in S3, trigger Lambda
@@ -104,13 +104,13 @@ Reuse parsing logic from closed PR #86, but adapt for:
 class InboundEmailParser:
     def parse(self, email: EmailMessage) -> ParsedEmail:
         """Parse inbound email into structured data."""
-        
+
     def detect_email_type(self, email: ParsedEmail) -> EmailType:
         """Classify: job_listing | application_confirm | recruiter_outreach"""
-        
+
     def extract_job_details(self, email: ParsedEmail) -> Optional[JobDetails]:
         """Extract company, title, URL, description from email body."""
-        
+
     def match_to_existing_job(self, email: ParsedEmail) -> Optional[str]:
         """Match to existing tracked job (for status updates)."""
 ```
@@ -126,24 +126,24 @@ class InboundEmailParser:
 async def handle_inbound_email(email_data: dict):
     # 1. Identify user from forwarding address
     user_id = get_user_from_address(email_data['to'])
-    
+
     # 2. Parse email
     parsed = parser.parse(email_data)
     email_type = parser.detect_email_type(parsed)
-    
+
     # 3. Handle based on type
     if email_type == EmailType.JOB_LISTING:
         job = parser.extract_job_details(parsed)
         if job:
             tracker.create_job(user_id, job, source="email_forward")
             training_pipeline.store(parsed, label="job_listing")
-            
+
     elif email_type == EmailType.APPLICATION_CONFIRM:
         existing_job = parser.match_to_existing_job(parsed)
         if existing_job:
             tracker.update_status(existing_job, "applied", applied_date=parsed.date)
         training_pipeline.store(parsed, label="application_confirm")
-        
+
     elif email_type == EmailType.RECRUITER_OUTREACH:
         job = parser.extract_job_details(parsed)
         if job:

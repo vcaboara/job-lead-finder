@@ -8,9 +8,9 @@ assignees: ''
 
 ## Task Type
 
-**Priority**: P1 (Email Integration)  
-**Agent**: @copilot  
-**Estimated Effort**: 3-4 hours  
+**Priority**: P1 (Email Integration)
+**Agent**: @copilot
+**Estimated Effort**: 3-4 hours
 **Branch**: `feature/email-webhook-integration`
 
 ## Context
@@ -129,6 +129,6 @@ This task measures:
 
 ---
 
-**AI-Task-Assignment**: @copilot  
-**Priority**: P1  
+**AI-Task-Assignment**: @copilot
+**Priority**: P1
 **Estimated-Tokens**: 2-3 premium requests

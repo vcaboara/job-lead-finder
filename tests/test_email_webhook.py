@@ -6,11 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from app.email_webhook import (
-    EmailWebhookManager,
-    InboundEmail,
-    UserEmailConfig,
-)
+from app.email_webhook import EmailWebhookManager, InboundEmail, UserEmailConfig
 
 
 class TestUserEmailConfig:

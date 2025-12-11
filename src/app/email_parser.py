@@ -127,15 +127,9 @@ class EmailParser:
 
     def _compile_patterns(self):
         """Compile regex patterns for efficiency."""
-        self.job_listing_regex = [
-            re.compile(p, re.IGNORECASE) for p in self.JOB_LISTING_PATTERNS
-        ]
-        self.application_confirm_regex = [
-            re.compile(p, re.IGNORECASE) for p in self.APPLICATION_CONFIRM_PATTERNS
-        ]
-        self.recruiter_outreach_regex = [
-            re.compile(p, re.IGNORECASE) for p in self.RECRUITER_OUTREACH_PATTERNS
-        ]
+        self.job_listing_regex = [re.compile(p, re.IGNORECASE) for p in self.JOB_LISTING_PATTERNS]
+        self.application_confirm_regex = [re.compile(p, re.IGNORECASE) for p in self.APPLICATION_CONFIRM_PATTERNS]
+        self.recruiter_outreach_regex = [re.compile(p, re.IGNORECASE) for p in self.RECRUITER_OUTREACH_PATTERNS]
         self.company_regex = [re.compile(p) for p in self.COMPANY_PATTERNS]
         self.title_regex = [re.compile(p) for p in self.TITLE_PATTERNS]
         self.url_regex = [re.compile(p) for p in self.URL_PATTERNS]
@@ -169,10 +163,7 @@ class EmailParser:
         # Check for recruiter outreach
         recruiter_score = sum(1 for p in self.recruiter_outreach_regex if p.search(text))
         # Personal emails (not from job boards/ATS)
-        is_personal = not any(
-            d in from_addr.lower()
-            for d in self.JOB_BOARD_DOMAINS + self.ATS_DOMAINS
-        )
+        is_personal = not any(d in from_addr.lower() for d in self.JOB_BOARD_DOMAINS + self.ATS_DOMAINS)
         if is_personal and recruiter_score > 0:
             recruiter_score += 1
 

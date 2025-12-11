@@ -92,10 +92,7 @@ class EmailWebhookManager:
             try:
                 with open(self.config_file, "r") as f:
                     data = json.load(f)
-                    self._configs = {
-                        addr: UserEmailConfig.from_dict(cfg)
-                        for addr, cfg in data.items()
-                    }
+                    self._configs = {addr: UserEmailConfig.from_dict(cfg) for addr, cfg in data.items()}
                 logger.info("Loaded %d email configs", len(self._configs))
             except Exception as e:
                 logger.error("Failed to load email configs: %s", e)
@@ -137,9 +134,7 @@ class EmailWebhookManager:
         self._configs[forwarding_address] = config
         self._save_configs()
 
-        logger.info(
-            "Created forwarding address %s for user %s", forwarding_address, user_id
-        )
+        logger.info("Created forwarding address %s for user %s", forwarding_address, user_id)
         return forwarding_address
 
     def get_config(self, forwarding_address: str) -> Optional[UserEmailConfig]:
@@ -227,9 +222,7 @@ class EmailWebhookManager:
         return {
             "forwarding_address": config.forwarding_address,
             "emails_processed": config.email_count,
-            "last_email_at": config.last_email_at.isoformat()
-            if config.last_email_at
-            else None,
+            "last_email_at": config.last_email_at.isoformat() if config.last_email_at else None,
             "is_active": config.is_active,
         }
 

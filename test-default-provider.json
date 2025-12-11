@@ -1,0 +1,14 @@
+{
+    "jsonrpc": "2.0",
+    "id": 2,
+    "method": "tools/call",
+    "params": {
+        "name": "vibe_check",
+        "arguments": {
+            "goal": "Verify Ollama is the default provider",
+            "plan": "1. Test vibe_check without explicit modelOverride. 2. Ensure it defaults to Ollama from environment variables.",
+            "progress": "Testing default provider selection",
+            "sessionId": "default-provider-test-002"
+        }
+    }
+}
