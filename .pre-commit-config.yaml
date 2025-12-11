@@ -74,5 +74,16 @@ repos:
         pass_filenames: false
         types: [python]
         files: ^(src/|tests/)
-        args: [-m, "not slow", --maxfail=3, --tb=short, -q, -p, "no:xdist", -p, "no:benchmark"]
+        args:
+          [
+            -m,
+            "not slow",
+            --maxfail=3,
+            --tb=short,
+            -q,
+            -p,
+            "no:xdist",
+            -p,
+            "no:benchmark",
+          ]
         stages: [pre-commit]
