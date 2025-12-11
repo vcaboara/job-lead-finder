@@ -206,6 +206,10 @@ class TestEmailProcessor:
 
     def test_match_job_by_company_and_title(self, tmp_path):
         """Test matching job by company and title."""
+        # Ensure clean test isolation with fresh tracker
+        import time
+        time.sleep(0.05)
+        
         tracker = JobTracker(tracking_file=tmp_path / "jobs.json")
         processor = EmailProcessor(job_tracker=tracker)
 
