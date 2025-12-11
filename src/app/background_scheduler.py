@@ -57,13 +57,15 @@ class BackgroundScheduler:
                 result = await find_direct_link(job, timeout=5)
 
                 if result and result.get("direct_url"):
-                    tracker.set_company_link(job["job_id"], result["direct_url"])
+                    tracker.set_company_link(
+                        job["job_id"], result["direct_url"])
                     logger.info(
                         f"Found direct link for {job.get('title', 'Unknown')}: "
                         f"{result['direct_url']} ({result['confidence']} confidence)"
                     )
             except Exception as e:
-                logger.error(f"Error finding link for {job.get('job_id')}: {e}")
+                logger.error(
+                    f"Error finding link for {job.get('job_id')}: {e}")
 
             # Rate limiting - wait between requests
             await asyncio.sleep(2)
@@ -81,7 +83,8 @@ class BackgroundScheduler:
         tracker = JobTracker()
         cutoff_date = datetime.now(timezone.utc) - timedelta(days=30)
 
-        hidden_jobs = tracker.get_all_jobs(status_filter=[STATUS_HIDDEN], include_hidden=True)
+        hidden_jobs = tracker.get_all_jobs(
+            status_filter=[STATUS_HIDDEN], include_hidden=True)
 
         removed_count = 0
         for job in hidden_jobs:
@@ -133,7 +136,8 @@ class BackgroundScheduler:
                 logger.warning("Could not extract search queries from resume")
                 return
 
-            logger.info(f"Extracted {len(search_queries)} search queries: {search_queries}")
+            logger.info(
+                f"Extracted {len(search_queries)} search queries: {search_queries}")
 
             # Perform searches for each query
             from app.job_finder import generate_job_leads
@@ -173,12 +177,15 @@ class BackgroundScheduler:
                     continue
 
             if new_jobs_count > 0:
-                logger.info(f"Automated discovery complete: added {new_jobs_count} new jobs")
+                logger.info(
+                    f"Automated discovery complete: added {new_jobs_count} new jobs")
             else:
-                logger.info("Automated discovery complete: no new high-scoring jobs found")
+                logger.info(
+                    "Automated discovery complete: no new high-scoring jobs found")
 
         except Exception as e:
-            logger.error(f"Error in automated job discovery: {e}", exc_info=True)
+            logger.error(
+                f"Error in automated job discovery: {e}", exc_info=True)
 
     async def _extract_search_queries_from_resume(self, resume_text: str) -> list[str]:
         """Extract relevant job search queries from resume using AI.
@@ -223,13 +230,14 @@ Example for a senior Python developer:
             end = text.rfind("]")
 
             if start != -1 and end != -1:
-                json_str = text[start : end + 1]
+                json_str = text[start: end + 1]
                 queries = json.loads(json_str)
 
                 if isinstance(queries, list) and all(isinstance(q, str) for q in queries):
                     return [q.strip() for q in queries if len(q.strip()) > 3]
 
-            logger.warning(f"Could not parse search queries from AI response: {response[:200]}")
+            logger.warning(
+                f"Could not parse search queries from AI response: {response[:200]}")
             return []
 
         except Exception as e:
@@ -298,9 +306,12 @@ Example for a senior Python developer:
         self.is_running = True
 
         logger.info("Background scheduler started:")
-        logger.info(f"  - Direct link discovery: every {find_links_interval_minutes} minutes")
-        logger.info(f"  - Hidden job cleanup: every {cleanup_interval_hours} hours")
-        logger.info(f"  - Automated job discovery: every {auto_discover_interval_hours} hours")
+        logger.info(
+            f"  - Direct link discovery: every {find_links_interval_minutes} minutes")
+        logger.info(
+            f"  - Hidden job cleanup: every {cleanup_interval_hours} hours")
+        logger.info(
+            f"  - Automated job discovery: every {auto_discover_interval_hours} hours")
 
     def stop(self):
         """Stop the background scheduler."""

@@ -148,7 +148,7 @@ def test_cli_search_with_resume():
             ],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=60,  # Increased from 30s - API calls can be slow
             check=False,
         )
 
