@@ -24,6 +24,7 @@ MAX_EMAILS_PER_USER = 1000  # Max emails stored per user
 EMAIL_TTL_DAYS = 30  # Auto-delete emails older than 30 days
 RATE_LIMIT_WINDOW = 3600  # 1 hour in seconds
 RATE_LIMIT_MAX_EMAILS = 100  # Max emails per user per hour
+EMAIL_CLEANUP_BUFFER = 100  # Keep this many emails under quota during cleanup
 
 
 @dataclass
@@ -176,12 +177,12 @@ class EmailWebhookManager:
         Returns:
             Forwarding email address like user-abc123@domain.com
         """
-        # Generate secure random identifier (8 alphanumeric chars, no stripping)
-        # This provides ~47 bits of entropy (62^8)
+        # Generate secure random identifier (4 bytes -> 8 hex chars)
+        # This provides 32 bits of entropy (2^32 = ~4 billion combinations)
         max_attempts = 10
         for _ in range(max_attempts):
             random_bytes = secrets.token_bytes(6)
-            random_id = "".join(f"{b:02x}" for b in random_bytes[:4])  # 8 hex chars
+            random_id = "".join(f"{b:02x}" for b in random_bytes[:4])  # 4 bytes -> 8 hex chars
             forwarding_address = f"user-{random_id}@{self.domain}"
 
             # Check for collision
@@ -338,7 +339,7 @@ class EmailWebhookManager:
 
         # Sort by date and delete oldest
         emails.sort(key=lambda x: x[1])
-        emails_to_delete = emails[: len(emails) - MAX_EMAILS_PER_USER + 100]  # Keep 100 under limit
+        emails_to_delete = emails[: len(emails) - MAX_EMAILS_PER_USER + EMAIL_CLEANUP_BUFFER]
 
         for email_file, _ in emails_to_delete:
             try:

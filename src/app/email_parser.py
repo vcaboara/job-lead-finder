@@ -6,9 +6,9 @@ Classifies inbound emails into:
 - application_confirm: Workday/Greenhouse/Lever receipts
 - recruiter_outreach: Personal emails with job offers
 """
+import concurrent.futures
 import logging
 import re
-import signal
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
@@ -152,24 +152,20 @@ class EmailParser:
         Raises:
             TimeoutError: If regex takes too long (potential ReDoS)
         """
+        # Use threading-based timeout for thread-safe, cross-platform protection
+        import concurrent.futures
 
-        def timeout_handler(signum, frame):
-            raise TimeoutError("Regex search timeout")
-
-        # Set alarm for timeout (Unix only)
         try:
-            old_handler = signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(timeout)
-            try:
-                match = pattern.search(text)
-                signal.alarm(0)  # Cancel alarm
-                return match
-            finally:
-                signal.signal(signal.SIGALRM, old_handler)
-        except (AttributeError, ValueError):
-            # SIGALRM not available (Windows) - fall back to direct search
-            # In production, consider using threading or subprocess for timeout
-            logger.warning("Timeout protection not available on this platform")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(pattern.search, text)
+                try:
+                    match = future.result(timeout=timeout)
+                    return match
+                except concurrent.futures.TimeoutError:
+                    raise TimeoutError("Regex search timeout")
+        except Exception as e:
+            # If threading fails, fall back to direct search with warning
+            logger.warning("Regex timeout protection unavailable: %s", e)
             return pattern.search(text)
 
     def detect_email_type(self, subject: str, body: str, from_addr: str) -> tuple:
