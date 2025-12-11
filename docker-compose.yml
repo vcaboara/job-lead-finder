@@ -81,6 +81,27 @@ services:
     # Volume mount removed - built files are in the image
     # If you need dev mode with hot reload, use docker-compose.dev.yml override
 
+  brave-search-mcp:
+    image: node:20-alpine
+    ports:
+      - "3002:3002"
+    environment:
+      - BRAVE_API_KEY=${BRAVE_API_KEY}
+      - PORT=3002
+    working_dir: /app
+    command: sh -c "npx -y @modelcontextprotocol/server-brave-search"
+    restart: unless-stopped
+
+  fetch-mcp:
+    image: node:20-alpine
+    ports:
+      - "3003:3003"
+    environment:
+      - PORT=3003
+    working_dir: /app
+    command: sh -c "npx -y @modelcontextprotocol/server-fetch"
+    restart: unless-stopped
+
   ollama-tunnel:
     image: cloudflare/cloudflared:latest
     command: tunnel --no-autoupdate --url http://host.docker.internal:11434
