@@ -103,6 +103,38 @@ class BackgroundScheduler:
         else:
             logger.info("No old hidden jobs to remove")
 
+    async def sync_job_applications_from_email(self):
+        """Sync job application status from sent emails.
+
+        This function:
+        1. Connects to user's email server (IMAP)
+        2. Fetches recent sent emails
+        3. Parses emails for job applications
+        4. Updates tracked jobs to 'applied' status
+        """
+        logger.info("Starting email sync for job applications...")
+
+        try:
+            from app.email_integration import EmailIntegration, create_email_config_from_env
+
+            # Get email config from environment
+            config = create_email_config_from_env()
+            if not config:
+                logger.info("Email credentials not configured - skipping email sync")
+                return
+
+            # Run sync
+            integration = EmailIntegration(config)
+            stats = integration.auto_update_job_status(days=7)
+
+            logger.info(
+                f"Email sync complete: {stats['jobs_updated']} jobs updated, "
+                f"{stats['emails_checked']} emails checked"
+            )
+
+        except Exception as e:
+            logger.error(f"Error in email sync: {e}", exc_info=True)
+
     async def discover_jobs_from_resume(self):
         """Automatically discover and track new jobs based on user's resume.
 
@@ -294,6 +326,15 @@ Example for a senior Python developer:
             replace_existing=True,
         )
 
+        # Schedule email sync (every 6 hours by default)
+        self.scheduler.add_job(
+            self.sync_job_applications_from_email,
+            trigger=IntervalTrigger(hours=6),
+            id="email_sync",
+            name="Sync job applications from email",
+            replace_existing=True,
+        )
+
         self.scheduler.start()
         self.is_running = True
 
@@ -301,6 +342,7 @@ Example for a senior Python developer:
         logger.info(f"  - Direct link discovery: every {find_links_interval_minutes} minutes")
         logger.info(f"  - Hidden job cleanup: every {cleanup_interval_hours} hours")
         logger.info(f"  - Automated job discovery: every {auto_discover_interval_hours} hours")
+        logger.info(f"  - Email sync: every 6 hours")
 
     def stop(self):
         """Stop the background scheduler."""
