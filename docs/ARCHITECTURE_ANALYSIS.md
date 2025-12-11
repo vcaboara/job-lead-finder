@@ -36,7 +36,7 @@ flowchart TB
         Scheduler[background_scheduler.py<br/>Async Tasks]
         Config[config_manager.py<br/>Settings]
         LinkFinder[link_finder.py<br/>Career Page Discovery]
-        
+
         subgraph Providers ["Provider Layer"]
             MCP[mcp_providers.py<br/>Job Aggregators]
             WWR[WeWorkRemotely]
@@ -45,12 +45,12 @@ flowchart TB
             DDG[DuckDuckGo]
             CMP[CompanyJobs]
         end
-        
+
         subgraph AI ["AI Provider Layer"]
             Gemini[gemini_provider.py<br/>Google AI]
             Ollama[ollama_provider.py<br/>Local LLM]
         end
-        
+
         subgraph Discovery ["Discovery System"]
             DiscoveryBase[base_provider.py<br/>Abstract Provider]
             CompanyStore[company_store.py<br/>SQLite Store]
@@ -76,26 +76,26 @@ flowchart TB
     UI --> Tracker
     UI --> Config
     Monitor --> UI
-    
+
     JobFinder --> Providers
     JobFinder --> AI
     Scheduler --> JobFinder
     Scheduler --> LinkFinder
     Scheduler --> Discovery
-    
+
     MCP --> JobBoards
     WWR --> JobBoards
     ROK --> JobBoards
     REM --> JobBoards
     CMP --> GeminiAPI
     DDG --> JobBoards
-    
+
     Gemini --> GeminiAPI
     Ollama --> OllamaAPI
-    
+
     Discovery --> JSearch
     DiscoveryBase --> CompanyStore
-    
+
     Tracker --> SQLite
     Config --> Files
     JobFinder --> Files
@@ -116,25 +116,25 @@ sequenceDiagram
 
     User->>UI: POST /api/search
     UI->>Finder: generate_job_leads(query, resume, count)
-    
+
     Note over Finder: Priority Chain:<br/>1. MCP → 2. Gemini → 3. Local
-    
+
     Finder->>MCP: Try MCP providers first
     MCP->>MCP: Aggregate from enabled providers<br/>(WWR, RemoteOK, Remotive)
     MCP-->>Finder: Raw jobs (count * 3)
-    
+
     alt Evaluation Enabled
         Finder->>AI: rank_jobs_batch(jobs, resume)
         AI->>AI: Score each job (0-100)
         AI-->>Finder: Ranked jobs with scores
     end
-    
+
     Finder->>Finder: Filter by min_score
     Finder->>Tracker: Check hidden jobs
     Tracker->>DB: get_hidden_job_ids()
     DB-->>Tracker: Set of hidden IDs
     Tracker-->>Finder: Hidden job filter
-    
+
     Finder->>Finder: Apply filters & dedup
     Finder-->>UI: Filtered job leads
     UI-->>User: JSON response
@@ -160,11 +160,11 @@ sequenceDiagram
     UI-->>User: Tracked
 
     Note over Scheduler: Background Task<br/>(Every 6 hours)
-    
+
     Scheduler->>Tracker: get_all_jobs(no company_link)
     Tracker->>DB: Query jobs without direct links
     DB-->>Tracker: Jobs needing links
-    
+
     loop For each job
         Scheduler->>LinkFinder: find_direct_link(job)
         LinkFinder->>LinkFinder: is_aggregator(url)?
@@ -229,7 +229,7 @@ class MCPProvider(ABC):
     @abstractmethod
     def search_jobs(self, query, count, location, **kwargs) -> List[Dict]:
         """Returns standardized job schema"""
-    
+
     @abstractmethod
     def is_available(self) -> bool:
         """Health check for provider"""
@@ -265,12 +265,12 @@ class MCPProvider(ABC):
 def generate_job_leads_via_mcp(query, count, count_per_provider, location):
     enabled = get_enabled_providers()  # From config.json
     results = []
-    
+
     for provider_class in [WeWorkRemotelyMCP, RemoteOKMCP, RemotiveMCP, ...]:
         if provider_class.name in enabled and provider.is_available():
             jobs = provider.search_jobs(query, count_per_provider, location)
             results.extend(jobs)
-    
+
     return deduplicate(results)  # By link hash
 ```
 
@@ -310,7 +310,7 @@ def generate_job_id(job) -> str:
     link = job.get("link", "")
     if link:
         return hashlib.sha256(link.encode()).hexdigest()[:16]
-    
+
     # Fallback: title + company
     key = f"{company}::{title}"
     return hashlib.sha256(key.encode()).hexdigest()[:16]
@@ -379,11 +379,11 @@ async def upload_resume(file: UploadFile):
         text = extract_docx_text(file)  # python-docx
     else:
         raise HTTPException(400, "Unsupported format")
-    
+
     # 2. Security scanning
     if scan_instructions(text) or scan_entity(text):
         raise HTTPException(400, "Potential injection detected")
-    
+
     # 3. Save to persistent storage
     RESUME_FILE.write_text(text, encoding='utf-8')
     return {"status": "success"}
@@ -402,7 +402,7 @@ async def search_jobs(req: SearchRequest):
         "progress": 0,
         "results": []
     }
-    
+
     # Run search in background
     asyncio.create_task(run_search_async(search_id, req))
     return {"search_id": search_id}
@@ -430,13 +430,13 @@ async def get_progress(search_id: str):
 class GeminiProvider:
     def evaluate(self, job: Dict, resume_text: str) -> Dict:
         """Single job evaluation (0-100 score + reasoning)"""
-        
+
     def rank_jobs_batch(self, jobs: List[Dict], resume_text: str, top_n: int) -> List[Dict]:
         """Batch ranking for efficiency - PREFERRED METHOD"""
-        
+
     def generate_job_leads(self, query: str, resume_text: str, count: int) -> List[Dict]:
         """Gemini-powered job search using google_search tool"""
-        
+
     def generate_cover_letter(self, job: Dict, resume_text: str) -> str:
         """AI-generated custom cover letter"""
 ```
@@ -447,15 +447,15 @@ SCORING CRITERIA (0-100 total):
 1. Required Skills Match (40 points)
    - Count matching technical skills
    - Weight by importance
-   
+
 2. Experience Level (25 points)
    - Junior/Mid/Senior alignment
    - Years of experience match
-   
+
 3. Domain Knowledge (20 points)
    - Industry experience
    - Sector-specific expertise
-   
+
 4. Role Fit (15 points)
    - Career trajectory alignment
    - Job responsibilities match
@@ -502,13 +502,13 @@ def evaluate(self, job: Dict, resume_text: str) -> Dict:
     prompt = f"""
     Evaluate this job-candidate match (0-100 score).
     Respond with ONLY valid JSON.
-    
+
     CANDIDATE: {resume_text[:1500]}
     JOB: {job['title']} at {job['company']}
-    
+
     Format: {{"score": 75, "reasoning": "..."}}
     """
-    
+
     response = httpx.post(
         f"{self.base_url}/api/generate",
         json={
@@ -522,7 +522,7 @@ def evaluate(self, job: Dict, resume_text: str) -> Dict:
             }
         }
     )
-    
+
     return parse_json(response.json()["response"])
 ```
 
@@ -530,7 +530,7 @@ def evaluate(self, job: Dict, resume_text: str) -> Dict:
 ```python
 def _get_evaluation_provider():
     """Auto-select best available AI provider"""
-    
+
     # 1. Try Ollama first (local, unlimited)
     try:
         provider = OllamaProvider()
@@ -538,14 +538,14 @@ def _get_evaluation_provider():
             return provider
     except:
         pass
-    
+
     # 2. Fallback to Gemini (cloud, quota limits)
     try:
         provider = GeminiProvider()
         return provider
     except:
         pass
-    
+
     # 3. No AI available
     return None
 ```
@@ -567,21 +567,21 @@ def _get_evaluation_provider():
 async def find_direct_links_for_tracked_jobs():
     tracker = JobTracker()
     jobs = tracker.get_all_jobs(include_hidden=False)
-    
+
     # Filter jobs from aggregators without direct link
     jobs_needing_links = [
         job for job in jobs
-        if not job.get("company_link") 
+        if not job.get("company_link")
         and job.get("source") != "CompanyJobs"
     ]
-    
+
     for job in jobs_needing_links:
         result = await find_direct_link(job, timeout=5)
-        
+
         if result and result.get("direct_url"):
             tracker.set_company_link(job["job_id"], result["direct_url"])
             logger.info(f"Found: {result['direct_url']} ({result['confidence']})")
-        
+
         await asyncio.sleep(2)  # Rate limiting
 ```
 
@@ -589,24 +589,24 @@ async def find_direct_links_for_tracked_jobs():
 ```python
 async def run_auto_discovery():
     """Passive job discovery matching user's resume"""
-    
+
     # 1. Load user's resume
     if not RESUME_FILE.exists():
         return
     resume = RESUME_FILE.read_text()
-    
+
     # 2. Extract skills/roles from resume
     skills = extract_skills(resume)
     query = " OR ".join(skills[:5])
-    
+
     # 3. Search via JSearch API
     companies = discover_companies(query, tech_stack=skills)
-    
+
     # 4. Store in company database
     store = CompanyStore()
     for company in companies:
         store.save_company(company)
-    
+
     # 5. Crawl career pages for jobs
     for company in companies:
         jobs = crawl_career_page(company.careers_url)
@@ -628,18 +628,18 @@ async def find_direct_link(job_data: Dict, timeout: int = 5) -> Dict:
     # 1. Check if already a direct link
     if not is_aggregator(job_data["link"]):
         return {"direct_url": job_data["link"], "confidence": "high"}
-    
+
     # 2. Extract company website from job data
     company_url = extract_company_website(job_data)
     if not company_url:
         return None
-    
+
     # 3. Generate potential career page URLs
     career_urls = build_careers_urls(company_url)
-    # e.g., ["https://example.com/careers", 
-    #        "https://example.com/jobs", 
+    # e.g., ["https://example.com/careers",
+    #        "https://example.com/jobs",
     #        "https://example.com/join-us"]
-    
+
     # 4. Test each URL with HTTP HEAD request
     for url in career_urls:
         try:
@@ -653,7 +653,7 @@ async def find_direct_link(job_data: Dict, timeout: int = 5) -> Dict:
                     }
         except:
             continue
-    
+
     # 5. Fallback: Return company homepage
     return {
         "direct_url": company_url,
@@ -771,7 +771,7 @@ CREATE TABLE discovery_log (
 class CompanyStore:
     def save_company(self, company: Company) -> int:
         """Insert or update company, return ID"""
-    
+
     def find_companies(
         self,
         industries: List[IndustryType] = None,
@@ -780,10 +780,10 @@ class CompanyStore:
         locations: List[str] = None
     ) -> List[Company]:
         """Query companies with filters"""
-    
+
     def save_job(self, company_id: int, job: Dict) -> int:
         """Associate job with company"""
-    
+
     def get_discovery_stats(self, source: str = None) -> Dict:
         """Get discovery metrics"""
 ```
@@ -803,17 +803,17 @@ class CompanyStore:
     "summary": str,      # Job description (truncated to 500 chars)
     "link": str,         # Application URL
     "source": str,       # Provider name ("WeWorkRemotely", "RemoteOK", etc.)
-    
+
     # Optional fields
     "description": str,  # Full job description
     "salary": str,       # "120k-160k USD" (if available)
     "posted_date": str,  # ISO timestamp
     "tags": List[str],   # ["Python", "Django", "AWS"]
-    
+
     # AI evaluation fields (if evaluate=True)
     "score": int,        # 0-100 match score
     "reasoning": str,    # "Python, AWS, Docker match. Senior level fits."
-    
+
     # Tracking fields (after tracking)
     "job_id": str,       # SHA256 hash of link
     "status": str,       # new|applied|interviewing|rejected|offer|hidden
@@ -852,20 +852,20 @@ class CompanyStore:
 ```python
 {
     "system_instructions": str,          # Custom AI instructions
-    "blocked_entities": List[{           # Blacklist filter
+    "blocked_entities": List[{           # Blocklist filter
         "type": "site" | "employer",
         "value": str
     }],
     "region": str,                       # "United States"
     "industry_profile": str,             # "tech" | "finance" | ...
-    
+
     "location": {
         "default_location": str,         # "United States"
         "prefer_remote": bool,           # Filter remote jobs
         "allow_hybrid": bool,
         "allow_onsite": bool
     },
-    
+
     "providers": {
         "weworkremotely": {
             "enabled": bool,
@@ -888,13 +888,13 @@ class CompanyStore:
             "name": "DuckDuckGo"
         }
     },
-    
+
     "search": {
         "default_count": int,            # Jobs to return (default: 10)
         "oversample_multiplier": int,    # MCP multiplier (default: 10)
         "enable_ai_ranking": bool        # Use AI scoring (default: true)
     },
-    
+
     "discovery": {
         "enabled": bool,
         "database_path": str,            # "data/companies.db"
@@ -982,11 +982,11 @@ class MCPProvider(ABC):
     def __init__(self, name: str, enabled: bool = True):
         self.name = name
         self.enabled = enabled
-    
+
     @abstractmethod
     def search_jobs(self, query, count, location, **kwargs) -> List[Dict]:
         pass
-    
+
     @abstractmethod
     def is_available(self) -> bool:
         pass
@@ -996,7 +996,7 @@ class WeWorkRemotelyMCP(MCPProvider):
     def search_jobs(self, query, count, location, **kwargs):
         # RSS parsing logic
         return jobs
-    
+
     def is_available(self):
         return True  # Public RSS, always available
 ```
@@ -1013,7 +1013,7 @@ AVAILABLE_PROVIDERS = [
 
 def get_active_providers() -> List[MCPProvider]:
     enabled_names = get_enabled_providers()  # From config
-    return [p for p in AVAILABLE_PROVIDERS 
+    return [p for p in AVAILABLE_PROVIDERS
             if p.name in enabled_names and p.is_available()]
 ```
 
@@ -1050,7 +1050,7 @@ def generate_job_leads(query, resume, count, use_mcp=True):
                 return rank_and_filter(leads, resume, count)
         except Exception as e:
             logger.warning("MCP failed: %s", e)
-    
+
     # Try Gemini
     try:
         provider = GeminiProvider()
@@ -1059,7 +1059,7 @@ def generate_job_leads(query, resume, count, use_mcp=True):
             return leads
     except Exception as e:
         logger.warning("Gemini failed: %s", e)
-    
+
     # Fallback to local
     return fetch_local_sample_jobs(query)[:count]
 ```
@@ -1113,19 +1113,19 @@ services:
     # Main web UI (FastAPI)
     ports: ["8000:8000"]
     depends_on: [worker]
-    
+
   worker:
     # Background task scheduler
     # No exposed ports (internal only)
-    
+
   ai-monitor:
     # AI resource usage dashboard
     ports: ["9000:9000"]
-    
+
   vibe-check-mcp:
     # MCP server for AI context
     ports: ["3000:3000"]
-    
+
   app:
     # Legacy service (deprecated)
     ports: ["8080:8080"]
@@ -1150,7 +1150,7 @@ def generate_job_id(job: Dict) -> str:
     link = job.get("link", "")
     if link:
         return hashlib.sha256(link.encode()).hexdigest()[:16]
-    
+
     # Fallback: Use title + company
     title = job.get("title", "").lower().strip()
     company = job.get("company", "").lower().strip()
@@ -1168,7 +1168,7 @@ def generate_job_id(job: Dict) -> str:
 def aggregate_jobs_from_providers(providers, query, count):
     all_jobs = []
     seen_ids = set()
-    
+
     for provider in providers:
         jobs = provider.search_jobs(query, count)
         for job in jobs:
@@ -1176,7 +1176,7 @@ def aggregate_jobs_from_providers(providers, query, count):
             if job_id not in seen_ids:
                 all_jobs.append(job)
                 seen_ids.add(job_id)
-    
+
     return all_jobs
 ```
 
@@ -1211,13 +1211,13 @@ def scan_entity(text: str) -> bool:
 @app.post("/api/resume/upload")
 async def upload_resume(file: UploadFile):
     content = await extract_text(file)
-    
+
     # Security scanning
     if scan_instructions(content):
         raise HTTPException(400, "Prompt injection detected")
     if scan_entity(content):
         raise HTTPException(400, "Malicious content detected")
-    
+
     # Safe to save
     RESUME_FILE.write_text(content)
 ```
@@ -1227,19 +1227,19 @@ async def upload_resume(file: UploadFile):
 def validate_url(url: str) -> bool:
     """Validate URL is HTTP(S) and not localhost"""
     parsed = urlparse(url)
-    
+
     # Must be http/https
     if parsed.scheme not in ["http", "https"]:
         return False
-    
+
     # No localhost/internal IPs
     if parsed.netloc in ["localhost", "127.0.0.1", "0.0.0.0"]:
         return False
-    
+
     # No private IP ranges
     if parsed.netloc.startswith(("192.168.", "10.", "172.")):
         return False
-    
+
     return True
 ```
 
@@ -1575,37 +1575,37 @@ classDiagram
         +search_jobs(query, count, location)*
         +is_available()*
     }
-    
+
     class WeWorkRemotelyMCP {
         +search_jobs()
         +is_available()
         -parse_rss_feed()
     }
-    
+
     class RemoteOKMCP {
         +search_jobs()
         +is_available()
         -fetch_api()
     }
-    
+
     class RemotiveMCP {
         +search_jobs()
         +is_available()
         -fetch_api()
     }
-    
+
     class CompanyJobsMCP {
         +search_jobs()
         +is_available()
         -gemini_search()
     }
-    
+
     class DuckDuckGoMCP {
         +search_jobs()
         +is_available()
         -scrape_search()
     }
-    
+
     MCPProvider <|-- WeWorkRemotelyMCP
     MCPProvider <|-- RemoteOKMCP
     MCPProvider <|-- RemotiveMCP
@@ -1618,31 +1618,31 @@ classDiagram
 ```mermaid
 stateDiagram-v2
     [*] --> New: User tracks job
-    
+
     New --> Applied: Submit application
     New --> Hidden: Not interested
-    
+
     Applied --> Interviewing: Get interview invite
     Applied --> Rejected: No response/rejection
-    
+
     Interviewing --> Offer: Receive offer
     Interviewing --> Rejected: Failed interview
-    
+
     Offer --> [*]: Accept/Decline offer
     Rejected --> [*]: Archive
     Hidden --> [*]: Cleanup after 30 days
-    
+
     note right of New
         Status: "new"
         Actions: Apply, Hide
     end note
-    
+
     note right of Applied
         Status: "applied"
         Actions: Update notes,
         Track interview
     end note
-    
+
     note right of Interviewing
         Status: "interviewing"
         Actions: Add interview notes,
@@ -1663,49 +1663,49 @@ sequenceDiagram
     participant AI as AI Provider
     participant Tracker as JobTracker
     participant DB as Storage
-    
+
     User->>UI: POST /api/search<br/>{query, resume, count}
     UI->>Config: get_enabled_providers()
     Config->>DB: Load config.json
     DB-->>Config: {providers: {...}}
     Config-->>UI: ["WeWorkRemotely", "RemoteOK"]
-    
+
     UI->>Finder: generate_job_leads(...)
-    
+
     Note over Finder: Step 1: Try MCP
     Finder->>MCP: generate_job_leads_via_mcp()
-    
+
     par Parallel Provider Calls
         MCP->>MCP: WeWorkRemotely.search_jobs()
         MCP->>MCP: RemoteOK.search_jobs()
         MCP->>MCP: Remotive.search_jobs()
     end
-    
+
     MCP-->>Finder: 150 raw jobs (50 each)
-    
+
     Note over Finder: Step 2: Deduplicate
     Finder->>Finder: Remove duplicates by job_id
-    
+
     Note over Finder: Step 3: AI Ranking
     Finder->>AI: rank_jobs_batch(100 jobs, resume)
     AI->>AI: Batch score all jobs (0-100)
     AI-->>Finder: Ranked jobs with scores
-    
+
     Note over Finder: Step 4: Filter
     Finder->>Tracker: get_hidden_job_ids()
     Tracker->>DB: Load job_tracking.json
     DB-->>Tracker: {hidden_ids: [...]}
     Tracker-->>Finder: Set of hidden IDs
-    
+
     Finder->>Finder: Filter by min_score=60<br/>Remove hidden jobs
-    
+
     Finder-->>UI: 10 top-scored jobs
     UI-->>User: JSON response
 ```
 
 ---
 
-**Generated**: 2024-12-09  
-**Version**: 1.0  
-**Author**: GitHub Copilot (Claude Sonnet 4.5)  
+**Generated**: 2024-12-09
+**Version**: 1.0
+**Author**: GitHub Copilot (Claude Sonnet 4.5)
 **Based on**: job-lead-finder codebase analysis
