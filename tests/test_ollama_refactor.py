@@ -4,17 +4,17 @@ Test for check_model_updates refactoring - validates behavior remains unchanged.
 import sys
 from pathlib import Path
 
+import pytest
+
 # Add scripts directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "scripts"))
 
-from ollama_code_assistant import _parse_model_age  # noqa: E402, F401
+from ollama_code_assistant import _parse_model_age  # noqa: E402
 
 
-def test_parse_model_age():
-    """Test that _parse_model_age categorizes correctly"""
-
-    # Test cases: (modified_string, expected_category)
-    test_cases = [
+@pytest.mark.parametrize(
+    "modified,expected_category",
+    [
         ("5 seconds ago", "up_to_date"),
         ("2 minutes ago", "up_to_date"),
         ("1 hour ago", "up_to_date"),
@@ -27,73 +27,41 @@ def test_parse_model_age():
         ("1 month ago", "needs_check"),
         ("3 months ago", "updates_available"),
         ("1 year ago", "updates_available"),
-    ]
-
-    passed = 0
-    failed = 0
-
-    for modified, expected_category in test_cases:
-        result = _parse_model_age(modified)
-        if result.category == expected_category:
-            print(f"✅ PASS: '{modified}' -> {result.category}")
-            passed += 1
-        else:
-            print(f"❌ FAIL: '{modified}' -> Expected {expected_category}, got {result.category}")
-            print(f"   Full result: {result}")
-            failed += 1
-
-    print(f"\nResults: {passed} passed, {failed} failed")
-    return failed == 0
+    ],
+)
+def test_parse_model_age_categorization(modified, expected_category):
+    """Test that _parse_model_age categorizes time strings correctly"""
+    result = _parse_model_age(modified)
+    assert result.category == expected_category, (
+        f"Expected '{modified}' to be categorized as '{expected_category}', "
+        f"but got '{result.category}'. Full result: {result}"
+    )
 
 
-def test_status_icons():
-    """Verify all expected status icons are preserved"""
-
-    test_cases = [
+@pytest.mark.parametrize(
+    "modified,expected_icon_prefix",
+    [
         ("1 second ago", "✅"),
         ("15 days ago", "⚠️"),
         ("10 weeks ago", "🔴"),
         ("5 years ago", "🔴"),
         ("invalid format", "❓"),
-    ]
-
-    passed = 0
-    failed = 0
-
-    for modified, expected_icon_prefix in test_cases:
-        result = _parse_model_age(modified)
-        if result.status_icon.startswith(expected_icon_prefix):
-            print(f"✅ PASS: '{modified}' has correct icon: {result.status_icon}")
-            passed += 1
-        else:
-            print(
-                f"❌ FAIL: '{modified}' -> Expected icon starting with {expected_icon_prefix}, got {result.status_icon}"
-            )
-            failed += 1
-
-    print(f"\nResults: {passed} passed, {failed} failed")
-    return failed == 0
+    ],
+)
+def test_parse_model_age_status_icons(modified, expected_icon_prefix):
+    """Verify all expected status icons are preserved"""
+    result = _parse_model_age(modified)
+    assert result.status_icon.startswith(expected_icon_prefix), (
+        f"Expected '{modified}' to have icon starting with '{expected_icon_prefix}', " f"but got '{result.status_icon}'"
+    )
 
 
-if __name__ == "__main__":
-    print("=" * 80)
-    print("Testing check_model_updates refactoring")
-    print("=" * 80)
-    print()
-
-    print("Test 1: Model age parsing and categorization")
-    print("-" * 80)
-    test1_passed = test_parse_model_age()
-
-    print("\n" + "=" * 80)
-    print("Test 2: Status icons preserved")
-    print("-" * 80)
-    test2_passed = test_status_icons()
-
-    print("\n" + "=" * 80)
-    if test1_passed and test2_passed:
-        print("✅ All tests PASSED - refactoring maintains behavior")
-        sys.exit(0)
-    else:
-        print("❌ Some tests FAILED - refactoring changed behavior")
-        sys.exit(1)
+def test_parse_model_age_returns_correct_structure():
+    """Verify _parse_model_age returns ModelUpdateStatus with all required fields"""
+    result = _parse_model_age("1 week ago")
+    assert hasattr(result, "status_icon"), "Missing status_icon attribute"
+    assert hasattr(result, "recommendation"), "Missing recommendation attribute"
+    assert hasattr(result, "category"), "Missing category attribute"
+    assert isinstance(result.status_icon, str), "status_icon should be a string"
+    assert isinstance(result.recommendation, str), "recommendation should be a string"
+    assert isinstance(result.category, str), "category should be a string"
