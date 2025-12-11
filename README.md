@@ -27,6 +27,8 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 - [Company Discovery Guide](docs/AGGREGATOR_TO_COMPANY_GUIDE.md) - Using the JSearch integration
 
 🤖 **AI & Development**
+- [**Ollama Code Assistant**](docs/OLLAMA_CODE_ASSISTANT.md) - **NEW!** Local LLM tool for privacy-sensitive operations
+- [Ollama Quick Start](docs/OLLAMA_QUICKSTART.md) - Get local AI running in 5 minutes (12GB VRAM recommended)
 - [Token Optimization Guide](docs/TOKEN_OPTIMIZATION.md) - **CRITICAL!** Save 50% on Copilot quota
 - [Local Coding Assistant](docs/CODING_ASSISTANT.md) - Free local code generation with Ollama
 - [Ollama Tunnel Setup](docs/OLLAMA_TUNNEL_SETUP.md) - Free AI PR reviews with local models
