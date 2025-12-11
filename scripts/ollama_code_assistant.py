@@ -329,6 +329,134 @@ Provide output in JSON format:
             return {"raw_analysis": response}
 
 
+def check_model_updates():
+    """Check installed models for available updates"""
+    import re
+
+    logger.info("Checking for model updates...")
+
+    # Get list of installed models
+    result = subprocess.run(["ollama", "list"], capture_output=True, text=True, check=False)
+
+    if result.returncode != 0:
+        logger.error("Failed to get model list")
+        return
+
+    lines = result.stdout.strip().split("\n")
+    if len(lines) < 2:
+        logger.info("No models installed")
+        return
+
+    print("\n" + "=" * 80)
+    print("Ollama Model Update Check")
+    print("=" * 80 + "\n")
+
+    # Parse model list (skip header)
+    models = lines[1:]
+
+    updates_available = []
+    up_to_date = []
+    needs_check = []
+
+    for line in models:
+        parts = line.split()
+        if len(parts) < 4:
+            continue
+
+        name = parts[0]
+        # Modified time is typically last 2-3 parts (e.g., "3 weeks ago" or "2 months ago")
+        modified = " ".join(parts[-3:]) if len(parts) > 5 else " ".join(parts[-2:])
+
+        # Parse age to determine status
+        status = "❓ Unknown"
+        recommendation = "Check manually"
+
+        if "second" in modified or "minute" in modified or "hour" in modified:
+            status = "✅ Just updated"
+            recommendation = "Up to date"
+            up_to_date.append(name)
+        elif "day" in modified:
+            # Extract number of days
+            days_match = re.search(r"(\d+)\s+day", modified)
+            if days_match:
+                days = int(days_match.group(1))
+                if days < 7:
+                    status = "✅ Recent"
+                    recommendation = "Up to date"
+                    up_to_date.append(name)
+                elif days < 30:
+                    status = "⚠️ Moderate"
+                    recommendation = "Consider checking"
+                    needs_check.append(name)
+                else:
+                    status = "⚠️ Old"
+                    recommendation = "Check for updates"
+                    needs_check.append(name)
+        elif "week" in modified:
+            weeks_match = re.search(r"(\d+)\s+week", modified)
+            if weeks_match:
+                weeks = int(weeks_match.group(1))
+                if weeks < 2:
+                    status = "✅ Recent"
+                    recommendation = "Up to date"
+                    up_to_date.append(name)
+                elif weeks < 8:
+                    status = "⚠️ Moderate"
+                    recommendation = "Check for updates"
+                    needs_check.append(name)
+                else:
+                    status = "🔴 Old"
+                    recommendation = "Update recommended"
+                    updates_available.append(name)
+        elif "month" in modified:
+            months_match = re.search(r"(\d+)\s+month", modified)
+            if months_match:
+                months = int(months_match.group(1))
+                if months < 2:
+                    status = "⚠️ Moderate"
+                    recommendation = "Check for updates"
+                    needs_check.append(name)
+                else:
+                    status = "🔴 Old"
+                    recommendation = "Update recommended"
+                    updates_available.append(name)
+        elif "year" in modified:
+            status = "🔴 Very old"
+            recommendation = "Update strongly recommended"
+            updates_available.append(name)
+
+        print(f"{status:15} {name:35} {modified:20} → {recommendation}")
+
+    # Summary
+    print("\n" + "=" * 80)
+    print("Summary")
+    print("=" * 80)
+    print(f"✅ Up to date: {len(up_to_date)}")
+    print(f"⚠️ Consider checking: {len(needs_check)}")
+    print(f"🔴 Updates recommended: {len(updates_available)}")
+
+    # Update commands
+    if updates_available:
+        print("\n" + "=" * 80)
+        print("To update models:")
+        print("=" * 80)
+        for model in updates_available:
+            print(f"ollama pull {model}")
+
+    if needs_check:
+        print("\n" + "=" * 80)
+        print("To check for updates:")
+        print("=" * 80)
+        for model in needs_check:
+            print(f"ollama pull {model}  # Will only download if newer version exists")
+
+    print("\n" + "=" * 80)
+    print("Note: 'ollama pull' only downloads if a newer version is available.")
+    print("Ollama models don't have explicit version numbers, so age is the indicator.")
+    print("Check https://ollama.ai/library for model release notes.")
+    print("=" * 80 + "\n")
+
+
 def recommend_model(task: str, available_vram_gb: float = 12.0) -> str:
     """Recommend best model for task and hardware"""
     task_lower = task.lower()
@@ -379,9 +507,11 @@ Examples:
     )
 
     parser.add_argument(
-        "command", choices=["review", "docstring", "test", "refactor", "recommend"], help="Command to execute"
+        "command",
+        choices=["review", "docstring", "test", "refactor", "recommend", "check-updates"],
+        help="Command to execute",
     )
-    parser.add_argument("target", help="File or directory to process")
+    parser.add_argument("target", nargs="?", help="File or directory to process (not needed for check-updates)")
     parser.add_argument(
         "-m", "--model", default="qwen2.5-coder:32b", help="Ollama model to use (default: qwen2.5-coder:32b)"
     )
@@ -391,6 +521,11 @@ Examples:
     parser.add_argument("--format", choices=["json", "text"], default="text", help="Output format")
 
     args = parser.parse_args()
+
+    # Handle check-updates command
+    if args.command == "check-updates":
+        check_model_updates()
+        return
 
     # Handle recommend command separately
     if args.command == "recommend":
