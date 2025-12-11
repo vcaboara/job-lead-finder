@@ -329,10 +329,93 @@ Provide output in JSON format:
             return {"raw_analysis": response}
 
 
-def check_model_updates():
-    """Check installed models for available updates"""
+@dataclass
+class ModelUpdateStatus:
+    """Status of a model's update state"""
+
+    status_icon: str
+    recommendation: str
+    category: str  # 'up_to_date', 'needs_check', 'updates_available'
+
+
+def _parse_model_age(modified: str) -> ModelUpdateStatus:
+    """
+    Parse model modification time and determine update status.
+
+    Args:
+        modified: Time string like "3 weeks ago" or "2 months ago"
+
+    Returns:
+        ModelUpdateStatus with status icon, recommendation, and category
+    """
     import re
 
+    # Define age thresholds and their corresponding statuses
+    # Format: (keywords, pattern, [(threshold_value, status_icon, recommendation, category)])
+    age_rules = [
+        (
+            ["second", "minute", "hour"],
+            None,
+            [(float("inf"), "✅ Just updated", "Up to date", "up_to_date")],
+        ),
+        (
+            ["day"],
+            r"(\d+)\s+day",
+            [
+                (7, "✅ Recent", "Up to date", "up_to_date"),
+                (30, "⚠️ Moderate", "Consider checking", "needs_check"),
+                (float("inf"), "⚠️ Old", "Check for updates", "needs_check"),
+            ],
+        ),
+        (
+            ["week"],
+            r"(\d+)\s+week",
+            [
+                (2, "✅ Recent", "Up to date", "up_to_date"),
+                (8, "⚠️ Moderate", "Check for updates", "needs_check"),
+                (float("inf"), "🔴 Old", "Update recommended", "updates_available"),
+            ],
+        ),
+        (
+            ["month"],
+            r"(\d+)\s+month",
+            [
+                (2, "⚠️ Moderate", "Check for updates", "needs_check"),
+                (float("inf"), "🔴 Old", "Update recommended", "updates_available"),
+            ],
+        ),
+        (
+            ["year"],
+            None,
+            [(float("inf"), "🔴 Very old", "Update strongly recommended", "updates_available")],
+        ),
+    ]
+
+    # Check each age rule
+    for keywords, pattern, thresholds in age_rules:
+        if not any(keyword in modified for keyword in keywords):
+            continue
+
+        # Extract numeric value if pattern exists
+        value = 1
+        if pattern:
+            match = re.search(pattern, modified)
+            if match:
+                value = int(match.group(1))
+            else:
+                continue  # Pattern expected but not found
+
+        # Find matching threshold
+        for threshold, icon, rec, cat in thresholds:
+            if value < threshold:
+                return ModelUpdateStatus(icon, rec, cat)
+
+    # Default if no rule matched
+    return ModelUpdateStatus("❓ Unknown", "Check manually", "needs_check")
+
+
+def check_model_updates():
+    """Check installed models for available updates"""
     logger.info("Checking for model updates...")
 
     # Get list of installed models
@@ -347,6 +430,7 @@ def check_model_updates():
         logger.info("No models installed")
         return
 
+    # User-facing output goes to stdout
     print("\n" + "=" * 80)
     print("Ollama Model Update Check")
     print("=" * 80 + "\n")
@@ -354,6 +438,7 @@ def check_model_updates():
     # Parse model list (skip header)
     models = lines[1:]
 
+    # Categorize models by status
     updates_available = []
     up_to_date = []
     needs_check = []
@@ -367,65 +452,19 @@ def check_model_updates():
         # Modified time is typically last 2-3 parts (e.g., "3 weeks ago" or "2 months ago")
         modified = " ".join(parts[-3:]) if len(parts) > 5 else " ".join(parts[-2:])
 
-        # Parse age to determine status
-        status = "❓ Unknown"
-        recommendation = "Check manually"
+        # Determine status using extracted function
+        status = _parse_model_age(modified)
 
-        if "second" in modified or "minute" in modified or "hour" in modified:
-            status = "✅ Just updated"
-            recommendation = "Up to date"
+        # Print status line to stdout for user
+        print(f"{status.status_icon:15} {name:35} {modified:20} → {status.recommendation}")
+
+        # Categorize model
+        if status.category == "up_to_date":
             up_to_date.append(name)
-        elif "day" in modified:
-            # Extract number of days
-            days_match = re.search(r"(\d+)\s+day", modified)
-            if days_match:
-                days = int(days_match.group(1))
-                if days < 7:
-                    status = "✅ Recent"
-                    recommendation = "Up to date"
-                    up_to_date.append(name)
-                elif days < 30:
-                    status = "⚠️ Moderate"
-                    recommendation = "Consider checking"
-                    needs_check.append(name)
-                else:
-                    status = "⚠️ Old"
-                    recommendation = "Check for updates"
-                    needs_check.append(name)
-        elif "week" in modified:
-            weeks_match = re.search(r"(\d+)\s+week", modified)
-            if weeks_match:
-                weeks = int(weeks_match.group(1))
-                if weeks < 2:
-                    status = "✅ Recent"
-                    recommendation = "Up to date"
-                    up_to_date.append(name)
-                elif weeks < 8:
-                    status = "⚠️ Moderate"
-                    recommendation = "Check for updates"
-                    needs_check.append(name)
-                else:
-                    status = "🔴 Old"
-                    recommendation = "Update recommended"
-                    updates_available.append(name)
-        elif "month" in modified:
-            months_match = re.search(r"(\d+)\s+month", modified)
-            if months_match:
-                months = int(months_match.group(1))
-                if months < 2:
-                    status = "⚠️ Moderate"
-                    recommendation = "Check for updates"
-                    needs_check.append(name)
-                else:
-                    status = "🔴 Old"
-                    recommendation = "Update recommended"
-                    updates_available.append(name)
-        elif "year" in modified:
-            status = "🔴 Very old"
-            recommendation = "Update strongly recommended"
+        elif status.category == "needs_check":
+            needs_check.append(name)
+        elif status.category == "updates_available":
             updates_available.append(name)
-
-        print(f"{status:15} {name:35} {modified:20} → {recommendation}")
 
     # Summary
     print("\n" + "=" * 80)
@@ -467,13 +506,13 @@ def recommend_model(task: str, available_vram_gb: float = 12.0) -> str:
     }
 
     if not suitable_models:
-        logger.warning(f"No models fit in {available_vram_gb}GB VRAM")
+        logger.warning("No models fit in %sGB VRAM", available_vram_gb)
         return "qwen2.5-coder:7b"  # Fallback to smaller model
 
     # Match task to best model
     for name, config in suitable_models.items():
         if any(keyword in task_lower for keyword in config.best_for.split(",")):
-            logger.info(f"Recommended model for '{task}': {name}")
+            logger.info("Recommended model for '%s': %s", task, name)
             return name
 
     # Default to qwen2.5-coder
