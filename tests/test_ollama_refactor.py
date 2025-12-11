@@ -60,11 +60,8 @@ def test_parse_model_age_returns_correct_structure():
     """Verify _parse_model_age returns ModelUpdateStatus with all required fields"""
     result = _parse_model_age("1 week ago")
     assert hasattr(result, "status_icon"), "Missing status_icon attribute"
-    assert hasattr(
-        result, "recommendation"), "Missing recommendation attribute"
+    assert hasattr(result, "recommendation"), "Missing recommendation attribute"
     assert hasattr(result, "category"), "Missing category attribute"
-    assert isinstance(result.status_icon,
-                      str), "status_icon should be a string"
-    assert isinstance(result.recommendation,
-                      str), "recommendation should be a string"
+    assert isinstance(result.status_icon, str), "status_icon should be a string"
+    assert isinstance(result.recommendation, str), "recommendation should be a string"
     assert isinstance(result.category, str), "category should be a string"

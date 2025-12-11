@@ -18,8 +18,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-logging.basicConfig(level=logging.INFO,
-                    format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -62,8 +61,7 @@ class OllamaAssistant:
     def _verify_ollama_installed(self):
         """Check if Ollama is installed and running"""
         try:
-            result = subprocess.run(
-                ["ollama", "list"], capture_output=True, text=True, check=False)
+            result = subprocess.run(["ollama", "list"], capture_output=True, text=True, check=False)
             if result.returncode != 0:
                 logger.error("Ollama not installed or not running")
                 logger.error("Install: https://ollama.ai/download")
@@ -80,8 +78,7 @@ class OllamaAssistant:
     def _pull_model(self):
         """Pull the specified model from Ollama registry"""
         logger.info(f"Pulling {self.model}... This may take several minutes")
-        result = subprocess.run(
-            ["ollama", "pull", self.model], capture_output=True, text=True)
+        result = subprocess.run(["ollama", "pull", self.model], capture_output=True, text=True)
         if result.returncode != 0:
             logger.error(f"Failed to pull model: {result.stderr}")
             sys.exit(1)
@@ -101,8 +98,7 @@ class OllamaAssistant:
             cmd = ["ollama", "run", self.model, full_prompt]
 
         try:
-            result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=300)  # 5 min timeout
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)  # 5 min timeout
             if result.returncode != 0:
                 logger.error(f"Ollama query failed: {result.stderr}")
                 return ""
@@ -222,8 +218,7 @@ Return ONLY the complete updated code with docstrings added."""
                 documented_code = self.generate_docstrings(file_path)
 
                 # Save to new file
-                output_path = file_path.with_stem(
-                    file_path.stem + output_suffix)
+                output_path = file_path.with_stem(file_path.stem + output_suffix)
                 with open(output_path, "w", encoding="utf-8") as f:
                     f.write(documented_code)
 
@@ -392,8 +387,7 @@ def _parse_model_age(modified: str) -> ModelUpdateStatus:
         (
             ["year"],
             None,
-            [(float("inf"), "🔴 Very old",
-              "Update strongly recommended", "updates_available")],
+            [(float("inf"), "🔴 Very old", "Update strongly recommended", "updates_available")],
         ),
     ]
 
@@ -425,8 +419,7 @@ def check_model_updates():
     logger.info("Checking for model updates...")
 
     # Get list of installed models
-    result = subprocess.run(
-        ["ollama", "list"], capture_output=True, text=True, check=False)
+    result = subprocess.run(["ollama", "list"], capture_output=True, text=True, check=False)
 
     if result.returncode != 0:
         logger.error("Failed to get model list")
@@ -457,15 +450,13 @@ def check_model_updates():
 
         name = parts[0]
         # Modified time is typically last 2-3 parts (e.g., "3 weeks ago" or "2 months ago")
-        modified = " ".join(
-            parts[-3:]) if len(parts) > 5 else " ".join(parts[-2:])
+        modified = " ".join(parts[-3:]) if len(parts) > 5 else " ".join(parts[-2:])
 
         # Determine status using extracted function
         status = _parse_model_age(modified)
 
         # Print status line to stdout for user
-        print(
-            f"{status.status_icon:15} {name:35} {modified:20} → {status.recommendation}")
+        print(f"{status.status_icon:15} {name:35} {modified:20} → {status.recommendation}")
 
         # Categorize model
         if status.category == "up_to_date":
@@ -496,8 +487,7 @@ def check_model_updates():
         print("To check for updates:")
         print("=" * 80)
         for model in needs_check:
-            print(
-                f"ollama pull {model}  # Will only download if newer version exists")
+            print(f"ollama pull {model}  # Will only download if newer version exists")
 
     print("\n" + "=" * 80)
     print("Note: 'ollama pull' only downloads if a newer version is available.")
@@ -557,23 +547,17 @@ Examples:
 
     parser.add_argument(
         "command",
-        choices=["review", "docstring", "test",
-                 "refactor", "recommend", "check-updates"],
+        choices=["review", "docstring", "test", "refactor", "recommend", "check-updates"],
         help="Command to execute",
     )
-    parser.add_argument(
-        "target", nargs="?", help="File or directory to process (not needed for check-updates)")
+    parser.add_argument("target", nargs="?", help="File or directory to process (not needed for check-updates)")
     parser.add_argument(
         "-m", "--model", default="qwen2.5-coder:32b", help="Ollama model to use (default: qwen2.5-coder:32b)"
     )
-    parser.add_argument(
-        "-o", "--output", help="Output directory for generated files")
-    parser.add_argument("--batch", action="store_true",
-                        help="Process all files in directory")
-    parser.add_argument("--vram", type=float, default=12.0,
-                        help="Available VRAM in GB (default: 12)")
-    parser.add_argument(
-        "--format", choices=["json", "text"], default="text", help="Output format")
+    parser.add_argument("-o", "--output", help="Output directory for generated files")
+    parser.add_argument("--batch", action="store_true", help="Process all files in directory")
+    parser.add_argument("--vram", type=float, default=12.0, help="Available VRAM in GB (default: 12)")
+    parser.add_argument("--format", choices=["json", "text"], default="text", help="Output format")
 
     args = parser.parse_args()
 
@@ -600,12 +584,10 @@ Examples:
 
         if args.batch and target_path.is_dir():
             results = reviewer.batch_review(target_path)
-            output = json.dumps(
-                results, indent=2) if args.format == "json" else str(results)
+            output = json.dumps(results, indent=2) if args.format == "json" else str(results)
         else:
             results = reviewer.review_file(target_path)
-            output = json.dumps(
-                results, indent=2) if args.format == "json" else str(results)
+            output = json.dumps(results, indent=2) if args.format == "json" else str(results)
 
         print(output)
 
@@ -629,8 +611,7 @@ Examples:
         analyzer = RefactoringAnalyzer(assistant)
         results = analyzer.analyze_file(target_path)
 
-        output = json.dumps(
-            results, indent=2) if args.format == "json" else str(results)
+        output = json.dumps(results, indent=2) if args.format == "json" else str(results)
         print(output)
 
 

@@ -63,13 +63,11 @@ class TestGeminiCliMain:
                     gemini_cli.main()
 
                     # Verify the Client was called with the API key from environment
-                    mock_genai.Client.assert_called_once_with(
-                        api_key="test-key")
+                    mock_genai.Client.assert_called_once_with(api_key="test-key")
 
     def test_cli_accepts_key_argument(self):
         """Test CLI accepts --key argument."""
-        test_args = ["gemini_cli.py", "--prompt",
-                     "test prompt", "--key", "provided-key"]
+        test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "provided-key"]
 
         with patch("sys.argv", test_args):
             # Mock the genai module
@@ -95,8 +93,7 @@ class TestGeminiCliMain:
                 gemini_cli.main()
 
                 # Verify that Client was called with the provided key
-                mock_genai.Client.assert_called_once_with(
-                    api_key="provided-key")
+                mock_genai.Client.assert_called_once_with(api_key="provided-key")
 
     def test_cli_uses_google_api_key_fallback(self):
         """Test CLI falls back to GOOGLE_API_KEY if GEMINI_API_KEY not set."""
@@ -126,13 +123,11 @@ class TestGeminiCliMain:
                     gemini_cli.main()
 
                     # Verify Client was called with the fallback key
-                    mock_genai.Client.assert_called_once_with(
-                        api_key="fallback-key")
+                    mock_genai.Client.assert_called_once_with(api_key="fallback-key")
 
     def test_cli_model_default(self):
         """Test CLI uses default model if not specified."""
-        test_args = ["gemini_cli.py", "--prompt",
-                     "test prompt", "--key", "test-key"]
+        test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key"]
 
         with patch("sys.argv", test_args):
             import argparse
@@ -150,8 +145,7 @@ class TestGeminiCliMain:
 
     def test_cli_custom_model(self):
         """Test CLI accepts custom model."""
-        test_args = ["gemini_cli.py", "--prompt", "test prompt",
-                     "--model", "custom-model", "--key", "test-key"]
+        test_args = ["gemini_cli.py", "--prompt", "test prompt", "--model", "custom-model", "--key", "test-key"]
 
         with patch("sys.argv", test_args):
             import argparse
@@ -166,8 +160,7 @@ class TestGeminiCliMain:
 
     def test_cli_no_tool_flag(self):
         """Test CLI accepts --no-tool flag."""
-        test_args = ["gemini_cli.py", "--prompt",
-                     "test prompt", "--no-tool", "--key", "test-key"]
+        test_args = ["gemini_cli.py", "--prompt", "test prompt", "--no-tool", "--key", "test-key"]
 
         with patch("sys.argv", test_args):
             import argparse
@@ -182,8 +175,7 @@ class TestGeminiCliMain:
 
     def test_cli_raw_file_argument(self):
         """Test CLI accepts --raw-file argument."""
-        test_args = ["gemini_cli.py", "--prompt", "test",
-                     "--raw-file", "output.txt", "--key", "test-key"]
+        test_args = ["gemini_cli.py", "--prompt", "test", "--raw-file", "output.txt", "--key", "test-key"]
 
         with patch("sys.argv", test_args):
             import argparse
@@ -198,8 +190,7 @@ class TestGeminiCliMain:
 
     def test_cli_exits_if_no_sdk_installed(self):
         """Test CLI exits gracefully if no SDK is installed."""
-        test_args = ["gemini_cli.py", "--prompt",
-                     "test prompt", "--key", "test-key"]
+        test_args = ["gemini_cli.py", "--prompt", "test prompt", "--key", "test-key"]
 
         with patch("sys.argv", test_args):
             # Mock both SDK imports to fail
@@ -231,8 +222,7 @@ class TestGeminiCliArguments:
 
     def test_model_short_form(self):
         """Test -m short form for model."""
-        test_args = ["gemini_cli.py", "--prompt", "test",
-                     "-m", "custom-model", "--key", "test-key"]
+        test_args = ["gemini_cli.py", "--prompt", "test", "-m", "custom-model", "--key", "test-key"]
         import argparse
 
         parser = argparse.ArgumentParser()
@@ -336,8 +326,7 @@ class TestGeminiCliOutput:
             tmp_path = tmp_file.name
 
         try:
-            test_args = ["gemini_cli.py", "--prompt",
-                         "test", "--raw-file", tmp_path]
+            test_args = ["gemini_cli.py", "--prompt", "test", "--raw-file", tmp_path]
 
             with patch("sys.argv", test_args):
                 with patch.dict(os.environ, {"GEMINI_API_KEY": "test-key"}, clear=True):
