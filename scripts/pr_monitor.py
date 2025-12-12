@@ -25,7 +25,12 @@ class PRMonitor:
     """Monitor PRs for status changes."""
 
     def __init__(
-        self, github_token: str, repo_owner: str, repo_name: str, check_interval: int = 300  # 5 minutes default
+        self,
+        github_token: str,
+        repo_owner: str,
+        repo_name: str,
+        check_interval: int = 300,  # 5 minutes default
+        slack_webhook_url: str = None,
     ):
         """
         Initialize PR monitor.
@@ -35,11 +40,13 @@ class PRMonitor:
             repo_owner: Repository owner
             repo_name: Repository name
             check_interval: Seconds between checks
+            slack_webhook_url: Optional Slack webhook URL for notifications
         """
         self.github_token = github_token
         self.repo_owner = repo_owner
         self.repo_name = repo_name
         self.check_interval = check_interval
+        self.slack_webhook_url = slack_webhook_url
         self.headers = {
             "Authorization": f"Bearer {github_token}",
             "Accept": "application/vnd.github+json",
@@ -160,13 +167,50 @@ class PRMonitor:
 
         return notifications
 
-    def send_notification(self, message: str):
+    def send_notification(self, message: str, pr_data: dict = None):
         """
-        Send notification (extend this to use Slack/Discord/etc).
+        Send notification via Slack webhook (if configured) or console.
 
-        Currently just logs to console.
+        Args:
+            message: Notification message text
+            pr_data: Optional PR metadata for rich formatting
         """
         logger.info(f"📢 {message}")
+
+        if self.slack_webhook_url:
+            try:
+                # Build rich Slack message with blocks
+                payload = {"text": message}
+
+                if pr_data:
+                    # Add formatted blocks for better Slack presentation
+                    blocks = [
+                        {
+                            "type": "section",
+                            "text": {"type": "mrkdwn", "text": message},
+                        },
+                        {
+                            "type": "context",
+                            "elements": [
+                                {
+                                    "type": "mrkdwn",
+                                    "text": (
+                                        f"<{pr_data.get('html_url', '')}|View PR #{pr_data.get('number', '')}> • "
+                                        f"{pr_data.get('title', '')}"
+                                    ),
+                                }
+                            ],
+                        },
+                    ]
+                    payload["blocks"] = blocks
+
+                response = httpx.post(self.slack_webhook_url, json=payload, timeout=10)
+                response.raise_for_status()
+                logger.debug(f"Slack notification sent: {response.status_code}")
+
+            except Exception as e:
+                logger.warning(f"Failed to send Slack notification: {e}")
+                # Don't fail the whole process if Slack is down
 
     def run(self):
         """Main monitoring loop."""
@@ -221,12 +265,17 @@ def main():
     repo_owner = os.getenv("REPO_OWNER", "vcaboara")
     repo_name = os.getenv("REPO_NAME", "job-lead-finder")
     check_interval = int(os.getenv("CHECK_INTERVAL", "300"))  # 5 minutes
+    slack_webhook_url = os.getenv("SLACK_WEBHOOK_URL")
 
     if not github_token:
         raise ValueError("GITHUB_TOKEN environment variable required")
 
     monitor = PRMonitor(
-        github_token=github_token, repo_owner=repo_owner, repo_name=repo_name, check_interval=check_interval
+        github_token=github_token,
+        repo_owner=repo_owner,
+        repo_name=repo_name,
+        check_interval=check_interval,
+        slack_webhook_url=slack_webhook_url,
     )
 
     monitor.run()

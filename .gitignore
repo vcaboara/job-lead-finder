@@ -159,6 +159,10 @@ venv.bak/
 # macOS
 .DS_Store
 
+# Debian/Linux packages (should be installed via package manager, not committed)
+*.deb
+*.rpm
+
 # Docker
 docker-compose.override.yml
 
