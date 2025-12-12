@@ -1,0 +1,5034 @@
+
+# 2025-12-12 20:56:19.868144
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
+
+# 2025-12-12 20:56:19.869274
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
+
+# 2025-12-12 20:57:54.002128
++# TODO: Brave Search MCP Integration
++
++**Priority**: P2 (Enhancement)
++**Complexity**: Low
++**Estimated Time**: 1-2 hours
++
++## Context
++
++User discovered Brave Search API Free tier (2,000 requests/month):
++- Screenshot: api.dashboard.search.brave.com/subscriptions
++- Free tier includes: Web search, Goggles, News cluster, Videos, Images
++- MCP server available for integration
++
++## Tasks
++
++### 1. Documentation Updates
++- [ ] Add Brave Search to `docs/PROVIDERS.md`
++  - Free tier details (2k req/month, $0.00)
++  - Features: Web search, News, Videos, Images
++  - API key setup instructions
++  - Link to Brave Search API dashboard
++
++- [ ] Update `docs/MCP_SERVICES.md` (if exists) or create
++  - Brave Search MCP integration guide
++  - Configuration example
++  - Usage patterns for job search
++
++### 2. Code Integration (Optional - Future Enhancement)
++- [ ] Add Brave Search as discovery provider option
++  - Similar to existing MCP providers
++  - Use for company/job discovery
++  - Potentially better than Google for fresh results
++
++- [ ] Add to `src/app/mcp_providers.py` or separate module
++  ```python
++  class BraveSearchMCP(MCPProvider):
++      """Brave Search provider via MCP."""
++      # Free tier: 2k requests/month
++      # Better privacy, no tracking
++      # Good for company discovery
++  ```
++
++### 3. Configuration
++- [ ] Add to `.env.example`:
++  ```
++  BRAVE_SEARCH_API_KEY=your_brave_api_key_here
++  ```
++
++- [ ] Add to `docker-compose.yml` MCP services section:
++  ```yaml
++  brave-search-mcp:
++    # Configuration for Brave Search MCP
++  ```
++
++## Benefits
++
++1. **Free tier**: 2k requests/month (generous for job search)
++2. **Privacy**: No Google tracking
++3. **Fresh results**: Good for discovering new companies/jobs
++4. **MCP integration**: Easy to add via existing infrastructure
++
++## Related
++
++- PR #98: MCP services setup (Brave Search + Fetch)
++- `docs/PROVIDERS.md`: Provider documentation
++- `.github/copilot-instructions.md`: TODOs section
++
++## References
++
++- Brave Search API: https://api.dashboard.search.brave.com/
++- Free tier: 1 request/second, 2,000 requests/month
++- Available features: Web search, Goggles, News, Videos, Images
++
+
+# 2025-12-12 20:57:54.003019
++# TODO: Brave Search MCP Integration
++
++**Priority**: P2 (Enhancement)
++**Complexity**: Low
++**Estimated Time**: 1-2 hours
++
++## Context
++
++User discovered Brave Search API Free tier (2,000 requests/month):
++- Screenshot: api.dashboard.search.brave.com/subscriptions
++- Free tier includes: Web search, Goggles, News cluster, Videos, Images
++- MCP server available for integration
++
++## Tasks
++
++### 1. Documentation Updates
++- [ ] Add Brave Search to `docs/PROVIDERS.md`
++  - Free tier details (2k req/month, $0.00)
++  - Features: Web search, News, Videos, Images
++  - API key setup instructions
++  - Link to Brave Search API dashboard
++
++- [ ] Update `docs/MCP_SERVICES.md` (if exists) or create
++  - Brave Search MCP integration guide
++  - Configuration example
++  - Usage patterns for job search
++
++### 2. Code Integration (Optional - Future Enhancement)
++- [ ] Add Brave Search as discovery provider option
++  - Similar to existing MCP providers
++  - Use for company/job discovery
++  - Potentially better than Google for fresh results
++
++- [ ] Add to `src/app/mcp_providers.py` or separate module
++  ```python
++  class BraveSearchMCP(MCPProvider):
++      """Brave Search provider via MCP."""
++      # Free tier: 2k requests/month
++      # Better privacy, no tracking
++      # Good for company discovery
++  ```
++
++### 3. Configuration
++- [ ] Add to `.env.example`:
++  ```
++  BRAVE_SEARCH_API_KEY=your_brave_api_key_here
++  ```
++
++- [ ] Add to `docker-compose.yml` MCP services section:
++  ```yaml
++  brave-search-mcp:
++    # Configuration for Brave Search MCP
++  ```
++
++## Benefits
++
++1. **Free tier**: 2k requests/month (generous for job search)
++2. **Privacy**: No Google tracking
++3. **Fresh results**: Good for discovering new companies/jobs
++4. **MCP integration**: Easy to add via existing infrastructure
++
++## Related
++
++- PR #98: MCP services setup (Brave Search + Fetch)
++- `docs/PROVIDERS.md`: Provider documentation
++- `.github/copilot-instructions.md`: TODOs section
++
++## References
++
++- Brave Search API: https://api.dashboard.search.brave.com/
++- Free tier: 1 request/second, 2,000 requests/month
++- Available features: Web search, Goggles, News, Videos, Images
++
+
+# 2025-12-12 20:59:47.473167
++# TODO: Upgrade to Latest Gemini Models
++
++## Current Status
++- **Using:** `gemini-2.0-flash-exp` (now "Previous generation")
++- **Available:** Gemini 3 Pro, 2.5 Flash, 2.5 Flash-Lite, 2.5 Pro
++- **Source:** https://ai.google.dev/gemini-api/docs/models (Updated Dec 10, 2025)
++
++## Recommended Upgrades
++
++### Option 1: Gemini 2.5 Flash (RECOMMENDED)
++- **Model:** `gemini-2.5-flash`
++- **Why:** Best price-performance, designed for agentic use cases
++- **Use for:** Current AI PR reviews, LLM API tool, general tasks
++- **Cost:** Lower than 2.0 Flash
++- **Speed:** Similar to 2.0 Flash
++
++### Option 2: Gemini 3 Pro
++- **Model:** `gemini-3-pro-preview`
++- **Why:** Most intelligent, best for complex reasoning
++- **Use for:** Architecture design, complex debugging, planning
++- **Cost:** Higher (premium tier)
++- **Speed:** Slower but more capable
++
++### Option 3: Gemini 2.5 Flash-Lite
++- **Model:** `gemini-2.5-flash-lite`
++- **Why:** Fastest, most cost-efficient
++- **Use for:** High-volume simple tasks, quick checks
++- **Cost:** Lowest
++- **Speed:** Fastest
++
++## Implementation Plan
++
++### Phase 1: Update Default Models (15 min)
++- [ ] Update `tools/llm_api.py`: Change default from `gemini-2.0-flash-exp` → `gemini-2.5-flash`
++- [ ] Update `.github/workflows/ai-pr-review.yml`: Use `gemini-2.5-flash`
++- [ ] Update docs mentioning Gemini 2.0 Flash → 2.5 Flash
++
++### Phase 2: Test New Models (30 min)
++- [ ] Test `gemini-2.5-flash` with LLM API tool
++- [ ] Test AI PR review workflow with new model
++- [ ] Compare response quality and speed
++- [ ] Monitor API costs
++
++### Phase 3: Advanced Usage (Optional - 1 hour)
++- [ ] Add Gemini 3 Pro option for complex tasks
++- [ ] Use 2.5 Flash-Lite for high-volume operations
++- [ ] Create model selection strategy based on task complexity
++- [ ] Document model usage guidelines
++
++## Files to Update
++
++```
++tools/llm_api.py (line 170)
++.github/workflows/ai-pr-review.yml (line 197)
++docs/COPILOT_WORKFLOW.md (mentions Gemini Flash 2.0)
++docs/OLLAMA_TUNNEL_SETUP.md (mentions Gemini Flash 2.0)
++docs/TOKEN_OPTIMIZATION.md (mentions Gemini Flash 2.0)
++```
++
++## Benefits
++✅ Latest model capabilities (thinking, agentic features)
++✅ Better price-performance
++✅ Future-proof (2.0 Flash is now "previous generation")
++✅ Access to Gemini 3 Pro for advanced tasks
++
++## Risks
++⚠️ API changes (test thoroughly)
++⚠️ Pricing changes (monitor costs)
++⚠️ Different response formats (validate outputs)
++
++## Decision
++**UPGRADE TO 2.5 FLASH** - It's designed for exactly our use case (agentic, large scale processing)
++
+
+# 2025-12-12 20:59:47.474145
++# TODO: Upgrade to Latest Gemini Models
++
++## Current Status
++- **Using:** `gemini-2.0-flash-exp` (now "Previous generation")
++- **Available:** Gemini 3 Pro, 2.5 Flash, 2.5 Flash-Lite, 2.5 Pro
++- **Source:** https://ai.google.dev/gemini-api/docs/models (Updated Dec 10, 2025)
++
++## Recommended Upgrades
++
++### Option 1: Gemini 2.5 Flash (RECOMMENDED)
++- **Model:** `gemini-2.5-flash`
++- **Why:** Best price-performance, designed for agentic use cases
++- **Use for:** Current AI PR reviews, LLM API tool, general tasks
++- **Cost:** Lower than 2.0 Flash
++- **Speed:** Similar to 2.0 Flash
++
++### Option 2: Gemini 3 Pro
++- **Model:** `gemini-3-pro-preview`
++- **Why:** Most intelligent, best for complex reasoning
++- **Use for:** Architecture design, complex debugging, planning
++- **Cost:** Higher (premium tier)
++- **Speed:** Slower but more capable
++
++### Option 3: Gemini 2.5 Flash-Lite
++- **Model:** `gemini-2.5-flash-lite`
++- **Why:** Fastest, most cost-efficient
++- **Use for:** High-volume simple tasks, quick checks
++- **Cost:** Lowest
++- **Speed:** Fastest
++
++## Implementation Plan
++
++### Phase 1: Update Default Models (15 min)
++- [ ] Update `tools/llm_api.py`: Change default from `gemini-2.0-flash-exp` → `gemini-2.5-flash`
++- [ ] Update `.github/workflows/ai-pr-review.yml`: Use `gemini-2.5-flash`
++- [ ] Update docs mentioning Gemini 2.0 Flash → 2.5 Flash
++
++### Phase 2: Test New Models (30 min)
++- [ ] Test `gemini-2.5-flash` with LLM API tool
++- [ ] Test AI PR review workflow with new model
++- [ ] Compare response quality and speed
++- [ ] Monitor API costs
++
++### Phase 3: Advanced Usage (Optional - 1 hour)
++- [ ] Add Gemini 3 Pro option for complex tasks
++- [ ] Use 2.5 Flash-Lite for high-volume operations
++- [ ] Create model selection strategy based on task complexity
++- [ ] Document model usage guidelines
++
++## Files to Update
++
++```
++tools/llm_api.py (line 170)
++.github/workflows/ai-pr-review.yml (line 197)
++docs/COPILOT_WORKFLOW.md (mentions Gemini Flash 2.0)
++docs/OLLAMA_TUNNEL_SETUP.md (mentions Gemini Flash 2.0)
++docs/TOKEN_OPTIMIZATION.md (mentions Gemini Flash 2.0)
++```
++
++## Benefits
++✅ Latest model capabilities (thinking, agentic features)
++✅ Better price-performance
++✅ Future-proof (2.0 Flash is now "previous generation")
++✅ Access to Gemini 3 Pro for advanced tasks
++
++## Risks
++⚠️ API changes (test thoroughly)
++⚠️ Pricing changes (monitor costs)
++⚠️ Different response formats (validate outputs)
++
++## Decision
++**UPGRADE TO 2.5 FLASH** - It's designed for exactly our use case (agentic, large scale processing)
++
+
+# 2025-12-12 21:00:46.592442
++# TODO: Upgrade to Latest Gemini Models
++
++## Current Status
++- **Using:** `gemini-2.0-flash-exp` (now "Previous generation")
++- **Available:** Gemini 3 Pro, 2.5 Flash, 2.5 Flash-Lite, 2.5 Pro
++- **Source:** https://ai.google.dev/gemini-api/docs/models (Updated Dec 10, 2025)
++
++## Recommended Upgrades
++
++### Option 1: Gemini 2.5 Flash (RECOMMENDED)
++- **Model:** `gemini-2.5-flash`
++- **Why:** Best price-performance, designed for agentic use cases
++- **Use for:** Current AI PR reviews, LLM API tool, general tasks
++- **Cost:** Lower than 2.0 Flash
++- **Speed:** Similar to 2.0 Flash
++
++### Option 2: Gemini 3 Pro
++- **Model:** `gemini-3-pro-preview`
++- **Why:** Most intelligent, best for complex reasoning
++- **Use for:** Architecture design, complex debugging, planning
++- **Cost:** Higher (premium tier)
++- **Speed:** Slower but more capable
++
++### Option 3: Gemini 2.5 Flash-Lite
++- **Model:** `gemini-2.5-flash-lite`
++- **Why:** Fastest, most cost-efficient
++- **Use for:** High-volume simple tasks, quick checks
++- **Cost:** Lowest
++- **Speed:** Fastest
++
++## Implementation Plan
++
++### Phase 1: Update Default Models (15 min)
++- [ ] Update `tools/llm_api.py`: Change default from `gemini-2.0-flash-exp` → `gemini-2.5-flash`
++- [ ] Update `.github/workflows/ai-pr-review.yml`: Use `gemini-2.5-flash`
++- [ ] Update docs mentioning Gemini 2.0 Flash → 2.5 Flash
++
++### Phase 2: Test New Models (30 min)
++- [ ] Test `gemini-2.5-flash` with LLM API tool
++- [ ] Test AI PR review workflow with new model
++- [ ] Compare response quality and speed
++- [ ] Monitor API costs
++
++### Phase 3: Advanced Usage (Optional - 1 hour)
++- [ ] Add Gemini 3 Pro option for complex tasks
++- [ ] Use 2.5 Flash-Lite for high-volume operations
++- [ ] Create model selection strategy based on task complexity
++- [ ] Document model usage guidelines
++
++## Files to Update
++
++```
++tools/llm_api.py (line 170)
++.github/workflows/ai-pr-review.yml (line 197)
++docs/COPILOT_WORKFLOW.md (mentions Gemini Flash 2.0)
++docs/OLLAMA_TUNNEL_SETUP.md (mentions Gemini Flash 2.0)
++docs/TOKEN_OPTIMIZATION.md (mentions Gemini Flash 2.0)
++```
++
++## Benefits
++✅ Latest model capabilities (thinking, agentic features)
++✅ Better price-performance
++✅ Future-proof (2.0 Flash is now "previous generation")
++✅ Access to Gemini 3 Pro for advanced tasks
++
++## Risks
++⚠️ API changes (test thoroughly)
++⚠️ Pricing changes (monitor costs)
++⚠️ Different response formats (validate outputs)
++
++## Decision
++**UPGRADE TO 2.5 FLASH** - It's designed for exactly our use case (agentic, large scale processing)
++
+
+# 2025-12-12 21:00:46.593597
++# TODO: Upgrade to Latest Gemini Models
++
++## Current Status
++- **Using:** `gemini-2.0-flash-exp` (now "Previous generation")
++- **Available:** Gemini 3 Pro, 2.5 Flash, 2.5 Flash-Lite, 2.5 Pro
++- **Source:** https://ai.google.dev/gemini-api/docs/models (Updated Dec 10, 2025)
++
++## Recommended Upgrades
++
++### Option 1: Gemini 2.5 Flash (RECOMMENDED)
++- **Model:** `gemini-2.5-flash`
++- **Why:** Best price-performance, designed for agentic use cases
++- **Use for:** Current AI PR reviews, LLM API tool, general tasks
++- **Cost:** Lower than 2.0 Flash
++- **Speed:** Similar to 2.0 Flash
++
++### Option 2: Gemini 3 Pro
++- **Model:** `gemini-3-pro-preview`
++- **Why:** Most intelligent, best for complex reasoning
++- **Use for:** Architecture design, complex debugging, planning
++- **Cost:** Higher (premium tier)
++- **Speed:** Slower but more capable
++
++### Option 3: Gemini 2.5 Flash-Lite
++- **Model:** `gemini-2.5-flash-lite`
++- **Why:** Fastest, most cost-efficient
++- **Use for:** High-volume simple tasks, quick checks
++- **Cost:** Lowest
++- **Speed:** Fastest
++
++## Implementation Plan
++
++### Phase 1: Update Default Models (15 min)
++- [ ] Update `tools/llm_api.py`: Change default from `gemini-2.0-flash-exp` → `gemini-2.5-flash`
++- [ ] Update `.github/workflows/ai-pr-review.yml`: Use `gemini-2.5-flash`
++- [ ] Update docs mentioning Gemini 2.0 Flash → 2.5 Flash
++
++### Phase 2: Test New Models (30 min)
++- [ ] Test `gemini-2.5-flash` with LLM API tool
++- [ ] Test AI PR review workflow with new model
++- [ ] Compare response quality and speed
++- [ ] Monitor API costs
++
++### Phase 3: Advanced Usage (Optional - 1 hour)
++- [ ] Add Gemini 3 Pro option for complex tasks
++- [ ] Use 2.5 Flash-Lite for high-volume operations
++- [ ] Create model selection strategy based on task complexity
++- [ ] Document model usage guidelines
++
++## Files to Update
++
++```
++tools/llm_api.py (line 170)
++.github/workflows/ai-pr-review.yml (line 197)
++docs/COPILOT_WORKFLOW.md (mentions Gemini Flash 2.0)
++docs/OLLAMA_TUNNEL_SETUP.md (mentions Gemini Flash 2.0)
++docs/TOKEN_OPTIMIZATION.md (mentions Gemini Flash 2.0)
++```
++
++## Benefits
++✅ Latest model capabilities (thinking, agentic features)
++✅ Better price-performance
++✅ Future-proof (2.0 Flash is now "previous generation")
++✅ Access to Gemini 3 Pro for advanced tasks
++
++## Risks
++⚠️ API changes (test thoroughly)
++⚠️ Pricing changes (monitor costs)
++⚠️ Different response formats (validate outputs)
++
++## Decision
++**UPGRADE TO 2.5 FLASH** - It's designed for exactly our use case (agentic, large scale processing)
++
+
+# 2025-12-12 21:03:41.808265
++# TODO: Upgrade to Latest Gemini Models
++
++## Current Status
++- **Using:** `gemini-2.0-flash-exp` (now "Previous generation")
++- **Available:** Gemini 3 Pro, 2.5 Flash, 2.5 Flash-Lite, 2.5 Pro
++- **Source:** https://ai.google.dev/gemini-api/docs/models (Updated Dec 10, 2025)
++
++## Recommended Upgrades
++
++### Option 1: Gemini 2.5 Flash (RECOMMENDED)
++- **Model:** `gemini-2.5-flash`
++- **Why:** Best price-performance, designed for agentic use cases
++- **Use for:** Current AI PR reviews, LLM API tool, general tasks
++- **Cost:** Lower than 2.0 Flash
++- **Speed:** Similar to 2.0 Flash
++
++### Option 2: Gemini 3 Pro
++- **Model:** `gemini-3-pro-preview`
++- **Why:** Most intelligent, best for complex reasoning
++- **Use for:** Architecture design, complex debugging, planning
++- **Cost:** Higher (premium tier)
++- **Speed:** Slower but more capable
++
++### Option 3: Gemini 2.5 Flash-Lite
++- **Model:** `gemini-2.5-flash-lite`
++- **Why:** Fastest, most cost-efficient
++- **Use for:** High-volume simple tasks, quick checks
++- **Cost:** Lowest
++- **Speed:** Fastest
++
++## Implementation Plan
++
++### Phase 1: Update Default Models (15 min)
++- [ ] Update `tools/llm_api.py`: Change default from `gemini-2.0-flash-exp` → `gemini-2.5-flash`
++- [ ] Update `.github/workflows/ai-pr-review.yml`: Use `gemini-2.5-flash`
++- [ ] Update docs mentioning Gemini 2.0 Flash → 2.5 Flash
++
++### Phase 2: Test New Models (30 min)
++- [ ] Test `gemini-2.5-flash` with LLM API tool
++- [ ] Test AI PR review workflow with new model
++- [ ] Compare response quality and speed
++- [ ] Monitor API costs
++
++### Phase 3: Advanced Usage (Optional - 1 hour)
++- [ ] Add Gemini 3 Pro option for complex tasks
++- [ ] Use 2.5 Flash-Lite for high-volume operations
++- [ ] Create model selection strategy based on task complexity
++- [ ] Document model usage guidelines
++
++## Files to Update
++
++```
++tools/llm_api.py (line 170)
++.github/workflows/ai-pr-review.yml (line 197)
++docs/COPILOT_WORKFLOW.md (mentions Gemini Flash 2.0)
++docs/OLLAMA_TUNNEL_SETUP.md (mentions Gemini Flash 2.0)
++docs/TOKEN_OPTIMIZATION.md (mentions Gemini Flash 2.0)
++```
++
++## Benefits
++✅ Latest model capabilities (thinking, agentic features)
++✅ Better price-performance
++✅ Future-proof (2.0 Flash is now "previous generation")
++✅ Access to Gemini 3 Pro for advanced tasks
++
++## Risks
++⚠️ API changes (test thoroughly)
++⚠️ Pricing changes (monitor costs)
++⚠️ Different response formats (validate outputs)
++
++## Decision
++**UPGRADE TO 2.5 FLASH** - It's designed for exactly our use case (agentic, large scale processing)
++
+
+# 2025-12-12 21:03:41.809848
++# TODO: Upgrade to Latest Gemini Models
++
++## Current Status
++- **Using:** `gemini-2.0-flash-exp` (now "Previous generation")
++- **Available:** Gemini 3 Pro, 2.5 Flash, 2.5 Flash-Lite, 2.5 Pro
++- **Source:** https://ai.google.dev/gemini-api/docs/models (Updated Dec 10, 2025)
++
++## Recommended Upgrades
++
++### Option 1: Gemini 2.5 Flash (RECOMMENDED)
++- **Model:** `gemini-2.5-flash`
++- **Why:** Best price-performance, designed for agentic use cases
++- **Use for:** Current AI PR reviews, LLM API tool, general tasks
++- **Cost:** Lower than 2.0 Flash
++- **Speed:** Similar to 2.0 Flash
++
++### Option 2: Gemini 3 Pro
++- **Model:** `gemini-3-pro-preview`
++- **Why:** Most intelligent, best for complex reasoning
++- **Use for:** Architecture design, complex debugging, planning
++- **Cost:** Higher (premium tier)
++- **Speed:** Slower but more capable
++
++### Option 3: Gemini 2.5 Flash-Lite
++- **Model:** `gemini-2.5-flash-lite`
++- **Why:** Fastest, most cost-efficient
++- **Use for:** High-volume simple tasks, quick checks
++- **Cost:** Lowest
++- **Speed:** Fastest
++
++## Implementation Plan
++
++### Phase 1: Update Default Models (15 min)
++- [ ] Update `tools/llm_api.py`: Change default from `gemini-2.0-flash-exp` → `gemini-2.5-flash`
++- [ ] Update `.github/workflows/ai-pr-review.yml`: Use `gemini-2.5-flash`
++- [ ] Update docs mentioning Gemini 2.0 Flash → 2.5 Flash
++
++### Phase 2: Test New Models (30 min)
++- [ ] Test `gemini-2.5-flash` with LLM API tool
++- [ ] Test AI PR review workflow with new model
++- [ ] Compare response quality and speed
++- [ ] Monitor API costs
++
++### Phase 3: Advanced Usage (Optional - 1 hour)
++- [ ] Add Gemini 3 Pro option for complex tasks
++- [ ] Use 2.5 Flash-Lite for high-volume operations
++- [ ] Create model selection strategy based on task complexity
++- [ ] Document model usage guidelines
++
++## Files to Update
++
++```
++tools/llm_api.py (line 170)
++.github/workflows/ai-pr-review.yml (line 197)
++docs/COPILOT_WORKFLOW.md (mentions Gemini Flash 2.0)
++docs/OLLAMA_TUNNEL_SETUP.md (mentions Gemini Flash 2.0)
++docs/TOKEN_OPTIMIZATION.md (mentions Gemini Flash 2.0)
++```
++
++## Benefits
++✅ Latest model capabilities (thinking, agentic features)
++✅ Better price-performance
++✅ Future-proof (2.0 Flash is now "previous generation")
++✅ Access to Gemini 3 Pro for advanced tasks
++
++## Risks
++⚠️ API changes (test thoroughly)
++⚠️ Pricing changes (monitor costs)
++⚠️ Different response formats (validate outputs)
++
++## Decision
++**UPGRADE TO 2.5 FLASH** - It's designed for exactly our use case (agentic, large scale processing)
++
+
+# 2025-12-12 21:14:30.864205
++# Next Steps - PR Management
++
++**Last Updated**: 2025-12-11 16:23
++**Current Branch**: copilot/sub-pr-89-again (PR #94)
++
++## ✅ Completed
++
++- Updated PR #94 description to include documentation cleanup commits
++- Created Ollama task file (`.ai-tasks/track-ollama-pr90-fix.md`) for PR #90 test fixes
++- Moved 3 markdown files from root to `docs/` directory
++- Fixed inclusive language (denylist terminology updates)
++
++## 📋 Current PR Status
++
++### PR #94 - Security Hardening + Doc Cleanup (CURRENT BRANCH)
++- **Branch**: copilot/sub-pr-89-again → main
++- **Status**: Open, AI review workflow failed (non-blocking)
++- **Content**:
++  - ✅ Security fixes (path traversal, DoS, ReDoS, HTML injection, weak entropy)
++  - ✅ 21 security tests added
++  - ✅ `docs/EMAIL_WEBHOOK_SECURITY.md` documentation
++  - ✅ 3 markdown files moved to docs/
++  - ✅ Ollama task file for PR #90
++- **CI Status**: ai-pr-review failed (run 20151417402) - check if this is blocking
++- **Next Action**: Review AI review failure, merge if security changes are good
++
++### PR #90 - Email Webhook Integration (TEST FAILURES)
++- **Branch**: copilot/sub-pr-89 → main
++- **Status**: Open, CI failing (2 test failures)
++- **Failures**:
++  - `test_email_processor.py::test_match_job_by_company_and_title` - Job ID mismatch
++  - `test_gemini_cli.py::test_cli_exits_if_no_sdk_installed` - Import error
++- **Recent Runs**:
++  - CI run 20151346194 (2025-12-11 23:57) - FAILED
++  - CI run 20151165395 (2025-12-11 23:47) - FAILED
++- **Delegated To**: Ollama agent (see `.ai-tasks/track-ollama-pr90-fix.md`)
++- **Next Action**: Wait for Ollama to fix tests, then merge
++
++### PR #98 - MCP Services
++- **Branch**: feature/mcp-services → main
++- **Status**: Open, checks passing
++- **Content**: Brave Search and Fetch MCP services
++- **Dependencies**: Has sub-PR #99 (copilot/sub-pr-98 → feature/mcp-services)
++- **Next Action**: Review and merge after PR #94
++
++### PR #99 - MCP Config Fix
++- **Branch**: copilot/sub-pr-98 → feature/mcp-services
++- **Status**: Open (sub-PR of #98)
++- **Content**: Fix MCP server configuration (stdio vs HTTP)
++- **Next Action**: Review as part of PR #98 chain
++
++## 🎯 Recommended Merge Order
++
++1. **PR #94** (Security + Docs) - Review AI review failure, merge if acceptable
++2. **PR #98/#99** (MCP Services) - Merge after #94
++3. **PR #90** (Email Webhook) - Merge after Ollama fixes tests
++
++## 🔍 Immediate Actions Needed
++
++### For PR #94 (You're here)
++```powershell
++# Check AI review failure details
++gh run view 20151417402 --log
++
++# If AI review is non-critical, can merge with:
++# gh pr merge 94 --squash --delete-branch
++```
++
++### For PR #90 (Delegated to Ollama)
++```powershell
++# Ollama should follow .ai-tasks/track-ollama-pr90-fix.md:
++# 1. Get CI logs: gh run view 20151346194 --log-failed
++# 2. Fix test isolation issues
++# 3. Commit with [AI] tag
++# 4. Push to copilot/sub-pr-89
++# 5. Verify CI passes
++```
++
++### For PR #98/99 (Ready to review)
++```powershell
++# Review MCP configuration changes
++gh pr view 98
++gh pr view 99
++
++# Merge when ready (after #94)
++```
++
++## 📊 Branch Relationship
++
++```
++main
++├── copilot/sub-pr-89-again (PR #94) ← YOU ARE HERE
++│   └── Security + Docs
++├── copilot/sub-pr-89 (PR #90)
++│   └── Email Webhook (needs test fixes)
++└── feature/mcp-services (PR #98)
++    └── copilot/sub-pr-98 (PR #99)
++        └── MCP config fix
++```
++
++## 🤖 AI Agent Assignments
++
++- **PR #94**: Manual review (human decision on AI review failure)
++- **PR #90**: Ollama (test fixes delegated via task file)
++- **PR #98/99**: Ready for human review
++- **Issue #82**: @github-copilot (Memory Bank documentation)
++
++## 💡 Notes
++
++- **PR #94** combines security work (main content) with doc cleanup (bonus) - acceptable
++- **PR #90** test failures are isolated test issues, not production bugs
++- **AI review failure** on PR #94 may be due to diff size (security PR is large)
++- **Ollama task** has detailed instructions for fixing PR #90
++
++## 🚀 After All PRs Merged
++
++1. Pull latest main: `git checkout main; git pull`
++2. Review Issue #82 progress (@github-copilot working on Memory Bank)
++3. Consider framework extraction for ESG discovery project
++4. Monitor Ollama agent for PR #90 fix completion
++
+
+# 2025-12-12 21:14:30.867267
++# Next Steps - PR Management
++
++**Last Updated**: 2025-12-11 16:23
++**Current Branch**: copilot/sub-pr-89-again (PR #94)
++
++## ✅ Completed
++
++- Updated PR #94 description to include documentation cleanup commits
++- Created Ollama task file (`.ai-tasks/track-ollama-pr90-fix.md`) for PR #90 test fixes
++- Moved 3 markdown files from root to `docs/` directory
++- Fixed inclusive language (denylist terminology updates)
++
++## 📋 Current PR Status
++
++### PR #94 - Security Hardening + Doc Cleanup (CURRENT BRANCH)
++- **Branch**: copilot/sub-pr-89-again → main
++- **Status**: Open, AI review workflow failed (non-blocking)
++- **Content**:
++  - ✅ Security fixes (path traversal, DoS, ReDoS, HTML injection, weak entropy)
++  - ✅ 21 security tests added
++  - ✅ `docs/EMAIL_WEBHOOK_SECURITY.md` documentation
++  - ✅ 3 markdown files moved to docs/
++  - ✅ Ollama task file for PR #90
++- **CI Status**: ai-pr-review failed (run 20151417402) - check if this is blocking
++- **Next Action**: Review AI review failure, merge if security changes are good
++
++### PR #90 - Email Webhook Integration (TEST FAILURES)
++- **Branch**: copilot/sub-pr-89 → main
++- **Status**: Open, CI failing (2 test failures)
++- **Failures**:
++  - `test_email_processor.py::test_match_job_by_company_and_title` - Job ID mismatch
++  - `test_gemini_cli.py::test_cli_exits_if_no_sdk_installed` - Import error
++- **Recent Runs**:
++  - CI run 20151346194 (2025-12-11 23:57) - FAILED
++  - CI run 20151165395 (2025-12-11 23:47) - FAILED
++- **Delegated To**: Ollama agent (see `.ai-tasks/track-ollama-pr90-fix.md`)
++- **Next Action**: Wait for Ollama to fix tests, then merge
++
++### PR #98 - MCP Services
++- **Branch**: feature/mcp-services → main
++- **Status**: Open, checks passing
++- **Content**: Brave Search and Fetch MCP services
++- **Dependencies**: Has sub-PR #99 (copilot/sub-pr-98 → feature/mcp-services)
++- **Next Action**: Review and merge after PR #94
++
++### PR #99 - MCP Config Fix
++- **Branch**: copilot/sub-pr-98 → feature/mcp-services
++- **Status**: Open (sub-PR of #98)
++- **Content**: Fix MCP server configuration (stdio vs HTTP)
++- **Next Action**: Review as part of PR #98 chain
++
++## 🎯 Recommended Merge Order
++
++1. **PR #94** (Security + Docs) - Review AI review failure, merge if acceptable
++2. **PR #98/#99** (MCP Services) - Merge after #94
++3. **PR #90** (Email Webhook) - Merge after Ollama fixes tests
++
++## 🔍 Immediate Actions Needed
++
++### For PR #94 (You're here)
++```powershell
++# Check AI review failure details
++gh run view 20151417402 --log
++
++# If AI review is non-critical, can merge with:
++# gh pr merge 94 --squash --delete-branch
++```
++
++### For PR #90 (Delegated to Ollama)
++```powershell
++# Ollama should follow .ai-tasks/track-ollama-pr90-fix.md:
++# 1. Get CI logs: gh run view 20151346194 --log-failed
++# 2. Fix test isolation issues
++# 3. Commit with [AI] tag
++# 4. Push to copilot/sub-pr-89
++# 5. Verify CI passes
++```
++
++### For PR #98/99 (Ready to review)
++```powershell
++# Review MCP configuration changes
++gh pr view 98
++gh pr view 99
++
++# Merge when ready (after #94)
++```
++
++## 📊 Branch Relationship
++
++```
++main
++├── copilot/sub-pr-89-again (PR #94) ← YOU ARE HERE
++│   └── Security + Docs
++├── copilot/sub-pr-89 (PR #90)
++│   └── Email Webhook (needs test fixes)
++└── feature/mcp-services (PR #98)
++    └── copilot/sub-pr-98 (PR #99)
++        └── MCP config fix
++```
++
++## 🤖 AI Agent Assignments
++
++- **PR #94**: Manual review (human decision on AI review failure)
++- **PR #90**: Ollama (test fixes delegated via task file)
++- **PR #98/99**: Ready for human review
++- **Issue #82**: @github-copilot (Memory Bank documentation)
++
++## 💡 Notes
++
++- **PR #94** combines security work (main content) with doc cleanup (bonus) - acceptable
++- **PR #90** test failures are isolated test issues, not production bugs
++- **AI review failure** on PR #94 may be due to diff size (security PR is large)
++- **Ollama task** has detailed instructions for fixing PR #90
++
++## 🚀 After All PRs Merged
++
++1. Pull latest main: `git checkout main; git pull`
++2. Review Issue #82 progress (@github-copilot working on Memory Bank)
++3. Consider framework extraction for ESG discovery project
++4. Monitor Ollama agent for PR #90 fix completion
++
+
+# 2025-12-12 21:25:22.825249
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
+
+# 2025-12-12 21:25:22.826230
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
+
+# 2025-12-12 21:30:12.452213
++# TODO: Make Security Constants Configurable
++
++**Priority**: P3 (Future Enhancement)
++**Complexity**: Medium
++**Estimated Time**: 2-3 hours
++
++## Context
++
++PR #94 introduced security hardening with bounded quantifiers to prevent ReDoS attacks in `src/app/email_parser.py`. The regex patterns use hardcoded limits like `{2,50}` for matching company names, job titles, etc.
++
++**Current Pattern Constants:**
++
++```python
++_COMPANY_NAME = r"[A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?"
++_JOB_ROLE = r"Engineer|Developer|Manager|Designer|Analyst|Scientist"
++_TITLE_BASE = r"[A-Z][A-Za-z\s]{2,50}"
++_SENIORITY = r"Senior|Junior|Lead|Staff|Principal"
++```
++
++## Problem
++
++1. **Hardcoded Limits**: The `{2,50}` bounds are security measures but may be too restrictive for some use cases
++2. **No Customization**: Users can't adjust security vs. flexibility tradeoff
++3. **Different Risk Profiles**: Some deployments need tighter security, others need broader matching
++
++## Proposed Solution
++
++### 1. Add Security Configuration Section to config.json
++
++```json
++{
++  "security": {
++    "regex_bounds": {
++      "company_name_min": 2,
++      "company_name_max": 50,
++      "title_min": 2,
++      "title_max": 50,
++      "enabled": true
++    },
++    "redos_protection": {
++      "enabled": true,
++      "max_backtracking": 10000
++    }
++  }
++}
++```
++
++### 2. Update email_parser.py to Use Configuration
++
++```python
++from app.config_manager import load_config
++
++config = load_config()
++security_config = config.get("security", {})
++regex_bounds = security_config.get("regex_bounds", {})
++
++# Get configurable bounds with secure defaults
++company_min = regex_bounds.get("company_name_min", 2)
++company_max = regex_bounds.get("company_name_max", 50)
++title_min = regex_bounds.get("title_min", 2)
++title_max = regex_bounds.get("title_max", 50)
++
++# Pattern components with configurable bounds
++_COMPANY_NAME = rf"[A-Z][A-Za-z0-9\s&]{{{company_min},{company_max}}}(?:Inc|LLC|Ltd|Corp)?"
++_TITLE_BASE = rf"[A-Z][A-Za-z\s]{{{title_min},{title_max}}}"
++```
++
++### 3. Add Validation
++
++```python
++def validate_regex_bounds(config: dict) -> None:
++    """Validate security configuration bounds."""
++    bounds = config.get("security", {}).get("regex_bounds", {})
++
++    # Minimum values must be at least 1
++    if bounds.get("company_name_min", 2) < 1:
++        raise ValueError("company_name_min must be at least 1")
++
++    # Maximum values must be reasonable (prevent ReDoS)
++    if bounds.get("company_name_max", 50) > 200:
++        logger.warning("company_name_max > 200 may cause ReDoS issues")
++
++    # Min must be less than max
++    if bounds.get("company_name_min", 2) >= bounds.get("company_name_max", 50):
++        raise ValueError("company_name_min must be less than company_name_max")
++```
++
++### 4. Documentation
++
++Update `docs/SECURITY.md`:
++
++```markdown
++## Configurable Security Settings
++
++### Regex Bounds (ReDoS Protection)
++
++The email parser uses bounded quantifiers to prevent Regular Expression Denial of Service (ReDoS) attacks. These bounds are configurable in `config.json`:
++
++**Default Settings (Recommended):**
++- Company name: 2-50 characters
++- Job title: 2-50 characters
++
++**Adjusting for Your Use Case:**
++- **Tighter Security**: Reduce max values (e.g., 30)
++- **Broader Matching**: Increase max values (up to 200, with caution)
++- **Disable**: Set `enabled: false` (NOT recommended for production)
++
++**Risk Assessment:**
++- Bounds < 100: Low ReDoS risk
++- Bounds 100-200: Medium risk (monitor performance)
++- Bounds > 200: High risk (may cause significant slowdowns)
++```
++
++## Implementation Steps
++
++- [ ] Add `security` section to `config.json` schema
++- [ ] Update `config_manager.py` with validation
++- [ ] Modify `email_parser.py` to use configurable bounds
++- [ ] Add tests for configuration validation
++- [ ] Add tests for different bound settings
++- [ ] Update `docs/SECURITY.md` with configuration guide
++- [ ] Update `.env.example` if needed
++- [ ] Add migration guide for existing deployments
++
++## Related TODOs
++
++- **email_parser.py line 84**: Make `_JOB_ROLE` and `_SENIORITY` configurable per industry
++- **email_parser.py line 113**: Make `JOB_BOARD_DOMAINS` configurable
++- **email_parser.py line 126**: Make `ATS_DOMAINS` configurable
++
++## Testing Strategy
++
++```python
++def test_custom_regex_bounds():
++    """Test email parser with custom security bounds."""
++    config = {
++        "security": {
++            "regex_bounds": {
++                "company_name_min": 3,
++                "company_name_max": 30,
++                "enabled": True
++            }
++        }
++    }
++    # Test with 2-char company name (should fail with min=3)
++    # Test with 50-char company name (should fail with max=30)
++    # Test with valid 15-char company name (should pass)
++```
++
++## Benefits
++
++1. **Flexibility**: Users can adjust security vs. matching tradeoff
++2. **Risk Management**: Different deployments have different threat models
++3. **Testing**: Easier to test edge cases by adjusting bounds
++4. **Future-Proof**: Can adapt to new threat patterns without code changes
++
++## Risks
++
++1. **Misconfiguration**: Users might disable protection inadvertently
++2. **Complexity**: More configuration surface area
++3. **Documentation Burden**: Need clear guidance on safe values
++
++## Mitigation
++
++- Set secure defaults (current values)
++- Add validation with warnings
++- Provide risk assessment in documentation
++- Log configuration at startup
++
+
+# 2025-12-12 21:30:12.453683
++# TODO: Make Security Constants Configurable
++
++**Priority**: P3 (Future Enhancement)
++**Complexity**: Medium
++**Estimated Time**: 2-3 hours
++
++## Context
++
++PR #94 introduced security hardening with bounded quantifiers to prevent ReDoS attacks in `src/app/email_parser.py`. The regex patterns use hardcoded limits like `{2,50}` for matching company names, job titles, etc.
++
++**Current Pattern Constants:**
++
++```python
++_COMPANY_NAME = r"[A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?"
++_JOB_ROLE = r"Engineer|Developer|Manager|Designer|Analyst|Scientist"
++_TITLE_BASE = r"[A-Z][A-Za-z\s]{2,50}"
++_SENIORITY = r"Senior|Junior|Lead|Staff|Principal"
++```
++
++## Problem
++
++1. **Hardcoded Limits**: The `{2,50}` bounds are security measures but may be too restrictive for some use cases
++2. **No Customization**: Users can't adjust security vs. flexibility tradeoff
++3. **Different Risk Profiles**: Some deployments need tighter security, others need broader matching
++
++## Proposed Solution
++
++### 1. Add Security Configuration Section to config.json
++
++```json
++{
++  "security": {
++    "regex_bounds": {
++      "company_name_min": 2,
++      "company_name_max": 50,
++      "title_min": 2,
++      "title_max": 50,
++      "enabled": true
++    },
++    "redos_protection": {
++      "enabled": true,
++      "max_backtracking": 10000
++    }
++  }
++}
++```
++
++### 2. Update email_parser.py to Use Configuration
++
++```python
++from app.config_manager import load_config
++
++config = load_config()
++security_config = config.get("security", {})
++regex_bounds = security_config.get("regex_bounds", {})
++
++# Get configurable bounds with secure defaults
++company_min = regex_bounds.get("company_name_min", 2)
++company_max = regex_bounds.get("company_name_max", 50)
++title_min = regex_bounds.get("title_min", 2)
++title_max = regex_bounds.get("title_max", 50)
++
++# Pattern components with configurable bounds
++_COMPANY_NAME = rf"[A-Z][A-Za-z0-9\s&]{{{company_min},{company_max}}}(?:Inc|LLC|Ltd|Corp)?"
++_TITLE_BASE = rf"[A-Z][A-Za-z\s]{{{title_min},{title_max}}}"
++```
++
++### 3. Add Validation
++
++```python
++def validate_regex_bounds(config: dict) -> None:
++    """Validate security configuration bounds."""
++    bounds = config.get("security", {}).get("regex_bounds", {})
++
++    # Minimum values must be at least 1
++    if bounds.get("company_name_min", 2) < 1:
++        raise ValueError("company_name_min must be at least 1")
++
++    # Maximum values must be reasonable (prevent ReDoS)
++    if bounds.get("company_name_max", 50) > 200:
++        logger.warning("company_name_max > 200 may cause ReDoS issues")
++
++    # Min must be less than max
++    if bounds.get("company_name_min", 2) >= bounds.get("company_name_max", 50):
++        raise ValueError("company_name_min must be less than company_name_max")
++```
++
++### 4. Documentation
++
++Update `docs/SECURITY.md`:
++
++```markdown
++## Configurable Security Settings
++
++### Regex Bounds (ReDoS Protection)
++
++The email parser uses bounded quantifiers to prevent Regular Expression Denial of Service (ReDoS) attacks. These bounds are configurable in `config.json`:
++
++**Default Settings (Recommended):**
++- Company name: 2-50 characters
++- Job title: 2-50 characters
++
++**Adjusting for Your Use Case:**
++- **Tighter Security**: Reduce max values (e.g., 30)
++- **Broader Matching**: Increase max values (up to 200, with caution)
++- **Disable**: Set `enabled: false` (NOT recommended for production)
++
++**Risk Assessment:**
++- Bounds < 100: Low ReDoS risk
++- Bounds 100-200: Medium risk (monitor performance)
++- Bounds > 200: High risk (may cause significant slowdowns)
++```
++
++## Implementation Steps
++
++- [ ] Add `security` section to `config.json` schema
++- [ ] Update `config_manager.py` with validation
++- [ ] Modify `email_parser.py` to use configurable bounds
++- [ ] Add tests for configuration validation
++- [ ] Add tests for different bound settings
++- [ ] Update `docs/SECURITY.md` with configuration guide
++- [ ] Update `.env.example` if needed
++- [ ] Add migration guide for existing deployments
++
++## Related TODOs
++
++- **email_parser.py line 84**: Make `_JOB_ROLE` and `_SENIORITY` configurable per industry
++- **email_parser.py line 113**: Make `JOB_BOARD_DOMAINS` configurable
++- **email_parser.py line 126**: Make `ATS_DOMAINS` configurable
++
++## Testing Strategy
++
++```python
++def test_custom_regex_bounds():
++    """Test email parser with custom security bounds."""
++    config = {
++        "security": {
++            "regex_bounds": {
++                "company_name_min": 3,
++                "company_name_max": 30,
++                "enabled": True
++            }
++        }
++    }
++    # Test with 2-char company name (should fail with min=3)
++    # Test with 50-char company name (should fail with max=30)
++    # Test with valid 15-char company name (should pass)
++```
++
++## Benefits
++
++1. **Flexibility**: Users can adjust security vs. matching tradeoff
++2. **Risk Management**: Different deployments have different threat models
++3. **Testing**: Easier to test edge cases by adjusting bounds
++4. **Future-Proof**: Can adapt to new threat patterns without code changes
++
++## Risks
++
++1. **Misconfiguration**: Users might disable protection inadvertently
++2. **Complexity**: More configuration surface area
++3. **Documentation Burden**: Need clear guidance on safe values
++
++## Mitigation
++
++- Set secure defaults (current values)
++- Add validation with warnings
++- Provide risk assessment in documentation
++- Log configuration at startup
++
+
+# 2025-12-12 21:41:02.505869
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
+
+# 2025-12-12 21:41:02.507254
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
+
+# 2025-12-12 21:45:18.157876
++# Workflow: PR Approval → Merge Process
++
++**Trigger**: PR receives approval
++**Goal**: Safely merge approved PR after verifying main branch stability
++
++## Process Steps
++
++### 1. Verify PR Approval Status
++```powershell
++gh pr view <PR_NUMBER> --json reviewDecision,mergeable,mergeStateStatus
++```
++
++**Expected Output:**
++```json
++{
++  "reviewDecision": "APPROVED",
++  "mergeable": "MERGEABLE",
++  "mergeStateStatus": "CLEAN"
++}
++```
++
++### 2. Check PR CI Status
++```powershell
++gh pr view <PR_NUMBER> --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion != "SUCCESS")'
++```
++
++**Expected**: Empty output (all checks passing)
++
++### 3. Verify Main Branch CI Status
++```powershell
++gh run list --branch main --limit 1 --json conclusion,status,workflowName,createdAt
++```
++
++**Expected Output:**
++```json
++[
++  {
++    "conclusion": "SUCCESS",
++    "status": "COMPLETED",
++    "workflowName": "CI"
++  }
++]
++```
++
++**If main CI is failing or stale:**
++- Option A: Trigger new CI run: `gh workflow run .github/workflows/ci.yml --ref main`
++- Option B: Merge PR anyway if failures are unrelated (document in merge commit)
++
++### 4. Check for Merge Conflicts
++```powershell
++gh pr view <PR_NUMBER> --json mergeable
++```
++
++**If conflicts exist:**
++```powershell
++git checkout <PR_BRANCH>
++git pull origin main
++# Resolve conflicts
++git push origin <PR_BRANCH>
++```
++
++### 5. Perform Merge
++```powershell
++gh pr merge <PR_NUMBER> --squash --delete-branch
++```
++
++**Options:**
++- `--squash`: Squash all commits into one (preferred for feature branches)
++- `--merge`: Keep all commits (for large features with meaningful history)
++- `--rebase`: Rebase and merge (for linear history)
++- `--delete-branch`: Automatically delete branch after merge
++- `--auto`: Enable auto-merge when checks pass
++
++**With message:**
++```powershell
++gh pr merge <PR_NUMBER> --squash --delete-branch --subject "[AI] <title>" --body "Merged via automated workflow
++
++Approval verified: <approver>
++CI status: All checks passing
++Main branch: Verified passing
++
++AI-Generated-By: GitHub Copilot (Claude Sonnet 4.5)"
++```
++
++### 6. Verify Merge Success
++```powershell
++gh pr view <PR_NUMBER> --json state,merged,mergedAt
++```
++
++**Expected:**
++```json
++{
++  "state": "MERGED",
++  "merged": true,
++  "mergedAt": "2025-12-11T..."
++}
++```
++
++### 7. Verify Branch Deletion
++```powershell
++git branch -r | Select-String "<PR_BRANCH>"
++```
++
++**Expected**: No output (branch deleted)
++
++### 8. Update Local Repository
++```powershell
++git checkout main
++git pull origin main
++git remote prune origin  # Clean up deleted remote branches
++```
++
++## Automated Workflow Example
++
++```powershell
++# Complete merge workflow for approved PR
++$PR_NUMBER = 94
++
++# Step 1: Verify approval and CI
++$pr_status = gh pr view $PR_NUMBER --json reviewDecision,mergeable,statusCheckRollup | ConvertFrom-Json
++
++if ($pr_status.reviewDecision -ne "APPROVED") {
++    Write-Error "PR not approved"
++    exit 1
++}
++
++if ($pr_status.mergeable -ne "MERGEABLE") {
++    Write-Error "PR has merge conflicts"
++    exit 1
++}
++
++$failed_checks = $pr_status.statusCheckRollup | Where-Object { $_.conclusion -ne "SUCCESS" }
++if ($failed_checks) {
++    Write-Warning "Some checks failed: $($failed_checks.name -join ', ')"
++}
++
++# Step 2: Check main branch CI
++$main_ci = gh run list --branch main --limit 1 --json conclusion,status | ConvertFrom-Json
++if ($main_ci[0].conclusion -ne "SUCCESS") {
++    Write-Warning "Main branch CI not passing: $($main_ci[0].conclusion)"
++    $response = Read-Host "Continue anyway? (y/n)"
++    if ($response -ne "y") { exit 1 }
++}
++
++# Step 3: Merge
++gh pr merge $PR_NUMBER --squash --delete-branch
++
++# Step 4: Update local
++git checkout main
++git pull origin main
++git remote prune origin
++
++Write-Host "✅ PR #$PR_NUMBER merged and branch deleted" -ForegroundColor Green
++```
++
++## Edge Cases
++
++### Main Branch CI Failing
++**Decision Tree:**
++1. Are failures related to PR changes?
++   - YES: Don't merge, fix PR first
++   - NO: Document in merge commit, merge anyway
++
++2. Are failures in PR branch too?
++   - YES: Failures are environmental/flaky, safe to merge
++   - NO: Wait for main to be fixed first
++
++### PR Has Conflicts
++**Options:**
++1. Rebase: `git checkout <branch> && git rebase main`
++2. Merge: `git checkout <branch> && git merge main`
++3. Ask PR author to resolve
++
++### Multiple Approved PRs
++**Strategy:**
++1. Check dependency graph (does PR B depend on PR A?)
++2. Merge in dependency order
++3. For independent PRs, merge oldest-first
++4. Watch for conflicts between PRs
++
++### Branch Not Auto-Deleted
++**Reasons:**
++- Protected branch rules
++- Branch has other PRs pointing to it
++- GitHub API issue
++
++**Manual cleanup:**
++```powershell
++git push origin --delete <branch_name>
++```
++
++## Notifications
++
++After merge:
++1. Check related issues: `gh pr view <PR> --json closingIssuesReferences`
++2. Notify stakeholders if needed
++3. Update project board if using GitHub Projects
++4. Document in CHANGELOG.md if public release
++
++## Related
++
++- `.github/workflows/ci.yml`: CI configuration
++- `.github/workflows/ai-pr-review.yml`: Auto-review on PR comments
++- `CHANGELOG.md`: Document significant changes
++
+
+# 2025-12-12 21:45:18.159355
++# Workflow: PR Approval → Merge Process
++
++**Trigger**: PR receives approval
++**Goal**: Safely merge approved PR after verifying main branch stability
++
++## Process Steps
++
++### 1. Verify PR Approval Status
++```powershell
++gh pr view <PR_NUMBER> --json reviewDecision,mergeable,mergeStateStatus
++```
++
++**Expected Output:**
++```json
++{
++  "reviewDecision": "APPROVED",
++  "mergeable": "MERGEABLE",
++  "mergeStateStatus": "CLEAN"
++}
++```
++
++### 2. Check PR CI Status
++```powershell
++gh pr view <PR_NUMBER> --json statusCheckRollup --jq '.statusCheckRollup[] | select(.conclusion != "SUCCESS")'
++```
++
++**Expected**: Empty output (all checks passing)
++
++### 3. Verify Main Branch CI Status
++```powershell
++gh run list --branch main --limit 1 --json conclusion,status,workflowName,createdAt
++```
++
++**Expected Output:**
++```json
++[
++  {
++    "conclusion": "SUCCESS",
++    "status": "COMPLETED",
++    "workflowName": "CI"
++  }
++]
++```
++
++**If main CI is failing or stale:**
++- Option A: Trigger new CI run: `gh workflow run .github/workflows/ci.yml --ref main`
++- Option B: Merge PR anyway if failures are unrelated (document in merge commit)
++
++### 4. Check for Merge Conflicts
++```powershell
++gh pr view <PR_NUMBER> --json mergeable
++```
++
++**If conflicts exist:**
++```powershell
++git checkout <PR_BRANCH>
++git pull origin main
++# Resolve conflicts
++git push origin <PR_BRANCH>
++```
++
++### 5. Perform Merge
++```powershell
++gh pr merge <PR_NUMBER> --squash --delete-branch
++```
++
++**Options:**
++- `--squash`: Squash all commits into one (preferred for feature branches)
++- `--merge`: Keep all commits (for large features with meaningful history)
++- `--rebase`: Rebase and merge (for linear history)
++- `--delete-branch`: Automatically delete branch after merge
++- `--auto`: Enable auto-merge when checks pass
++
++**With message:**
++```powershell
++gh pr merge <PR_NUMBER> --squash --delete-branch --subject "[AI] <title>" --body "Merged via automated workflow
++
++Approval verified: <approver>
++CI status: All checks passing
++Main branch: Verified passing
++
++AI-Generated-By: GitHub Copilot (Claude Sonnet 4.5)"
++```
++
++### 6. Verify Merge Success
++```powershell
++gh pr view <PR_NUMBER> --json state,merged,mergedAt
++```
++
++**Expected:**
++```json
++{
++  "state": "MERGED",
++  "merged": true,
++  "mergedAt": "2025-12-11T..."
++}
++```
++
++### 7. Verify Branch Deletion
++```powershell
++git branch -r | Select-String "<PR_BRANCH>"
++```
++
++**Expected**: No output (branch deleted)
++
++### 8. Update Local Repository
++```powershell
++git checkout main
++git pull origin main
++git remote prune origin  # Clean up deleted remote branches
++```
++
++## Automated Workflow Example
++
++```powershell
++# Complete merge workflow for approved PR
++$PR_NUMBER = 94
++
++# Step 1: Verify approval and CI
++$pr_status = gh pr view $PR_NUMBER --json reviewDecision,mergeable,statusCheckRollup | ConvertFrom-Json
++
++if ($pr_status.reviewDecision -ne "APPROVED") {
++    Write-Error "PR not approved"
++    exit 1
++}
++
++if ($pr_status.mergeable -ne "MERGEABLE") {
++    Write-Error "PR has merge conflicts"
++    exit 1
++}
++
++$failed_checks = $pr_status.statusCheckRollup | Where-Object { $_.conclusion -ne "SUCCESS" }
++if ($failed_checks) {
++    Write-Warning "Some checks failed: $($failed_checks.name -join ', ')"
++}
++
++# Step 2: Check main branch CI
++$main_ci = gh run list --branch main --limit 1 --json conclusion,status | ConvertFrom-Json
++if ($main_ci[0].conclusion -ne "SUCCESS") {
++    Write-Warning "Main branch CI not passing: $($main_ci[0].conclusion)"
++    $response = Read-Host "Continue anyway? (y/n)"
++    if ($response -ne "y") { exit 1 }
++}
++
++# Step 3: Merge
++gh pr merge $PR_NUMBER --squash --delete-branch
++
++# Step 4: Update local
++git checkout main
++git pull origin main
++git remote prune origin
++
++Write-Host "✅ PR #$PR_NUMBER merged and branch deleted" -ForegroundColor Green
++```
++
++## Edge Cases
++
++### Main Branch CI Failing
++**Decision Tree:**
++1. Are failures related to PR changes?
++   - YES: Don't merge, fix PR first
++   - NO: Document in merge commit, merge anyway
++
++2. Are failures in PR branch too?
++   - YES: Failures are environmental/flaky, safe to merge
++   - NO: Wait for main to be fixed first
++
++### PR Has Conflicts
++**Options:**
++1. Rebase: `git checkout <branch> && git rebase main`
++2. Merge: `git checkout <branch> && git merge main`
++3. Ask PR author to resolve
++
++### Multiple Approved PRs
++**Strategy:**
++1. Check dependency graph (does PR B depend on PR A?)
++2. Merge in dependency order
++3. For independent PRs, merge oldest-first
++4. Watch for conflicts between PRs
++
++### Branch Not Auto-Deleted
++**Reasons:**
++- Protected branch rules
++- Branch has other PRs pointing to it
++- GitHub API issue
++
++**Manual cleanup:**
++```powershell
++git push origin --delete <branch_name>
++```
++
++## Notifications
++
++After merge:
++1. Check related issues: `gh pr view <PR> --json closingIssuesReferences`
++2. Notify stakeholders if needed
++3. Update project board if using GitHub Projects
++4. Document in CHANGELOG.md if public release
++
++## Related
++
++- `.github/workflows/ci.yml`: CI configuration
++- `.github/workflows/ai-pr-review.yml`: Auto-review on PR comments
++- `CHANGELOG.md`: Document significant changes
++
+
+# 2025-12-12 21:56:07.553022
++# Next Steps - PR Management
++
++**Last Updated**: 2025-12-11 16:23
++**Current Branch**: copilot/sub-pr-89-again (PR #94)
++
++## ✅ Completed
++
++- Updated PR #94 description to include documentation cleanup commits
++- Created Ollama task file (`.ai-tasks/track-ollama-pr90-fix.md`) for PR #90 test fixes
++- Moved 3 markdown files from root to `docs/` directory
++- Fixed inclusive language (denylist terminology updates)
++
++## 📋 Current PR Status
++
++### PR #94 - Security Hardening + Doc Cleanup (CURRENT BRANCH)
++- **Branch**: copilot/sub-pr-89-again → main
++- **Status**: Open, AI review workflow failed (non-blocking)
++- **Content**:
++  - ✅ Security fixes (path traversal, DoS, ReDoS, HTML injection, weak entropy)
++  - ✅ 21 security tests added
++  - ✅ `docs/EMAIL_WEBHOOK_SECURITY.md` documentation
++  - ✅ 3 markdown files moved to docs/
++  - ✅ Ollama task file for PR #90
++- **CI Status**: ai-pr-review failed (run 20151417402) - check if this is blocking
++- **Next Action**: Review AI review failure, merge if security changes are good
++
++### PR #90 - Email Webhook Integration (TEST FAILURES)
++- **Branch**: copilot/sub-pr-89 → main
++- **Status**: Open, CI failing (2 test failures)
++- **Failures**:
++  - `test_email_processor.py::test_match_job_by_company_and_title` - Job ID mismatch
++  - `test_gemini_cli.py::test_cli_exits_if_no_sdk_installed` - Import error
++- **Recent Runs**:
++  - CI run 20151346194 (2025-12-11 23:57) - FAILED
++  - CI run 20151165395 (2025-12-11 23:47) - FAILED
++- **Delegated To**: Ollama agent (see `.ai-tasks/track-ollama-pr90-fix.md`)
++- **Next Action**: Wait for Ollama to fix tests, then merge
++
++### PR #98 - MCP Services
++- **Branch**: feature/mcp-services → main
++- **Status**: Open, checks passing
++- **Content**: Brave Search and Fetch MCP services
++- **Dependencies**: Has sub-PR #99 (copilot/sub-pr-98 → feature/mcp-services)
++- **Next Action**: Review and merge after PR #94
++
++### PR #99 - MCP Config Fix
++- **Branch**: copilot/sub-pr-98 → feature/mcp-services
++- **Status**: Open (sub-PR of #98)
++- **Content**: Fix MCP server configuration (stdio vs HTTP)
++- **Next Action**: Review as part of PR #98 chain
++
++## 🎯 Recommended Merge Order
++
++1. **PR #94** (Security + Docs) - Review AI review failure, merge if acceptable
++2. **PR #98/#99** (MCP Services) - Merge after #94
++3. **PR #90** (Email Webhook) - Merge after Ollama fixes tests
++
++## 🔍 Immediate Actions Needed
++
++### For PR #94 (You're here)
++```powershell
++# Check AI review failure details
++gh run view 20151417402 --log
++
++# If AI review is non-critical, can merge with:
++# gh pr merge 94 --squash --delete-branch
++```
++
++### For PR #90 (Delegated to Ollama)
++```powershell
++# Ollama should follow .ai-tasks/track-ollama-pr90-fix.md:
++# 1. Get CI logs: gh run view 20151346194 --log-failed
++# 2. Fix test isolation issues
++# 3. Commit with [AI] tag
++# 4. Push to copilot/sub-pr-89
++# 5. Verify CI passes
++```
++
++### For PR #98/99 (Ready to review)
++```powershell
++# Review MCP configuration changes
++gh pr view 98
++gh pr view 99
++
++# Merge when ready (after #94)
++```
++
++## 📊 Branch Relationship
++
++```
++main
++├── copilot/sub-pr-89-again (PR #94) ← YOU ARE HERE
++│   └── Security + Docs
++├── copilot/sub-pr-89 (PR #90)
++│   └── Email Webhook (needs test fixes)
++└── feature/mcp-services (PR #98)
++    └── copilot/sub-pr-98 (PR #99)
++        └── MCP config fix
++```
++
++## 🤖 AI Agent Assignments
++
++- **PR #94**: Manual review (human decision on AI review failure)
++- **PR #90**: Ollama (test fixes delegated via task file)
++- **PR #98/99**: Ready for human review
++- **Issue #82**: @github-copilot (Memory Bank documentation)
++
++## 💡 Notes
++
++- **PR #94** combines security work (main content) with doc cleanup (bonus) - acceptable
++- **PR #90** test failures are isolated test issues, not production bugs
++- **AI review failure** on PR #94 may be due to diff size (security PR is large)
++- **Ollama task** has detailed instructions for fixing PR #90
++
++## 🚀 After All PRs Merged
++
++1. Pull latest main: `git checkout main; git pull`
++2. Review Issue #82 progress (@github-copilot working on Memory Bank)
++3. Consider framework extraction for ESG discovery project
++4. Monitor Ollama agent for PR #90 fix completion
++
+
+# 2025-12-12 21:56:07.554019
++# Next Steps - PR Management
++
++**Last Updated**: 2025-12-11 16:23
++**Current Branch**: copilot/sub-pr-89-again (PR #94)
++
++## ✅ Completed
++
++- Updated PR #94 description to include documentation cleanup commits
++- Created Ollama task file (`.ai-tasks/track-ollama-pr90-fix.md`) for PR #90 test fixes
++- Moved 3 markdown files from root to `docs/` directory
++- Fixed inclusive language (denylist terminology updates)
++
++## 📋 Current PR Status
++
++### PR #94 - Security Hardening + Doc Cleanup (CURRENT BRANCH)
++- **Branch**: copilot/sub-pr-89-again → main
++- **Status**: Open, AI review workflow failed (non-blocking)
++- **Content**:
++  - ✅ Security fixes (path traversal, DoS, ReDoS, HTML injection, weak entropy)
++  - ✅ 21 security tests added
++  - ✅ `docs/EMAIL_WEBHOOK_SECURITY.md` documentation
++  - ✅ 3 markdown files moved to docs/
++  - ✅ Ollama task file for PR #90
++- **CI Status**: ai-pr-review failed (run 20151417402) - check if this is blocking
++- **Next Action**: Review AI review failure, merge if security changes are good
++
++### PR #90 - Email Webhook Integration (TEST FAILURES)
++- **Branch**: copilot/sub-pr-89 → main
++- **Status**: Open, CI failing (2 test failures)
++- **Failures**:
++  - `test_email_processor.py::test_match_job_by_company_and_title` - Job ID mismatch
++  - `test_gemini_cli.py::test_cli_exits_if_no_sdk_installed` - Import error
++- **Recent Runs**:
++  - CI run 20151346194 (2025-12-11 23:57) - FAILED
++  - CI run 20151165395 (2025-12-11 23:47) - FAILED
++- **Delegated To**: Ollama agent (see `.ai-tasks/track-ollama-pr90-fix.md`)
++- **Next Action**: Wait for Ollama to fix tests, then merge
++
++### PR #98 - MCP Services
++- **Branch**: feature/mcp-services → main
++- **Status**: Open, checks passing
++- **Content**: Brave Search and Fetch MCP services
++- **Dependencies**: Has sub-PR #99 (copilot/sub-pr-98 → feature/mcp-services)
++- **Next Action**: Review and merge after PR #94
++
++### PR #99 - MCP Config Fix
++- **Branch**: copilot/sub-pr-98 → feature/mcp-services
++- **Status**: Open (sub-PR of #98)
++- **Content**: Fix MCP server configuration (stdio vs HTTP)
++- **Next Action**: Review as part of PR #98 chain
++
++## 🎯 Recommended Merge Order
++
++1. **PR #94** (Security + Docs) - Review AI review failure, merge if acceptable
++2. **PR #98/#99** (MCP Services) - Merge after #94
++3. **PR #90** (Email Webhook) - Merge after Ollama fixes tests
++
++## 🔍 Immediate Actions Needed
++
++### For PR #94 (You're here)
++```powershell
++# Check AI review failure details
++gh run view 20151417402 --log
++
++# If AI review is non-critical, can merge with:
++# gh pr merge 94 --squash --delete-branch
++```
++
++### For PR #90 (Delegated to Ollama)
++```powershell
++# Ollama should follow .ai-tasks/track-ollama-pr90-fix.md:
++# 1. Get CI logs: gh run view 20151346194 --log-failed
++# 2. Fix test isolation issues
++# 3. Commit with [AI] tag
++# 4. Push to copilot/sub-pr-89
++# 5. Verify CI passes
++```
++
++### For PR #98/99 (Ready to review)
++```powershell
++# Review MCP configuration changes
++gh pr view 98
++gh pr view 99
++
++# Merge when ready (after #94)
++```
++
++## 📊 Branch Relationship
++
++```
++main
++├── copilot/sub-pr-89-again (PR #94) ← YOU ARE HERE
++│   └── Security + Docs
++├── copilot/sub-pr-89 (PR #90)
++│   └── Email Webhook (needs test fixes)
++└── feature/mcp-services (PR #98)
++    └── copilot/sub-pr-98 (PR #99)
++        └── MCP config fix
++```
++
++## 🤖 AI Agent Assignments
++
++- **PR #94**: Manual review (human decision on AI review failure)
++- **PR #90**: Ollama (test fixes delegated via task file)
++- **PR #98/99**: Ready for human review
++- **Issue #82**: @github-copilot (Memory Bank documentation)
++
++## 💡 Notes
++
++- **PR #94** combines security work (main content) with doc cleanup (bonus) - acceptable
++- **PR #90** test failures are isolated test issues, not production bugs
++- **AI review failure** on PR #94 may be due to diff size (security PR is large)
++- **Ollama task** has detailed instructions for fixing PR #90
++
++## 🚀 After All PRs Merged
++
++1. Pull latest main: `git checkout main; git pull`
++2. Review Issue #82 progress (@github-copilot working on Memory Bank)
++3. Consider framework extraction for ESG discovery project
++4. Monitor Ollama agent for PR #90 fix completion
++
+
+# 2025-12-12 22:06:57.899701
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
+
+# 2025-12-12 22:06:57.901645
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
+
+# 2025-12-12 22:17:48.014510
++# TODO: Brave Search MCP Integration
++
++**Priority**: P2 (Enhancement)
++**Complexity**: Low
++**Estimated Time**: 1-2 hours
++
++## Context
++
++User discovered Brave Search API Free tier (2,000 requests/month):
++- Screenshot: api.dashboard.search.brave.com/subscriptions
++- Free tier includes: Web search, Goggles, News cluster, Videos, Images
++- MCP server available for integration
++
++## Tasks
++
++### 1. Documentation Updates
++- [ ] Add Brave Search to `docs/PROVIDERS.md`
++  - Free tier details (2k req/month, $0.00)
++  - Features: Web search, News, Videos, Images
++  - API key setup instructions
++  - Link to Brave Search API dashboard
++
++- [ ] Update `docs/MCP_SERVICES.md` (if exists) or create
++  - Brave Search MCP integration guide
++  - Configuration example
++  - Usage patterns for job search
++
++### 2. Code Integration (Optional - Future Enhancement)
++- [ ] Add Brave Search as discovery provider option
++  - Similar to existing MCP providers
++  - Use for company/job discovery
++  - Potentially better than Google for fresh results
++
++- [ ] Add to `src/app/mcp_providers.py` or separate module
++  ```python
++  class BraveSearchMCP(MCPProvider):
++      """Brave Search provider via MCP."""
++      # Free tier: 2k requests/month
++      # Better privacy, no tracking
++      # Good for company discovery
++  ```
++
++### 3. Configuration
++- [ ] Add to `.env.example`:
++  ```
++  BRAVE_SEARCH_API_KEY=your_brave_api_key_here
++  ```
++
++- [ ] Add to `docker-compose.yml` MCP services section:
++  ```yaml
++  brave-search-mcp:
++    # Configuration for Brave Search MCP
++  ```
++
++## Benefits
++
++1. **Free tier**: 2k requests/month (generous for job search)
++2. **Privacy**: No Google tracking
++3. **Fresh results**: Good for discovering new companies/jobs
++4. **MCP integration**: Easy to add via existing infrastructure
++
++## Related
++
++- PR #98: MCP services setup (Brave Search + Fetch)
++- `docs/PROVIDERS.md`: Provider documentation
++- `.github/copilot-instructions.md`: TODOs section
++
++## References
++
++- Brave Search API: https://api.dashboard.search.brave.com/
++- Free tier: 1 request/second, 2,000 requests/month
++- Available features: Web search, Goggles, News, Videos, Images
++
+
+# 2025-12-12 22:17:48.015376
++# TODO: Brave Search MCP Integration
++
++**Priority**: P2 (Enhancement)
++**Complexity**: Low
++**Estimated Time**: 1-2 hours
++
++## Context
++
++User discovered Brave Search API Free tier (2,000 requests/month):
++- Screenshot: api.dashboard.search.brave.com/subscriptions
++- Free tier includes: Web search, Goggles, News cluster, Videos, Images
++- MCP server available for integration
++
++## Tasks
++
++### 1. Documentation Updates
++- [ ] Add Brave Search to `docs/PROVIDERS.md`
++  - Free tier details (2k req/month, $0.00)
++  - Features: Web search, News, Videos, Images
++  - API key setup instructions
++  - Link to Brave Search API dashboard
++
++- [ ] Update `docs/MCP_SERVICES.md` (if exists) or create
++  - Brave Search MCP integration guide
++  - Configuration example
++  - Usage patterns for job search
++
++### 2. Code Integration (Optional - Future Enhancement)
++- [ ] Add Brave Search as discovery provider option
++  - Similar to existing MCP providers
++  - Use for company/job discovery
++  - Potentially better than Google for fresh results
++
++- [ ] Add to `src/app/mcp_providers.py` or separate module
++  ```python
++  class BraveSearchMCP(MCPProvider):
++      """Brave Search provider via MCP."""
++      # Free tier: 2k requests/month
++      # Better privacy, no tracking
++      # Good for company discovery
++  ```
++
++### 3. Configuration
++- [ ] Add to `.env.example`:
++  ```
++  BRAVE_SEARCH_API_KEY=your_brave_api_key_here
++  ```
++
++- [ ] Add to `docker-compose.yml` MCP services section:
++  ```yaml
++  brave-search-mcp:
++    # Configuration for Brave Search MCP
++  ```
++
++## Benefits
++
++1. **Free tier**: 2k requests/month (generous for job search)
++2. **Privacy**: No Google tracking
++3. **Fresh results**: Good for discovering new companies/jobs
++4. **MCP integration**: Easy to add via existing infrastructure
++
++## Related
++
++- PR #98: MCP services setup (Brave Search + Fetch)
++- `docs/PROVIDERS.md`: Provider documentation
++- `.github/copilot-instructions.md`: TODOs section
++
++## References
++
++- Brave Search API: https://api.dashboard.search.brave.com/
++- Free tier: 1 request/second, 2,000 requests/month
++- Available features: Web search, Goggles, News, Videos, Images
++
+
+# 2025-12-12 22:28:38.539641
++# TODO: Upgrade to Latest Gemini Models
++
++## Current Status
++- **Using:** `gemini-2.0-flash-exp` (now "Previous generation")
++- **Available:** Gemini 3 Pro, 2.5 Flash, 2.5 Flash-Lite, 2.5 Pro
++- **Source:** https://ai.google.dev/gemini-api/docs/models (Updated Dec 10, 2025)
++
++## Recommended Upgrades
++
++### Option 1: Gemini 2.5 Flash (RECOMMENDED)
++- **Model:** `gemini-2.5-flash`
++- **Why:** Best price-performance, designed for agentic use cases
++- **Use for:** Current AI PR reviews, LLM API tool, general tasks
++- **Cost:** Lower than 2.0 Flash
++- **Speed:** Similar to 2.0 Flash
++
++### Option 2: Gemini 3 Pro
++- **Model:** `gemini-3-pro-preview`
++- **Why:** Most intelligent, best for complex reasoning
++- **Use for:** Architecture design, complex debugging, planning
++- **Cost:** Higher (premium tier)
++- **Speed:** Slower but more capable
++
++### Option 3: Gemini 2.5 Flash-Lite
++- **Model:** `gemini-2.5-flash-lite`
++- **Why:** Fastest, most cost-efficient
++- **Use for:** High-volume simple tasks, quick checks
++- **Cost:** Lowest
++- **Speed:** Fastest
++
++## Implementation Plan
++
++### Phase 1: Update Default Models (15 min)
++- [ ] Update `tools/llm_api.py`: Change default from `gemini-2.0-flash-exp` → `gemini-2.5-flash`
++- [ ] Update `.github/workflows/ai-pr-review.yml`: Use `gemini-2.5-flash`
++- [ ] Update docs mentioning Gemini 2.0 Flash → 2.5 Flash
++
++### Phase 2: Test New Models (30 min)
++- [ ] Test `gemini-2.5-flash` with LLM API tool
++- [ ] Test AI PR review workflow with new model
++- [ ] Compare response quality and speed
++- [ ] Monitor API costs
++
++### Phase 3: Advanced Usage (Optional - 1 hour)
++- [ ] Add Gemini 3 Pro option for complex tasks
++- [ ] Use 2.5 Flash-Lite for high-volume operations
++- [ ] Create model selection strategy based on task complexity
++- [ ] Document model usage guidelines
++
++## Files to Update
++
++```
++tools/llm_api.py (line 170)
++.github/workflows/ai-pr-review.yml (line 197)
++docs/COPILOT_WORKFLOW.md (mentions Gemini Flash 2.0)
++docs/OLLAMA_TUNNEL_SETUP.md (mentions Gemini Flash 2.0)
++docs/TOKEN_OPTIMIZATION.md (mentions Gemini Flash 2.0)
++```
++
++## Benefits
++✅ Latest model capabilities (thinking, agentic features)
++✅ Better price-performance
++✅ Future-proof (2.0 Flash is now "previous generation")
++✅ Access to Gemini 3 Pro for advanced tasks
++
++## Risks
++⚠️ API changes (test thoroughly)
++⚠️ Pricing changes (monitor costs)
++⚠️ Different response formats (validate outputs)
++
++## Decision
++**UPGRADE TO 2.5 FLASH** - It's designed for exactly our use case (agentic, large scale processing)
++
+
+# 2025-12-12 22:28:38.540792
++# TODO: Upgrade to Latest Gemini Models
++
++## Current Status
++- **Using:** `gemini-2.0-flash-exp` (now "Previous generation")
++- **Available:** Gemini 3 Pro, 2.5 Flash, 2.5 Flash-Lite, 2.5 Pro
++- **Source:** https://ai.google.dev/gemini-api/docs/models (Updated Dec 10, 2025)
++
++## Recommended Upgrades
++
++### Option 1: Gemini 2.5 Flash (RECOMMENDED)
++- **Model:** `gemini-2.5-flash`
++- **Why:** Best price-performance, designed for agentic use cases
++- **Use for:** Current AI PR reviews, LLM API tool, general tasks
++- **Cost:** Lower than 2.0 Flash
++- **Speed:** Similar to 2.0 Flash
++
++### Option 2: Gemini 3 Pro
++- **Model:** `gemini-3-pro-preview`
++- **Why:** Most intelligent, best for complex reasoning
++- **Use for:** Architecture design, complex debugging, planning
++- **Cost:** Higher (premium tier)
++- **Speed:** Slower but more capable
++
++### Option 3: Gemini 2.5 Flash-Lite
++- **Model:** `gemini-2.5-flash-lite`
++- **Why:** Fastest, most cost-efficient
++- **Use for:** High-volume simple tasks, quick checks
++- **Cost:** Lowest
++- **Speed:** Fastest
++
++## Implementation Plan
++
++### Phase 1: Update Default Models (15 min)
++- [ ] Update `tools/llm_api.py`: Change default from `gemini-2.0-flash-exp` → `gemini-2.5-flash`
++- [ ] Update `.github/workflows/ai-pr-review.yml`: Use `gemini-2.5-flash`
++- [ ] Update docs mentioning Gemini 2.0 Flash → 2.5 Flash
++
++### Phase 2: Test New Models (30 min)
++- [ ] Test `gemini-2.5-flash` with LLM API tool
++- [ ] Test AI PR review workflow with new model
++- [ ] Compare response quality and speed
++- [ ] Monitor API costs
++
++### Phase 3: Advanced Usage (Optional - 1 hour)
++- [ ] Add Gemini 3 Pro option for complex tasks
++- [ ] Use 2.5 Flash-Lite for high-volume operations
++- [ ] Create model selection strategy based on task complexity
++- [ ] Document model usage guidelines
++
++## Files to Update
++
++```
++tools/llm_api.py (line 170)
++.github/workflows/ai-pr-review.yml (line 197)
++docs/COPILOT_WORKFLOW.md (mentions Gemini Flash 2.0)
++docs/OLLAMA_TUNNEL_SETUP.md (mentions Gemini Flash 2.0)
++docs/TOKEN_OPTIMIZATION.md (mentions Gemini Flash 2.0)
++```
++
++## Benefits
++✅ Latest model capabilities (thinking, agentic features)
++✅ Better price-performance
++✅ Future-proof (2.0 Flash is now "previous generation")
++✅ Access to Gemini 3 Pro for advanced tasks
++
++## Risks
++⚠️ API changes (test thoroughly)
++⚠️ Pricing changes (monitor costs)
++⚠️ Different response formats (validate outputs)
++
++## Decision
++**UPGRADE TO 2.5 FLASH** - It's designed for exactly our use case (agentic, large scale processing)
++
+
+# 2025-12-12 22:39:29.472080
++# TODO: Make Security Constants Configurable
++
++**Priority**: P3 (Future Enhancement)
++**Complexity**: Medium
++**Estimated Time**: 2-3 hours
++
++## Context
++
++PR #94 introduced security hardening with bounded quantifiers to prevent ReDoS attacks in `src/app/email_parser.py`. The regex patterns use hardcoded limits like `{2,50}` for matching company names, job titles, etc.
++
++**Current Pattern Constants:**
++
++```python
++_COMPANY_NAME = r"[A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?"
++_JOB_ROLE = r"Engineer|Developer|Manager|Designer|Analyst|Scientist"
++_TITLE_BASE = r"[A-Z][A-Za-z\s]{2,50}"
++_SENIORITY = r"Senior|Junior|Lead|Staff|Principal"
++```
++
++## Problem
++
++1. **Hardcoded Limits**: The `{2,50}` bounds are security measures but may be too restrictive for some use cases
++2. **No Customization**: Users can't adjust security vs. flexibility tradeoff
++3. **Different Risk Profiles**: Some deployments need tighter security, others need broader matching
++
++## Proposed Solution
++
++### 1. Add Security Configuration Section to config.json
++
++```json
++{
++  "security": {
++    "regex_bounds": {
++      "company_name_min": 2,
++      "company_name_max": 50,
++      "title_min": 2,
++      "title_max": 50,
++      "enabled": true
++    },
++    "redos_protection": {
++      "enabled": true,
++      "max_backtracking": 10000
++    }
++  }
++}
++```
++
++### 2. Update email_parser.py to Use Configuration
++
++```python
++from app.config_manager import load_config
++
++config = load_config()
++security_config = config.get("security", {})
++regex_bounds = security_config.get("regex_bounds", {})
++
++# Get configurable bounds with secure defaults
++company_min = regex_bounds.get("company_name_min", 2)
++company_max = regex_bounds.get("company_name_max", 50)
++title_min = regex_bounds.get("title_min", 2)
++title_max = regex_bounds.get("title_max", 50)
++
++# Pattern components with configurable bounds
++_COMPANY_NAME = rf"[A-Z][A-Za-z0-9\s&]{{{company_min},{company_max}}}(?:Inc|LLC|Ltd|Corp)?"
++_TITLE_BASE = rf"[A-Z][A-Za-z\s]{{{title_min},{title_max}}}"
++```
++
++### 3. Add Validation
++
++```python
++def validate_regex_bounds(config: dict) -> None:
++    """Validate security configuration bounds."""
++    bounds = config.get("security", {}).get("regex_bounds", {})
++
++    # Minimum values must be at least 1
++    if bounds.get("company_name_min", 2) < 1:
++        raise ValueError("company_name_min must be at least 1")
++
++    # Maximum values must be reasonable (prevent ReDoS)
++    if bounds.get("company_name_max", 50) > 200:
++        logger.warning("company_name_max > 200 may cause ReDoS issues")
++
++    # Min must be less than max
++    if bounds.get("company_name_min", 2) >= bounds.get("company_name_max", 50):
++        raise ValueError("company_name_min must be less than company_name_max")
++```
++
++### 4. Documentation
++
++Update `docs/SECURITY.md`:
++
++```markdown
++## Configurable Security Settings
++
++### Regex Bounds (ReDoS Protection)
++
++The email parser uses bounded quantifiers to prevent Regular Expression Denial of Service (ReDoS) attacks. These bounds are configurable in `config.json`:
++
++**Default Settings (Recommended):**
++- Company name: 2-50 characters
++- Job title: 2-50 characters
++
++**Adjusting for Your Use Case:**
++- **Tighter Security**: Reduce max values (e.g., 30)
++- **Broader Matching**: Increase max values (up to 200, with caution)
++- **Disable**: Set `enabled: false` (NOT recommended for production)
++
++**Risk Assessment:**
++- Bounds < 100: Low ReDoS risk
++- Bounds 100-200: Medium risk (monitor performance)
++- Bounds > 200: High risk (may cause significant slowdowns)
++```
++
++## Implementation Steps
++
++- [ ] Add `security` section to `config.json` schema
++- [ ] Update `config_manager.py` with validation
++- [ ] Modify `email_parser.py` to use configurable bounds
++- [ ] Add tests for configuration validation
++- [ ] Add tests for different bound settings
++- [ ] Update `docs/SECURITY.md` with configuration guide
++- [ ] Update `.env.example` if needed
++- [ ] Add migration guide for existing deployments
++
++## Related TODOs
++
++- **email_parser.py line 84**: Make `_JOB_ROLE` and `_SENIORITY` configurable per industry
++- **email_parser.py line 113**: Make `JOB_BOARD_DOMAINS` configurable
++- **email_parser.py line 126**: Make `ATS_DOMAINS` configurable
++
++## Testing Strategy
++
++```python
++def test_custom_regex_bounds():
++    """Test email parser with custom security bounds."""
++    config = {
++        "security": {
++            "regex_bounds": {
++                "company_name_min": 3,
++                "company_name_max": 30,
++                "enabled": True
++            }
++        }
++    }
++    # Test with 2-char company name (should fail with min=3)
++    # Test with 50-char company name (should fail with max=30)
++    # Test with valid 15-char company name (should pass)
++```
++
++## Benefits
++
++1. **Flexibility**: Users can adjust security vs. matching tradeoff
++2. **Risk Management**: Different deployments have different threat models
++3. **Testing**: Easier to test edge cases by adjusting bounds
++4. **Future-Proof**: Can adapt to new threat patterns without code changes
++
++## Risks
++
++1. **Misconfiguration**: Users might disable protection inadvertently
++2. **Complexity**: More configuration surface area
++3. **Documentation Burden**: Need clear guidance on safe values
++
++## Mitigation
++
++- Set secure defaults (current values)
++- Add validation with warnings
++- Provide risk assessment in documentation
++- Log configuration at startup
++
+
+# 2025-12-12 22:39:29.472985
++# TODO: Make Security Constants Configurable
++
++**Priority**: P3 (Future Enhancement)
++**Complexity**: Medium
++**Estimated Time**: 2-3 hours
++
++## Context
++
++PR #94 introduced security hardening with bounded quantifiers to prevent ReDoS attacks in `src/app/email_parser.py`. The regex patterns use hardcoded limits like `{2,50}` for matching company names, job titles, etc.
++
++**Current Pattern Constants:**
++
++```python
++_COMPANY_NAME = r"[A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?"
++_JOB_ROLE = r"Engineer|Developer|Manager|Designer|Analyst|Scientist"
++_TITLE_BASE = r"[A-Z][A-Za-z\s]{2,50}"
++_SENIORITY = r"Senior|Junior|Lead|Staff|Principal"
++```
++
++## Problem
++
++1. **Hardcoded Limits**: The `{2,50}` bounds are security measures but may be too restrictive for some use cases
++2. **No Customization**: Users can't adjust security vs. flexibility tradeoff
++3. **Different Risk Profiles**: Some deployments need tighter security, others need broader matching
++
++## Proposed Solution
++
++### 1. Add Security Configuration Section to config.json
++
++```json
++{
++  "security": {
++    "regex_bounds": {
++      "company_name_min": 2,
++      "company_name_max": 50,
++      "title_min": 2,
++      "title_max": 50,
++      "enabled": true
++    },
++    "redos_protection": {
++      "enabled": true,
++      "max_backtracking": 10000
++    }
++  }
++}
++```
++
++### 2. Update email_parser.py to Use Configuration
++
++```python
++from app.config_manager import load_config
++
++config = load_config()
++security_config = config.get("security", {})
++regex_bounds = security_config.get("regex_bounds", {})
++
++# Get configurable bounds with secure defaults
++company_min = regex_bounds.get("company_name_min", 2)
++company_max = regex_bounds.get("company_name_max", 50)
++title_min = regex_bounds.get("title_min", 2)
++title_max = regex_bounds.get("title_max", 50)
++
++# Pattern components with configurable bounds
++_COMPANY_NAME = rf"[A-Z][A-Za-z0-9\s&]{{{company_min},{company_max}}}(?:Inc|LLC|Ltd|Corp)?"
++_TITLE_BASE = rf"[A-Z][A-Za-z\s]{{{title_min},{title_max}}}"
++```
++
++### 3. Add Validation
++
++```python
++def validate_regex_bounds(config: dict) -> None:
++    """Validate security configuration bounds."""
++    bounds = config.get("security", {}).get("regex_bounds", {})
++
++    # Minimum values must be at least 1
++    if bounds.get("company_name_min", 2) < 1:
++        raise ValueError("company_name_min must be at least 1")
++
++    # Maximum values must be reasonable (prevent ReDoS)
++    if bounds.get("company_name_max", 50) > 200:
++        logger.warning("company_name_max > 200 may cause ReDoS issues")
++
++    # Min must be less than max
++    if bounds.get("company_name_min", 2) >= bounds.get("company_name_max", 50):
++        raise ValueError("company_name_min must be less than company_name_max")
++```
++
++### 4. Documentation
++
++Update `docs/SECURITY.md`:
++
++```markdown
++## Configurable Security Settings
++
++### Regex Bounds (ReDoS Protection)
++
++The email parser uses bounded quantifiers to prevent Regular Expression Denial of Service (ReDoS) attacks. These bounds are configurable in `config.json`:
++
++**Default Settings (Recommended):**
++- Company name: 2-50 characters
++- Job title: 2-50 characters
++
++**Adjusting for Your Use Case:**
++- **Tighter Security**: Reduce max values (e.g., 30)
++- **Broader Matching**: Increase max values (up to 200, with caution)
++- **Disable**: Set `enabled: false` (NOT recommended for production)
++
++**Risk Assessment:**
++- Bounds < 100: Low ReDoS risk
++- Bounds 100-200: Medium risk (monitor performance)
++- Bounds > 200: High risk (may cause significant slowdowns)
++```
++
++## Implementation Steps
++
++- [ ] Add `security` section to `config.json` schema
++- [ ] Update `config_manager.py` with validation
++- [ ] Modify `email_parser.py` to use configurable bounds
++- [ ] Add tests for configuration validation
++- [ ] Add tests for different bound settings
++- [ ] Update `docs/SECURITY.md` with configuration guide
++- [ ] Update `.env.example` if needed
++- [ ] Add migration guide for existing deployments
++
++## Related TODOs
++
++- **email_parser.py line 84**: Make `_JOB_ROLE` and `_SENIORITY` configurable per industry
++- **email_parser.py line 113**: Make `JOB_BOARD_DOMAINS` configurable
++- **email_parser.py line 126**: Make `ATS_DOMAINS` configurable
++
++## Testing Strategy
++
++```python
++def test_custom_regex_bounds():
++    """Test email parser with custom security bounds."""
++    config = {
++        "security": {
++            "regex_bounds": {
++                "company_name_min": 3,
++                "company_name_max": 30,
++                "enabled": True
++            }
++        }
++    }
++    # Test with 2-char company name (should fail with min=3)
++    # Test with 50-char company name (should fail with max=30)
++    # Test with valid 15-char company name (should pass)
++```
++
++## Benefits
++
++1. **Flexibility**: Users can adjust security vs. matching tradeoff
++2. **Risk Management**: Different deployments have different threat models
++3. **Testing**: Easier to test edge cases by adjusting bounds
++4. **Future-Proof**: Can adapt to new threat patterns without code changes
++
++## Risks
++
++1. **Misconfiguration**: Users might disable protection inadvertently
++2. **Complexity**: More configuration surface area
++3. **Documentation Burden**: Need clear guidance on safe values
++
++## Mitigation
++
++- Set secure defaults (current values)
++- Add validation with warnings
++- Provide risk assessment in documentation
++- Log configuration at startup
++
+
+# 2025-12-12 22:44:24.397308
++# TODO: Make Security Constants Configurable
++
++**Priority**: P3 (Future Enhancement)
++**Complexity**: Medium
++**Estimated Time**: 2-3 hours
++
++## Context
++
++PR #94 introduced security hardening with bounded quantifiers to prevent ReDoS attacks in `src/app/email_parser.py`. The regex patterns use hardcoded limits like `{2,50}` for matching company names, job titles, etc.
++
++**Current Pattern Constants:**
++
++```python
++_COMPANY_NAME = r"[A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?"
++_JOB_ROLE = r"Engineer|Developer|Manager|Designer|Analyst|Scientist"
++_TITLE_BASE = r"[A-Z][A-Za-z\s]{2,50}"
++_SENIORITY = r"Senior|Junior|Lead|Staff|Principal"
++```
++
++## Problem
++
++1. **Hardcoded Limits**: The `{2,50}` bounds are security measures but may be too restrictive for some use cases
++2. **No Customization**: Users can't adjust security vs. flexibility tradeoff
++3. **Different Risk Profiles**: Some deployments need tighter security, others need broader matching
++
++## Proposed Solution
++
++### 1. Add Security Configuration Section to config.json
++
++```json
++{
++  "security": {
++    "regex_bounds": {
++      "company_name_min": 2,
++      "company_name_max": 50,
++      "title_min": 2,
++      "title_max": 50,
++      "enabled": true
++    },
++    "redos_protection": {
++      "enabled": true,
++      "max_backtracking": 10000
++    }
++  }
++}
++```
++
++### 2. Update email_parser.py to Use Configuration
++
++```python
++from app.config_manager import load_config
++
++config = load_config()
++security_config = config.get("security", {})
++regex_bounds = security_config.get("regex_bounds", {})
++
++# Get configurable bounds with secure defaults
++company_min = regex_bounds.get("company_name_min", 2)
++company_max = regex_bounds.get("company_name_max", 50)
++title_min = regex_bounds.get("title_min", 2)
++title_max = regex_bounds.get("title_max", 50)
++
++# Pattern components with configurable bounds
++_COMPANY_NAME = rf"[A-Z][A-Za-z0-9\s&]{{{company_min},{company_max}}}(?:Inc|LLC|Ltd|Corp)?"
++_TITLE_BASE = rf"[A-Z][A-Za-z\s]{{{title_min},{title_max}}}"
++```
++
++### 3. Add Validation
++
++```python
++def validate_regex_bounds(config: dict) -> None:
++    """Validate security configuration bounds."""
++    bounds = config.get("security", {}).get("regex_bounds", {})
++
++    # Minimum values must be at least 1
++    if bounds.get("company_name_min", 2) < 1:
++        raise ValueError("company_name_min must be at least 1")
++
++    # Maximum values must be reasonable (prevent ReDoS)
++    if bounds.get("company_name_max", 50) > 200:
++        logger.warning("company_name_max > 200 may cause ReDoS issues")
++
++    # Min must be less than max
++    if bounds.get("company_name_min", 2) >= bounds.get("company_name_max", 50):
++        raise ValueError("company_name_min must be less than company_name_max")
++```
++
++### 4. Documentation
++
++Update `docs/SECURITY.md`:
++
++```markdown
++## Configurable Security Settings
++
++### Regex Bounds (ReDoS Protection)
++
++The email parser uses bounded quantifiers to prevent Regular Expression Denial of Service (ReDoS) attacks. These bounds are configurable in `config.json`:
++
++**Default Settings (Recommended):**
++- Company name: 2-50 characters
++- Job title: 2-50 characters
++
++**Adjusting for Your Use Case:**
++- **Tighter Security**: Reduce max values (e.g., 30)
++- **Broader Matching**: Increase max values (up to 200, with caution)
++- **Disable**: Set `enabled: false` (NOT recommended for production)
++
++**Risk Assessment:**
++- Bounds < 100: Low ReDoS risk
++- Bounds 100-200: Medium risk (monitor performance)
++- Bounds > 200: High risk (may cause significant slowdowns)
++```
++
++## Implementation Steps
++
++- [ ] Add `security` section to `config.json` schema
++- [ ] Update `config_manager.py` with validation
++- [ ] Modify `email_parser.py` to use configurable bounds
++- [ ] Add tests for configuration validation
++- [ ] Add tests for different bound settings
++- [ ] Update `docs/SECURITY.md` with configuration guide
++- [ ] Update `.env.example` if needed
++- [ ] Add migration guide for existing deployments
++
++## Related TODOs
++
++- **email_parser.py line 84**: Make `_JOB_ROLE` and `_SENIORITY` configurable per industry
++- **email_parser.py line 113**: Make `JOB_BOARD_DOMAINS` configurable
++- **email_parser.py line 126**: Make `ATS_DOMAINS` configurable
++
++## Testing Strategy
++
++```python
++def test_custom_regex_bounds():
++    """Test email parser with custom security bounds."""
++    config = {
++        "security": {
++            "regex_bounds": {
++                "company_name_min": 3,
++                "company_name_max": 30,
++                "enabled": True
++            }
++        }
++    }
++    # Test with 2-char company name (should fail with min=3)
++    # Test with 50-char company name (should fail with max=30)
++    # Test with valid 15-char company name (should pass)
++```
++
++## Benefits
++
++1. **Flexibility**: Users can adjust security vs. matching tradeoff
++2. **Risk Management**: Different deployments have different threat models
++3. **Testing**: Easier to test edge cases by adjusting bounds
++4. **Future-Proof**: Can adapt to new threat patterns without code changes
++
++## Risks
++
++1. **Misconfiguration**: Users might disable protection inadvertently
++2. **Complexity**: More configuration surface area
++3. **Documentation Burden**: Need clear guidance on safe values
++
++## Mitigation
++
++- Set secure defaults (current values)
++- Add validation with warnings
++- Provide risk assessment in documentation
++- Log configuration at startup
++
+
+# 2025-12-12 22:44:24.398761
++# TODO: Make Security Constants Configurable
++
++**Priority**: P3 (Future Enhancement)
++**Complexity**: Medium
++**Estimated Time**: 2-3 hours
++
++## Context
++
++PR #94 introduced security hardening with bounded quantifiers to prevent ReDoS attacks in `src/app/email_parser.py`. The regex patterns use hardcoded limits like `{2,50}` for matching company names, job titles, etc.
++
++**Current Pattern Constants:**
++
++```python
++_COMPANY_NAME = r"[A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?"
++_JOB_ROLE = r"Engineer|Developer|Manager|Designer|Analyst|Scientist"
++_TITLE_BASE = r"[A-Z][A-Za-z\s]{2,50}"
++_SENIORITY = r"Senior|Junior|Lead|Staff|Principal"
++```
++
++## Problem
++
++1. **Hardcoded Limits**: The `{2,50}` bounds are security measures but may be too restrictive for some use cases
++2. **No Customization**: Users can't adjust security vs. flexibility tradeoff
++3. **Different Risk Profiles**: Some deployments need tighter security, others need broader matching
++
++## Proposed Solution
++
++### 1. Add Security Configuration Section to config.json
++
++```json
++{
++  "security": {
++    "regex_bounds": {
++      "company_name_min": 2,
++      "company_name_max": 50,
++      "title_min": 2,
++      "title_max": 50,
++      "enabled": true
++    },
++    "redos_protection": {
++      "enabled": true,
++      "max_backtracking": 10000
++    }
++  }
++}
++```
++
++### 2. Update email_parser.py to Use Configuration
++
++```python
++from app.config_manager import load_config
++
++config = load_config()
++security_config = config.get("security", {})
++regex_bounds = security_config.get("regex_bounds", {})
++
++# Get configurable bounds with secure defaults
++company_min = regex_bounds.get("company_name_min", 2)
++company_max = regex_bounds.get("company_name_max", 50)
++title_min = regex_bounds.get("title_min", 2)
++title_max = regex_bounds.get("title_max", 50)
++
++# Pattern components with configurable bounds
++_COMPANY_NAME = rf"[A-Z][A-Za-z0-9\s&]{{{company_min},{company_max}}}(?:Inc|LLC|Ltd|Corp)?"
++_TITLE_BASE = rf"[A-Z][A-Za-z\s]{{{title_min},{title_max}}}"
++```
++
++### 3. Add Validation
++
++```python
++def validate_regex_bounds(config: dict) -> None:
++    """Validate security configuration bounds."""
++    bounds = config.get("security", {}).get("regex_bounds", {})
++
++    # Minimum values must be at least 1
++    if bounds.get("company_name_min", 2) < 1:
++        raise ValueError("company_name_min must be at least 1")
++
++    # Maximum values must be reasonable (prevent ReDoS)
++    if bounds.get("company_name_max", 50) > 200:
++        logger.warning("company_name_max > 200 may cause ReDoS issues")
++
++    # Min must be less than max
++    if bounds.get("company_name_min", 2) >= bounds.get("company_name_max", 50):
++        raise ValueError("company_name_min must be less than company_name_max")
++```
++
++### 4. Documentation
++
++Update `docs/SECURITY.md`:
++
++```markdown
++## Configurable Security Settings
++
++### Regex Bounds (ReDoS Protection)
++
++The email parser uses bounded quantifiers to prevent Regular Expression Denial of Service (ReDoS) attacks. These bounds are configurable in `config.json`:
++
++**Default Settings (Recommended):**
++- Company name: 2-50 characters
++- Job title: 2-50 characters
++
++**Adjusting for Your Use Case:**
++- **Tighter Security**: Reduce max values (e.g., 30)
++- **Broader Matching**: Increase max values (up to 200, with caution)
++- **Disable**: Set `enabled: false` (NOT recommended for production)
++
++**Risk Assessment:**
++- Bounds < 100: Low ReDoS risk
++- Bounds 100-200: Medium risk (monitor performance)
++- Bounds > 200: High risk (may cause significant slowdowns)
++```
++
++## Implementation Steps
++
++- [ ] Add `security` section to `config.json` schema
++- [ ] Update `config_manager.py` with validation
++- [ ] Modify `email_parser.py` to use configurable bounds
++- [ ] Add tests for configuration validation
++- [ ] Add tests for different bound settings
++- [ ] Update `docs/SECURITY.md` with configuration guide
++- [ ] Update `.env.example` if needed
++- [ ] Add migration guide for existing deployments
++
++## Related TODOs
++
++- **email_parser.py line 84**: Make `_JOB_ROLE` and `_SENIORITY` configurable per industry
++- **email_parser.py line 113**: Make `JOB_BOARD_DOMAINS` configurable
++- **email_parser.py line 126**: Make `ATS_DOMAINS` configurable
++
++## Testing Strategy
++
++```python
++def test_custom_regex_bounds():
++    """Test email parser with custom security bounds."""
++    config = {
++        "security": {
++            "regex_bounds": {
++                "company_name_min": 3,
++                "company_name_max": 30,
++                "enabled": True
++            }
++        }
++    }
++    # Test with 2-char company name (should fail with min=3)
++    # Test with 50-char company name (should fail with max=30)
++    # Test with valid 15-char company name (should pass)
++```
++
++## Benefits
++
++1. **Flexibility**: Users can adjust security vs. matching tradeoff
++2. **Risk Management**: Different deployments have different threat models
++3. **Testing**: Easier to test edge cases by adjusting bounds
++4. **Future-Proof**: Can adapt to new threat patterns without code changes
++
++## Risks
++
++1. **Misconfiguration**: Users might disable protection inadvertently
++2. **Complexity**: More configuration surface area
++3. **Documentation Burden**: Need clear guidance on safe values
++
++## Mitigation
++
++- Set secure defaults (current values)
++- Add validation with warnings
++- Provide risk assessment in documentation
++- Log configuration at startup
++
+
+# 2025-12-12 22:55:17.613579
++# Current Autonomous Task
++
++**Task:** Verify version bump auto-merge after next merge
++
++**Priority:** Immediate
++
++**Instructions:**
++1. Read Memory Bank files from .claude/settings.json
++2. Follow workflow in .claude/settings.json
++3. Check if version bump workflow is properly configured:
++   - Verify VERSION_BUMP_PAT is set in GitHub secrets
++   - Verify auto-merge is enabled in repository settings
++   - Verify --delete-branch flag is in version-bump.yml
++4. Create a small documentation update to trigger version bump
++5. Monitor PR creation and auto-merge
++6. Auto-commit changes (autoCommit: true)
++7. Auto-create PR with [AI] tag (autoPR: true)
++8. Update Memory Bank when complete
++
++**Expected Outcome:**
++- Version bump PR is auto-created after this PR merges
++- Version bump PR auto-merges
++- Branch is auto-deleted
++- Documentation of verification in memory/tasks/active_context.md
++
++**Execution Mode:** Fully autonomous (no approval required)
++
+
+# 2025-12-12 22:55:17.614686
++# Current Autonomous Task
++
++**Task:** Verify version bump auto-merge after next merge
++
++**Priority:** Immediate
++
++**Instructions:**
++1. Read Memory Bank files from .claude/settings.json
++2. Follow workflow in .claude/settings.json
++3. Check if version bump workflow is properly configured:
++   - Verify VERSION_BUMP_PAT is set in GitHub secrets
++   - Verify auto-merge is enabled in repository settings
++   - Verify --delete-branch flag is in version-bump.yml
++4. Create a small documentation update to trigger version bump
++5. Monitor PR creation and auto-merge
++6. Auto-commit changes (autoCommit: true)
++7. Auto-create PR with [AI] tag (autoPR: true)
++8. Update Memory Bank when complete
++
++**Expected Outcome:**
++- Version bump PR is auto-created after this PR merges
++- Version bump PR auto-merges
++- Branch is auto-deleted
++- Documentation of verification in memory/tasks/active_context.md
++
++**Execution Mode:** Fully autonomous (no approval required)
++
+
+# 2025-12-12 23:06:06.725562
++# Task: Migrate job_tracker to Framework
++
++## Objective
++Migrate job_tracker functionality to the framework structure by moving job_tracker_new.py to framework/tracker/ and updating all references.
++
++## Steps
++
++1. **Move File**
++   - Move `job_tracker_new.py` to `framework/tracker/job_tracker.py`
++   - Ensure framework/tracker/ directory exists
++
++2. **Update Imports**
++   - Find all files importing from job_tracker or job_tracker_new
++   - Update imports to use `framework.tracker.job_tracker`
++   - Key files to check:
++     - app/*.py files
++     - tests/test_*.py files
++     - Any other modules using job tracker
++
++3. **Remove Old File**
++   - Delete old `job_tracker.py` if it exists
++   - Verify no remaining references to old file
++
++4. **Update Tests**
++   - Update test imports to use new location
++   - Run tests to ensure all pass: `pytest tests/test_job_tracker.py -v`
++   - Fix any import or path issues
++
++## Success Criteria
++- [ ] job_tracker_new.py moved to framework/tracker/job_tracker.py
++- [ ] All imports updated to framework.tracker.job_tracker
++- [ ] Old job_tracker.py removed
++- [ ] All tests pass
++- [ ] No import errors in codebase
++
++## Context
++- Framework structure is in framework/ directory
++- Tests are in tests/ directory
++- Main app code is in app/ directory
++- Use grep to find all references: `grep -r "job_tracker" --include="*.py"`
++
++## Notes
++- Preserve all functionality during migration
++- Ensure backward compatibility if needed
++- Update any documentation referencing old paths
++
+
+# 2025-12-12 23:06:06.726594
++# Task: Migrate job_tracker to Framework
++
++## Objective
++Migrate job_tracker functionality to the framework structure by moving job_tracker_new.py to framework/tracker/ and updating all references.
++
++## Steps
++
++1. **Move File**
++   - Move `job_tracker_new.py` to `framework/tracker/job_tracker.py`
++   - Ensure framework/tracker/ directory exists
++
++2. **Update Imports**
++   - Find all files importing from job_tracker or job_tracker_new
++   - Update imports to use `framework.tracker.job_tracker`
++   - Key files to check:
++     - app/*.py files
++     - tests/test_*.py files
++     - Any other modules using job tracker
++
++3. **Remove Old File**
++   - Delete old `job_tracker.py` if it exists
++   - Verify no remaining references to old file
++
++4. **Update Tests**
++   - Update test imports to use new location
++   - Run tests to ensure all pass: `pytest tests/test_job_tracker.py -v`
++   - Fix any import or path issues
++
++## Success Criteria
++- [ ] job_tracker_new.py moved to framework/tracker/job_tracker.py
++- [ ] All imports updated to framework.tracker.job_tracker
++- [ ] Old job_tracker.py removed
++- [ ] All tests pass
++- [ ] No import errors in codebase
++
++## Context
++- Framework structure is in framework/ directory
++- Tests are in tests/ directory
++- Main app code is in app/ directory
++- Use grep to find all references: `grep -r "job_tracker" --include="*.py"`
++
++## Notes
++- Preserve all functionality during migration
++- Ensure backward compatibility if needed
++- Update any documentation referencing old paths
++
+
+# 2025-12-12 23:16:58.469571
++
++# Task: Containerized AI Resource Monitor Dashboard (Priority: P1)
++
++## Assigned Agent: GEMINI
++
++## Objectives:
++
++
++## Context:
++- Project: Job Lead Finder (Python 3.12, FastAPI, Docker)
++- Memory Bank: memory/ directory contains project documentation
++- Code Style: Follow black, isort, flake8 standards
++- Testing: Use pytest, aim for >80% coverage
++
++## Workflow:
++1. Read relevant Memory Bank files for context
++2. Implement each objective sequentially
++3. Write tests for new code
++4. Run tests locally: pytest -m ""
++5. Validate with pre-commit hooks
++6. Create commits with clear messages
++
++## Success Criteria:
++- All objectives completed
++- Tests passing
++- Code passes linting (black, flake8)
++- Documentation updated if needed
++
++## Output:
++When complete, create a PR with:
++- Title: "Containerized AI Resource Monitor Dashboard"
++- Branch: auto/track-1-containerized-ai-resource-moni
++- Description: Checklist of completed objectives
++
+
+# 2025-12-12 23:16:58.470694
++
++# Task: Containerized AI Resource Monitor Dashboard (Priority: P1)
++
++## Assigned Agent: GEMINI
++
++## Objectives:
++
++
++## Context:
++- Project: Job Lead Finder (Python 3.12, FastAPI, Docker)
++- Memory Bank: memory/ directory contains project documentation
++- Code Style: Follow black, isort, flake8 standards
++- Testing: Use pytest, aim for >80% coverage
++
++## Workflow:
++1. Read relevant Memory Bank files for context
++2. Implement each objective sequentially
++3. Write tests for new code
++4. Run tests locally: pytest -m ""
++5. Validate with pre-commit hooks
++6. Create commits with clear messages
++
++## Success Criteria:
++- All objectives completed
++- Tests passing
++- Code passes linting (black, flake8)
++- Documentation updated if needed
++
++## Output:
++When complete, create a PR with:
++- Title: "Containerized AI Resource Monitor Dashboard"
++- Branch: auto/track-1-containerized-ai-resource-moni
++- Description: Checklist of completed objectives
++
+
+# 2025-12-12 23:27:50.393502
++# Next Steps - PR Management
++
++**Last Updated**: 2025-12-11 16:23
++**Current Branch**: copilot/sub-pr-89-again (PR #94)
++
++## ✅ Completed
++
++- Updated PR #94 description to include documentation cleanup commits
++- Created Ollama task file (`.ai-tasks/track-ollama-pr90-fix.md`) for PR #90 test fixes
++- Moved 3 markdown files from root to `docs/` directory
++- Fixed inclusive language (denylist terminology updates)
++
++## 📋 Current PR Status
++
++### PR #94 - Security Hardening + Doc Cleanup (CURRENT BRANCH)
++- **Branch**: copilot/sub-pr-89-again → main
++- **Status**: Open, AI review workflow failed (non-blocking)
++- **Content**:
++  - ✅ Security fixes (path traversal, DoS, ReDoS, HTML injection, weak entropy)
++  - ✅ 21 security tests added
++  - ✅ `docs/EMAIL_WEBHOOK_SECURITY.md` documentation
++  - ✅ 3 markdown files moved to docs/
++  - ✅ Ollama task file for PR #90
++- **CI Status**: ai-pr-review failed (run 20151417402) - check if this is blocking
++- **Next Action**: Review AI review failure, merge if security changes are good
++
++### PR #90 - Email Webhook Integration (TEST FAILURES)
++- **Branch**: copilot/sub-pr-89 → main
++- **Status**: Open, CI failing (2 test failures)
++- **Failures**:
++  - `test_email_processor.py::test_match_job_by_company_and_title` - Job ID mismatch
++  - `test_gemini_cli.py::test_cli_exits_if_no_sdk_installed` - Import error
++- **Recent Runs**:
++  - CI run 20151346194 (2025-12-11 23:57) - FAILED
++  - CI run 20151165395 (2025-12-11 23:47) - FAILED
++- **Delegated To**: Ollama agent (see `.ai-tasks/track-ollama-pr90-fix.md`)
++- **Next Action**: Wait for Ollama to fix tests, then merge
++
++### PR #98 - MCP Services
++- **Branch**: feature/mcp-services → main
++- **Status**: Open, checks passing
++- **Content**: Brave Search and Fetch MCP services
++- **Dependencies**: Has sub-PR #99 (copilot/sub-pr-98 → feature/mcp-services)
++- **Next Action**: Review and merge after PR #94
++
++### PR #99 - MCP Config Fix
++- **Branch**: copilot/sub-pr-98 → feature/mcp-services
++- **Status**: Open (sub-PR of #98)
++- **Content**: Fix MCP server configuration (stdio vs HTTP)
++- **Next Action**: Review as part of PR #98 chain
++
++## 🎯 Recommended Merge Order
++
++1. **PR #94** (Security + Docs) - Review AI review failure, merge if acceptable
++2. **PR #98/#99** (MCP Services) - Merge after #94
++3. **PR #90** (Email Webhook) - Merge after Ollama fixes tests
++
++## 🔍 Immediate Actions Needed
++
++### For PR #94 (You're here)
++```powershell
++# Check AI review failure details
++gh run view 20151417402 --log
++
++# If AI review is non-critical, can merge with:
++# gh pr merge 94 --squash --delete-branch
++```
++
++### For PR #90 (Delegated to Ollama)
++```powershell
++# Ollama should follow .ai-tasks/track-ollama-pr90-fix.md:
++# 1. Get CI logs: gh run view 20151346194 --log-failed
++# 2. Fix test isolation issues
++# 3. Commit with [AI] tag
++# 4. Push to copilot/sub-pr-89
++# 5. Verify CI passes
++```
++
++### For PR #98/99 (Ready to review)
++```powershell
++# Review MCP configuration changes
++gh pr view 98
++gh pr view 99
++
++# Merge when ready (after #94)
++```
++
++## 📊 Branch Relationship
++
++```
++main
++├── copilot/sub-pr-89-again (PR #94) ← YOU ARE HERE
++│   └── Security + Docs
++├── copilot/sub-pr-89 (PR #90)
++│   └── Email Webhook (needs test fixes)
++└── feature/mcp-services (PR #98)
++    └── copilot/sub-pr-98 (PR #99)
++        └── MCP config fix
++```
++
++## 🤖 AI Agent Assignments
++
++- **PR #94**: Manual review (human decision on AI review failure)
++- **PR #90**: Ollama (test fixes delegated via task file)
++- **PR #98/99**: Ready for human review
++- **Issue #82**: @github-copilot (Memory Bank documentation)
++
++## 💡 Notes
++
++- **PR #94** combines security work (main content) with doc cleanup (bonus) - acceptable
++- **PR #90** test failures are isolated test issues, not production bugs
++- **AI review failure** on PR #94 may be due to diff size (security PR is large)
++- **Ollama task** has detailed instructions for fixing PR #90
++
++## 🚀 After All PRs Merged
++
++1. Pull latest main: `git checkout main; git pull`
++2. Review Issue #82 progress (@github-copilot working on Memory Bank)
++3. Consider framework extraction for ESG discovery project
++4. Monitor Ollama agent for PR #90 fix completion
++
+
+# 2025-12-12 23:27:50.394897
++# Next Steps - PR Management
++
++**Last Updated**: 2025-12-11 16:23
++**Current Branch**: copilot/sub-pr-89-again (PR #94)
++
++## ✅ Completed
++
++- Updated PR #94 description to include documentation cleanup commits
++- Created Ollama task file (`.ai-tasks/track-ollama-pr90-fix.md`) for PR #90 test fixes
++- Moved 3 markdown files from root to `docs/` directory
++- Fixed inclusive language (denylist terminology updates)
++
++## 📋 Current PR Status
++
++### PR #94 - Security Hardening + Doc Cleanup (CURRENT BRANCH)
++- **Branch**: copilot/sub-pr-89-again → main
++- **Status**: Open, AI review workflow failed (non-blocking)
++- **Content**:
++  - ✅ Security fixes (path traversal, DoS, ReDoS, HTML injection, weak entropy)
++  - ✅ 21 security tests added
++  - ✅ `docs/EMAIL_WEBHOOK_SECURITY.md` documentation
++  - ✅ 3 markdown files moved to docs/
++  - ✅ Ollama task file for PR #90
++- **CI Status**: ai-pr-review failed (run 20151417402) - check if this is blocking
++- **Next Action**: Review AI review failure, merge if security changes are good
++
++### PR #90 - Email Webhook Integration (TEST FAILURES)
++- **Branch**: copilot/sub-pr-89 → main
++- **Status**: Open, CI failing (2 test failures)
++- **Failures**:
++  - `test_email_processor.py::test_match_job_by_company_and_title` - Job ID mismatch
++  - `test_gemini_cli.py::test_cli_exits_if_no_sdk_installed` - Import error
++- **Recent Runs**:
++  - CI run 20151346194 (2025-12-11 23:57) - FAILED
++  - CI run 20151165395 (2025-12-11 23:47) - FAILED
++- **Delegated To**: Ollama agent (see `.ai-tasks/track-ollama-pr90-fix.md`)
++- **Next Action**: Wait for Ollama to fix tests, then merge
++
++### PR #98 - MCP Services
++- **Branch**: feature/mcp-services → main
++- **Status**: Open, checks passing
++- **Content**: Brave Search and Fetch MCP services
++- **Dependencies**: Has sub-PR #99 (copilot/sub-pr-98 → feature/mcp-services)
++- **Next Action**: Review and merge after PR #94
++
++### PR #99 - MCP Config Fix
++- **Branch**: copilot/sub-pr-98 → feature/mcp-services
++- **Status**: Open (sub-PR of #98)
++- **Content**: Fix MCP server configuration (stdio vs HTTP)
++- **Next Action**: Review as part of PR #98 chain
++
++## 🎯 Recommended Merge Order
++
++1. **PR #94** (Security + Docs) - Review AI review failure, merge if acceptable
++2. **PR #98/#99** (MCP Services) - Merge after #94
++3. **PR #90** (Email Webhook) - Merge after Ollama fixes tests
++
++## 🔍 Immediate Actions Needed
++
++### For PR #94 (You're here)
++```powershell
++# Check AI review failure details
++gh run view 20151417402 --log
++
++# If AI review is non-critical, can merge with:
++# gh pr merge 94 --squash --delete-branch
++```
++
++### For PR #90 (Delegated to Ollama)
++```powershell
++# Ollama should follow .ai-tasks/track-ollama-pr90-fix.md:
++# 1. Get CI logs: gh run view 20151346194 --log-failed
++# 2. Fix test isolation issues
++# 3. Commit with [AI] tag
++# 4. Push to copilot/sub-pr-89
++# 5. Verify CI passes
++```
++
++### For PR #98/99 (Ready to review)
++```powershell
++# Review MCP configuration changes
++gh pr view 98
++gh pr view 99
++
++# Merge when ready (after #94)
++```
++
++## 📊 Branch Relationship
++
++```
++main
++├── copilot/sub-pr-89-again (PR #94) ← YOU ARE HERE
++│   └── Security + Docs
++├── copilot/sub-pr-89 (PR #90)
++│   └── Email Webhook (needs test fixes)
++└── feature/mcp-services (PR #98)
++    └── copilot/sub-pr-98 (PR #99)
++        └── MCP config fix
++```
++
++## 🤖 AI Agent Assignments
++
++- **PR #94**: Manual review (human decision on AI review failure)
++- **PR #90**: Ollama (test fixes delegated via task file)
++- **PR #98/99**: Ready for human review
++- **Issue #82**: @github-copilot (Memory Bank documentation)
++
++## 💡 Notes
++
++- **PR #94** combines security work (main content) with doc cleanup (bonus) - acceptable
++- **PR #90** test failures are isolated test issues, not production bugs
++- **AI review failure** on PR #94 may be due to diff size (security PR is large)
++- **Ollama task** has detailed instructions for fixing PR #90
++
++## 🚀 After All PRs Merged
++
++1. Pull latest main: `git checkout main; git pull`
++2. Review Issue #82 progress (@github-copilot working on Memory Bank)
++3. Consider framework extraction for ESG discovery project
++4. Monitor Ollama agent for PR #90 fix completion
++
+
+# 2025-12-12 23:38:42.895750
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
+
+# 2025-12-12 23:38:42.900817
++# Auto-Revert on CI Failure Strategy
++
++## Overview
++
++Automatically reverts merged PRs if CI fails after merge, preventing broken main branch.
++
++## Workflow
++
++```mermaid
++flowchart TD
++    PR[PR Merged to Main] --> Wait[Wait for CI<br/>Max 10 minutes]
++    Wait --> Check{CI Result?}
++
++    Check -->|Success| Done[✅ No Action]
++    Check -->|Failure| Revert[Create Revert PR]
++    Check -->|Timeout| Manual[Manual Check Needed]
++
++    Revert --> Branch[Create auto/revert-pr-N]
++    Branch --> RevertPR[Create Revert PR]
++    RevertPR --> Issue[Create Investigation Issue]
++    Issue --> Notify[Notify Original Author]
++
++    Notify --> Review[Human Reviews<br/>Revert PR]
++    Review --> Merge[Merge Revert]
++    Merge --> Fix[Author Fixes<br/>Original PR]
++    Fix --> Retry[Re-merge After Fix]
++```
++
++## Components
++
++### 1. Workflow: `.github/workflows/auto-revert-on-failure.yml`
++- **Trigger:** PR closed + merged to main
++- **Actions:**
++  - Waits up to 10 minutes for CI to complete
++  - On CI failure: Calls Python script
++  - On CI success: No action
++
++### 2. Script: `scripts/auto_revert_on_failure.py`
++- **Monitors:** CI status on main branch
++- **Creates:**
++  1. Revert branch: `auto/revert-pr-{number}`
++  2. Revert PR with auto-label
++  3. Investigation issue assigned to author
++  4. Comments on original PR
++
++### 3. Fallback: Manual Action Issue
++- If automatic revert fails, creates urgent issue
++- Provides manual revert commands
++- Assigns to repository owner
++
++## Example Flow
++
++### Scenario: PR #102 Merged, CI Fails
++
++1. **Auto-Revert Triggered** (within 10 min of merge)
++   ```
++   ⏳ Waiting for CI...
++   ❌ CI failed: build-and-test
++   🚨 Creating revert PR...
++   ```
++
++2. **Revert PR Created**: #103
++   - Branch: `auto/revert-pr-102`
++   - Title: `[AUTO-REVERT] Revert PR #102: Original Title`
++   - Labels: `auto-revert`, `urgent`, `bug`
++   - Body: Explains what happened, next steps
++
++3. **Investigation Issue Created**: #104
++   - Title: `CI Failure Investigation: PR #102`
++   - Assigned to: Original PR author
++   - Checklist: Review logs, identify cause, fix
++
++4. **Notifications Sent:**
++   - Comment on PR #102: "@author PR reverted, see #104"
++   - Revert PR #103: Links to issue #104
++   - Investigation #104: Assigned to author
++
++5. **Human Action Required:**
++   - Review revert PR #103 (usually safe to merge immediately)
++   - Merge #103 to restore main
++   - Author fixes original PR
++   - Re-test and re-merge
++
++## Benefits
++
++✅ **Fast Recovery:** Main branch restored quickly
++✅ **Automatic:** No manual revert commands
++✅ **Documented:** Investigation issue tracks root cause
++✅ **Notified:** Author gets immediate feedback
++✅ **Safe:** Human reviews revert before merge
++
++## Configuration
++
++### Enable/Disable
++To disable auto-revert:
++1. Comment out workflow file
++2. Or add condition: `if: false`
++
++### Adjust Timing
++Change max wait time in `auto_revert_on_failure.py`:
++```python
++ci_result = wait_for_ci(repo, max_wait_minutes=10)  # Change here
++```
++
++### Customize Labels
++Edit labels in `create_revert_pr()`:
++```python
++revert_pr.add_to_labels("auto-revert", "urgent", "bug")  # Customize
++```
++
++## Dependencies
++
++Workflow requires:
++- `PyGithub` - Installed during workflow
++- `GITHUB_TOKEN` - Automatically provided by Actions
++- Branch protection allowing auto-revert PRs
++
++## Testing
++
++Test the workflow without actual revert:
++
++1. **Dry Run:**
++   ```bash
++   # Set env vars
++   export GITHUB_TOKEN="your_token"
++   export PR_NUMBER=102
++   export PR_TITLE="Test PR"
++   export PR_AUTHOR="username"
++   export REPO_OWNER="vcaboara"
++   export REPO_NAME="job-lead-finder"
++
++   # Run script
++   python scripts/auto_revert_on_failure.py
++   ```
++
++2. **Trigger Test:**
++   - Create test PR with failing test
++   - Merge to main
++   - Watch workflow execute
++   - Verify revert PR and issue created
++
++## Troubleshooting
++
++### Workflow Not Triggering
++- Check: Is PR merged? (not just closed)
++- Check: Is target branch `main`?
++- Check: Workflow file syntax valid?
++
++### Revert PR Creation Fails
++- Check: `GITHUB_TOKEN` has write permissions
++- Check: Branch protection allows bot PRs
++- Fallback: Manual action issue will be created
++
++### CI Check Not Found
++- Script looks for check named `build-and-test`
++- Update name in `wait_for_ci()` if different
++
++## Related
++
++- **Version Bump:** `.github/workflows/version-bump.yml` - Creates PR for version bumps
++- **CI Workflow:** `.github/workflows/ci.yml` - Runs tests
++- **Branch Protection:** Requires PR + CI pass
++
++## Future Enhancements
++
++- [ ] Auto-merge revert PR if approved
++- [ ] Slack/Discord notifications
++- [ ] Metrics dashboard (revert frequency)
++- [ ] ML prediction of likely failures
++- [ ] Auto-fix common issues before revert
++
