@@ -13,9 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv (fast Python package manager)
-RUN curl -LsSf https://astral.sh/uv/install.sh | sh
-ENV PATH="/root/.cargo/bin:${PATH}"
+# Install uv (fast Python package manager) using official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/
 
 # Install Aider (AI pair programming tool)
 RUN uv pip install --system aider-chat
