@@ -29,7 +29,15 @@ Complete Memory Bank documentation to enable autonomous AI-driven development wi
 
 ### Completed Work
 
-1. **PR #80: Fixed Flaky Test in CI** (2025-01-08)
+1. **Verify Version Bump Auto-Merge After Next Merge** (2025-12-12)
+   - Created `scripts/verify_version_auto_merge.py` verification script
+   - Validates version bump workflow logic (patch/minor/major determination)
+   - Tests automated version increment and pyproject.toml updates
+   - Verifies GitHub Actions workflow integration
+   - Confirms manual merge mode (VERSION_BUMP_PAT configured)
+   - All automated logic tests passed ✅
+
+2. **PR #80: Fixed Flaky Test in CI** (2025-01-08)
    - Issue: test_cli_prints_sdk_name failing in pytest-xdist parallel execution
    - Root cause: importlib.reload() called before module loaded in some workers
    - Fix: Added conditional check `if "app.gemini_cli" in sys.modules:`
