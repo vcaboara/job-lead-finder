@@ -864,7 +864,7 @@ wheels = [
 
 [[package]]
 name = "job-lead-starter"
-version = "0.14.8"
+version = "0.14.13"
 source = { editable = "." }
 dependencies = [
     { name = "apscheduler" },
