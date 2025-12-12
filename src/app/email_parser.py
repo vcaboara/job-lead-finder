@@ -6,7 +6,6 @@ Classifies inbound emails into:
 - application_confirm: Workday/Greenhouse/Lever receipts
 - recruiter_outreach: Personal emails with job offers
 """
-import concurrent.futures
 import logging
 import re
 from dataclasses import dataclass
@@ -80,18 +79,24 @@ class EmailParser:
         r"I'm reaching out",
     ]
 
+    # Pattern components (DRY - reusable regex parts with ReDoS protection)
+    _COMPANY_NAME = r"[A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?"
+    _JOB_ROLE = r"Engineer|Developer|Manager|Designer|Analyst|Scientist"
+    _TITLE_BASE = r"[A-Z][A-Za-z\s]{2,50}"
+    _SENIORITY = r"Senior|Junior|Lead|Staff|Principal"
+
     # Company extraction patterns (simplified to avoid ReDoS)
     COMPANY_PATTERNS = [
-        r"at ([A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?)",
-        r"with ([A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?)",
-        r"from ([A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?)",
+        rf"at ({_COMPANY_NAME})",
+        rf"with ({_COMPANY_NAME})",
+        rf"from ({_COMPANY_NAME})",
     ]
 
     # Job title patterns (simplified with bounded quantifiers)
     TITLE_PATTERNS = [
-        r"(?:position|role|opportunity):\s*([A-Z][A-Za-z\s]{2,50}(?:Engineer|Developer|Manager|Designer|Analyst|Scientist))",
-        r"([A-Z][A-Za-z\s]{2,50}(?:Engineer|Developer|Manager|Designer|Analyst|Scientist))\s+(?:at|with|position)",
-        r"(?:Senior|Junior|Lead|Staff|Principal)\s+([A-Z][A-Za-z\s]{2,50})",
+        rf"(?:position|role|opportunity):\s*({_TITLE_BASE}(?:{_JOB_ROLE}))",
+        rf"({_TITLE_BASE}(?:{_JOB_ROLE}))\s+(?:at|with|position)",
+        rf"(?:{_SENIORITY})\s+({_TITLE_BASE})",
     ]
 
     # URL patterns for job boards
