@@ -357,12 +357,16 @@ Follow these foundational instructions. Goal: Be a helpful, rigorous, secure, ef
 *   **MANDATORY VERIFICATION:** **NEVER assume commands succeed**. ALWAYS verify command output for errors:
     *   **Check exit codes** (non-zero = failure)
     *   **Read COMPLETE stdout AND stderr** for error messages, warnings, and issues
-    *   **Look for keywords:** "error", "fail", "warning", "not set", "missing", "denied", "invalid"
+    *   **Look for keywords:** "error", "fail", "warning", "not set", "missing", "denied", "invalid", "unstaged files"
+    *   **Check for git state issues:** `[WARNING] Unstaged files detected` means git operations may be incomplete
     *   **Report immediately:** If output contains errors/warnings, STOP and notify user with exact error text
     *   **Environment issues:** Missing API keys, configuration errors, permission denials
     *   **Before pushing:** Verify tests pass, config valid, build succeeds, no warnings
+    *   **Handle unstaged files:** When pre-commit shows unstaged files, either stage them or notify user
     *   **Document failures:** Add to `error-documentation.md`
-    *   **Example:** Docker warnings about missing env vars ("variable is not set") MUST be reported immediately
+    *   **Examples:**
+        - Docker warnings about missing env vars ("variable is not set") MUST be reported immediately
+        - Pre-commit "Unstaged files detected" means changes not fully committed
 *   **AI ATTRIBUTION:** All commits and PRs MUST include AI attribution:
     *   **Commit subject:** Prefix with `[AI]` tag (e.g., `[AI] feat: Add new feature`)
     *   **Commit body/PR footer:** Add attribution line:
