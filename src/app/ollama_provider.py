@@ -34,7 +34,11 @@ class OllamaProvider(BaseAIProvider):
     """
 
     def __init__(
-        self, api_key: Optional[str] = None, model: Optional[str] = None, request_timeout: int = 90, base_url: Optional[str] = None
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        request_timeout: int = 90,
+        base_url: Optional[str] = None,
     ):
         """Initialize Ollama provider.
 

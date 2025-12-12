@@ -99,6 +99,23 @@ class GeminiProvider(BaseAIProvider):
             logger.error(f"Gemini query error: {e}")
             return ""
 
+    def is_available(self) -> bool:
+        """Check if Gemini is available and API key is configured.
+
+        Returns:
+            True if provider is available, False otherwise
+        """
+        if not self.api_key:
+            logger.warning("Gemini API key not configured")
+            return False
+
+        if genai is None:
+            logger.warning("google-generativeai package not installed")
+            return False
+
+        # Simple availability check - if we got this far, we're configured
+        return True
+
     def evaluate(self, job: Dict[str, Any], resume_text: str) -> Dict[str, Any]:
         """Evaluate a job using the Gemini client.
 
