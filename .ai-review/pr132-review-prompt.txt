@@ -1,0 +1,14 @@
+Review this Python code from scripts/verify_version_auto_merge.py and provide specific improvements for:
+
+1. Replace print statements with proper logging module
+2. Simplify complex if/else chains
+3. Improve loop structures
+4. General code quality improvements (DRY, naming, complexity)
+
+Focus on the PR review criteria:
+- Logging instead of print statements
+- Simplified conditionals
+- Clearer control flow
+- Better error handling
+
+Provide specific code changes with explanations.

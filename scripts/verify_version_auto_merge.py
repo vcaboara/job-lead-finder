@@ -16,10 +16,22 @@ Tasks:
 Run this script after setting up VERSION_BUMP_PAT secret to verify auto-merge works.
 """
 
+import logging
 import os
 import re
 import subprocess
 from pathlib import Path
+from typing import Tuple
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+logger = logging.getLogger(__name__)
+
+# Constants for version bump rules
+BUMP_TYPE_RULES = {
+    "major": {"labels": ["major", "breaking-change"], "title_contains": ["BREAKING CHANGE"]},
+    "minor": {"labels": ["minor"], "title_prefixes": ["feat:", "feat("]},
+}
 
 # Test data - simulate a real PR scenario
 TEST_PR_SCENARIOS = [
@@ -30,18 +42,64 @@ TEST_PR_SCENARIOS = [
 ]
 
 
+def _read_pyproject() -> Tuple[Path, str]:
+    """Read pyproject.toml file and return path and content."""
+    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
+    if not pyproject_path.exists():
+        raise FileNotFoundError("pyproject.toml not found")
+    return pyproject_path, pyproject_path.read_text()
+
+
+def _check_gh_cli_available() -> bool:
+    """Check if GitHub CLI is available."""
+    try:
+        subprocess.run(["gh", "--version"], capture_output=True, check=True, timeout=5)
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"gh command failed: {e}")
+        return False
+    except (FileNotFoundError, OSError) as e:
+        logger.error(f"gh CLI not installed: {e}")
+        return False
+    except subprocess.TimeoutExpired:
+        logger.error("gh CLI check timed out")
+        return False
+
+
+def _test_single_scenario(scenario: dict, current_version: str) -> bool:
+    """Test a single PR scenario for version bumping."""
+    logger.info(f"Scenario: {scenario['title']}")
+    logger.info(f"Labels: {scenario['labels']}")
+
+    actual_bump = determine_bump_type(scenario["title"], scenario["labels"])
+    expected_bump = scenario["expected_bump"]
+
+    if actual_bump != expected_bump:
+        logger.error(f"Bump type mismatch: expected {expected_bump}, got {actual_bump}")
+        return False
+
+    logger.info(f"Bump type: {actual_bump}")
+    new_version = increment_version(current_version, actual_bump)
+    logger.info(f"New version: {current_version} → {new_version}")
+    return True
+
+
 def determine_bump_type(pr_title: str, pr_labels: list) -> str:
     """Determine version bump type based on PR title and labels (matches workflow logic)"""
     labels_str = ",".join(pr_labels)
 
-    if any(label in labels_str for label in ["major", "breaking-change"]) or "BREAKING CHANGE" in pr_title:
-        return "major"
-    elif any(label in labels_str for label in ["minor"]) or any(
-        pr_title.startswith(prefix) for prefix in ["feat:", "feat("]
-    ):
-        return "minor"
-    else:
-        return "patch"
+    for bump_type, rules in BUMP_TYPE_RULES.items():
+        # Check labels
+        if any(label in labels_str for label in rules.get("labels", [])):
+            return bump_type
+        # Check title keywords
+        if any(keyword in pr_title for keyword in rules.get("title_contains", [])):
+            return bump_type
+        # Check title prefixes
+        if any(pr_title.startswith(prefix) for prefix in rules.get("title_prefixes", [])):
+            return bump_type
+
+    return "patch"  # default
 
 
 def increment_version(current_version: str, bump_type: str) -> str:
@@ -136,107 +194,91 @@ AI-Generated-By: GitHub Actions Bot"""
 
 def test_version_bump_logic():
     """Test the core version bump logic with various scenarios"""
-    print("🧪 Testing Version Bump Logic")
-    print("=" * 50)
+    logger.info("Testing Version Bump Logic")
+    logger.info("=" * 50)
 
-    # Read current pyproject.toml
-    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
-    if not pyproject_path.exists():
-        print("❌ pyproject.toml not found")
+    try:
+        _, original_content = _read_pyproject()
+        current_version = get_current_version(original_content)
+    except FileNotFoundError:
+        logger.error("pyproject.toml not found")
         return False
 
-    with open(pyproject_path, "r") as f:
-        original_content = f.read()
+    logger.info(f"Current version: {current_version}")
 
-    current_version = get_current_version(original_content)
-    print(f"Current version: {current_version}")
+    results = [_test_single_scenario(scenario, current_version) for scenario in TEST_PR_SCENARIOS]
 
-    all_passed = True
-
-    for i, scenario in enumerate(TEST_PR_SCENARIOS, 1):
-        print(f"\nTest Scenario {i}: {scenario['title']}")
-        print(f"Labels: {scenario['labels']}")
-
-        # Test bump type determination
-        actual_bump = determine_bump_type(scenario["title"], scenario["labels"])
-        expected_bump = scenario["expected_bump"]
-
-        if actual_bump == expected_bump:
-            print(f"✅ Bump type: {actual_bump}")
-        else:
-            print(f"❌ Bump type mismatch: expected {expected_bump}, got {actual_bump}")
-            all_passed = False
-
-        # Test version increment
-        new_version = increment_version(current_version, actual_bump)
-        print(f"   New version would be: {current_version} → {new_version}")
-
-    return all_passed
+    return all(results)
 
 
 def test_auto_merge_setup():
     """Test auto-merge setup and PAT availability"""
-    print("\n🔧 Testing Auto-Merge Setup")
-    print("=" * 50)
+    logger.info("Testing Auto-Merge Setup")
+    logger.info("=" * 50)
 
     # Check for VERSION_BUMP_PAT
     pat = os.getenv("VERSION_BUMP_PAT")
     if pat:
-        # Don't print the actual PAT for security
-        print("✅ VERSION_BUMP_PAT is set")
+        # Don't log the actual PAT for security
+        logger.info("VERSION_BUMP_PAT is set")
         # Basic PAT format validation (GitHub PATs start with ghp_)
         if pat.startswith("ghp_"):
-            print("✅ VERSION_BUMP_PAT appears to be a valid GitHub PAT")
+            logger.info("VERSION_BUMP_PAT appears to be a valid GitHub PAT")
         else:
-            print("⚠️  VERSION_BUMP_PAT doesn't look like a GitHub PAT (should start with 'ghp_')")
+            logger.warning("VERSION_BUMP_PAT doesn't look like a GitHub PAT (should start with 'ghp_')")
     else:
-        print("⚠️  VERSION_BUMP_PAT not set - auto-merge will require manual intervention")
+        logger.warning("VERSION_BUMP_PAT not set - auto-merge will require manual intervention")
 
     # Check if GitHub CLI is available
-    try:
-        result = subprocess.run(["gh", "--version"], capture_output=True, text=True, check=True)
-        print(f"✅ GitHub CLI available: {result.stdout.strip().split()[2]}")
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print("❌ GitHub CLI not available - required for PR operations")
+    gh_available = _check_gh_cli_available()
+    if gh_available:
+        logger.info("GitHub CLI is available")
+    else:
+        logger.error("GitHub CLI not available - required for PR operations")
 
 
 def simulate_complete_workflow():
     """Simulate the complete version bump workflow with realistic data"""
-    print("\n🚀 Simulating Complete Version Bump Workflow")
-    print("=" * 50)
+    logger.info("Simulating Complete Version Bump Workflow")
+    logger.info("=" * 50)
 
     # Use realistic scenario
     scenario = TEST_PR_SCENARIOS[0]  # feat PR
-    print(f"Scenario: {scenario['title']}")
+    logger.info(f"Scenario: {scenario['title']}")
 
-    # Read current version
-    pyproject_path = Path(__file__).parent.parent / "pyproject.toml"
-    with open(pyproject_path, "r") as f:
-        original_content = f.read()
+    try:
+        _, original_content = _read_pyproject()
+        current_version = get_current_version(original_content)
+    except FileNotFoundError:
+        logger.error("pyproject.toml not found")
+        return False
 
-    current_version = get_current_version(original_content)
-    print(f"Current version: {current_version}")
+    logger.info(f"Current version: {current_version}")
 
     # Step 1: Determine bump type
     bump_type = determine_bump_type(scenario["title"], scenario["labels"])
-    print(f"Bump type determined: {bump_type}")
+    logger.info(f"Bump type determined: {bump_type}")
 
     # Step 2: Calculate new version
     new_version = increment_version(current_version, bump_type)
-    print(f"New version: {new_version}")
+    logger.info(f"New version: {new_version}")
 
     # Step 3: Update pyproject.toml
-    updated_content, old_version = validate_pyproject_update(original_content, new_version)
-    print("✅ pyproject.toml content updated (simulation)")
+    try:
+        updated_content, old_version = validate_pyproject_update(original_content, new_version)
+        logger.info("pyproject.toml content updated (simulation)")
+    except ValueError as e:
+        logger.error(f"Failed to update pyproject.toml: {e}")
+        return False
 
     # Step 4: Simulate PR creation
     branch_name = f"auto/version-bump-v{new_version}"
     pr_number = "123"  # Mock PR number
     commands = simulate_gh_pr_creation(branch_name, new_version, old_version, pr_number, scenario["title"])
 
-    print("\n📋 GitHub CLI Commands (simulated):")
+    logger.info("GitHub CLI Commands (simulated):")
     for cmd in commands:
-        print(f"   {cmd}")
+        logger.info(f"  {cmd}")
 
     return True
 
