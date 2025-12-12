@@ -183,7 +183,7 @@ jobs:
           # Enable auto-merge if PAT is available (has required permissions)
           if [ -n "${{ secrets.VERSION_BUMP_PAT }}" ]; then
             echo "Enabling auto-merge with PAT..."
-            gh pr merge "$PR_URL" --auto --squash || echo "⚠️  Auto-merge failed, manual merge required"
+            gh pr merge "$PR_URL" --auto --squash --delete-branch || echo "⚠️  Auto-merge failed, manual merge required"
           else
             echo "⚠️  VERSION_BUMP_PAT not set, manual merge required"
             echo "To enable auto-merge, create a PAT with 'repo' permissions and add as VERSION_BUMP_PAT secret"
