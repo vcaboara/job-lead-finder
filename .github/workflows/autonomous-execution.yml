@@ -1,0 +1,46 @@
+name: Autonomous Task Execution
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'  # Every 2 hours (12 runs/day = 125 queries/run)
+  workflow_dispatch:  # Manual trigger
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  execute-tasks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install httpx PyGithub google-generativeai anthropic openai
+
+      - name: Run autonomous executor
+        run: python scripts/autonomous_task_executor.py --execute
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          REPO_NAME: ${{ github.event.repository.name }}
+
+      - name: Report completion
+        if: always()
+        run: |
+          echo "✅ Autonomous execution cycle complete"
+          echo "Check created PRs and issues for results"
