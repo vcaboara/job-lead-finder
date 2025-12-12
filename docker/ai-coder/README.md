@@ -124,13 +124,13 @@ git config user.email
 
 ## Comparison: AI Coder vs Cline
 
-| Feature | AI Coder | Cline |
-|---------|----------|-------|
-| **Automation** | Fully autonomous | Requires manual click |
-| **Setup** | Docker container | VS Code extension |
-| **Trigger** | File watcher | Manual "Start New Task" |
-| **24/7 Operation** | Yes | No (VS Code must be open) |
-| **Host Changes** | None | VS Code + extensions |
+| Feature            | AI Coder         | Cline                     |
+| ------------------ | ---------------- | ------------------------- |
+| **Automation**     | Fully autonomous | Requires manual click     |
+| **Setup**          | Docker container | VS Code extension         |
+| **Trigger**        | File watcher     | Manual "Start New Task"   |
+| **24/7 Operation** | Yes              | No (VS Code must be open) |
+| **Host Changes**   | None             | VS Code + extensions      |
 
 ## Architecture Details
 

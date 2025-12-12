@@ -71,6 +71,7 @@ services:
       - REPO_OWNER=vcaboara
       - REPO_NAME=job-lead-finder
       - CHECK_INTERVAL=${PR_CHECK_INTERVAL:-300} # 5 minutes default
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
     restart: unless-stopped
     logging:
       driver: "json-file"
@@ -102,7 +103,7 @@ services:
     # This service is for use with 'docker compose run' commands
     # See docs/MCP_SERVICES_GUIDE.md for proper configuration
     image: node:20-alpine
-    profiles: ["mcp"]  # Don't start automatically with 'docker compose up'
+    profiles: ["mcp"] # Don't start automatically with 'docker compose up'
     environment:
       - BRAVE_API_KEY=${BRAVE_API_KEY}
     working_dir: /app
@@ -115,7 +116,7 @@ services:
     # This service is for use with 'docker compose run' commands
     # See docs/MCP_SERVICES_GUIDE.md for proper configuration
     image: node:20-alpine
-    profiles: ["mcp"]  # Don't start automatically with 'docker compose up'
+    profiles: ["mcp"] # Don't start automatically with 'docker compose up'
     working_dir: /app
     command: sh -c "npx -y @modelcontextprotocol/server-fetch"
     stdin_open: true

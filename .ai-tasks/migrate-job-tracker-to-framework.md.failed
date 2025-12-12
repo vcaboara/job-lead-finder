@@ -1,0 +1,45 @@
+# Task: Migrate job_tracker to Framework
+
+## Objective
+Migrate job_tracker functionality to the framework structure by moving job_tracker_new.py to framework/tracker/ and updating all references.
+
+## Steps
+
+1. **Move File**
+   - Move `job_tracker_new.py` to `framework/tracker/job_tracker.py`
+   - Ensure framework/tracker/ directory exists
+
+2. **Update Imports**
+   - Find all files importing from job_tracker or job_tracker_new
+   - Update imports to use `framework.tracker.job_tracker`
+   - Key files to check:
+     - app/*.py files
+     - tests/test_*.py files
+     - Any other modules using job tracker
+
+3. **Remove Old File**
+   - Delete old `job_tracker.py` if it exists
+   - Verify no remaining references to old file
+
+4. **Update Tests**
+   - Update test imports to use new location
+   - Run tests to ensure all pass: `pytest tests/test_job_tracker.py -v`
+   - Fix any import or path issues
+
+## Success Criteria
+- [ ] job_tracker_new.py moved to framework/tracker/job_tracker.py
+- [ ] All imports updated to framework.tracker.job_tracker
+- [ ] Old job_tracker.py removed
+- [ ] All tests pass
+- [ ] No import errors in codebase
+
+## Context
+- Framework structure is in framework/ directory
+- Tests are in tests/ directory
+- Main app code is in app/ directory
+- Use grep to find all references: `grep -r "job_tracker" --include="*.py"`
+
+## Notes
+- Preserve all functionality during migration
+- Ensure backward compatibility if needed
+- Update any documentation referencing old paths
