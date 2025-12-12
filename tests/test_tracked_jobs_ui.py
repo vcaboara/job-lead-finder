@@ -121,15 +121,19 @@ def test_filter_tracked_jobs_by_status(client, mock_search_response):
     time.sleep(0.1)
 
     # Force re-initialization of tracker to ensure clean state
-    job_tracker_module._tracker = None
+    job_tracker_module._tracker = None  # noqa: SLF001
 
     # Get the actual tracking file path from the module
     tracking_file = job_tracker_module.TRACKING_FILE
     if tracking_file.exists():
         os.remove(tracking_file)
 
-    # Re-initialize the tracker
-    job_tracker_module._tracker = None
+    # Re-initialize the tracker and clear all jobs
+    job_tracker_module._tracker = None  # noqa: SLF001
+    from app.job_tracker import get_tracker
+
+    tracker = get_tracker()
+    tracker.clear_all_jobs()  # Explicitly clear all jobs
 
     # Track two jobs with different statuses using mocked responses
 
