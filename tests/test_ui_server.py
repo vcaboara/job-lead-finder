@@ -54,6 +54,7 @@ class TestHealthEndpoint:
 class TestSearchEndpoint:
     """Tests for /api/search endpoint."""
 
+    @pytest.mark.skip(reason="TODO: Mock Ollama API calls - currently takes 30+ seconds (GH issue #XXX)")
     def test_search_without_api_key(self, client, no_api_key):
         """Search should succeed without API key using local fallback."""
         response = client.post(
