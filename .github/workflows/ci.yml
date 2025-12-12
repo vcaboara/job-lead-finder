@@ -8,6 +8,10 @@ on:
 
 jobs:
   build-and-test:
+    # Skip CI for version bump PRs (already validated before merge)
+    if: |
+      !startsWith(github.head_ref, 'auto/version-bump-') &&
+      !contains(github.event.pull_request.title, 'chore: bump version')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
