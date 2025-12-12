@@ -74,7 +74,7 @@ repos:
         pass_filenames: false
         types: [python]
         files: ^(src/|tests/)
-        args: [-m, "not slow", --maxfail=1, --tb=line, -q, -p, "no:xdist", -p, "no:benchmark"]
+        args: [-m, "not slow", --maxfail=1, --tb=line, -q, -p, "no:xdist", -p, "no:benchmark", --timeout=10]
         stages: [pre-commit]
       - id: pytest-push
         name: pytest (full suite - push)
@@ -83,5 +83,5 @@ repos:
         pass_filenames: false
         types: [python]
         files: ^(src/|tests/)
-        args: [-v, --tb=short, --maxfail=5]
+        args: [-v, --tb=short, --maxfail=5, --timeout=30]
         stages: [pre-push]

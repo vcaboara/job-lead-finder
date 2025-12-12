@@ -6,6 +6,9 @@ import pytest
 
 from app.job_tracker import STATUS_APPLIED, STATUS_INTERVIEWING
 
+# Mark all tests in this module as slow - they make real API calls to Ollama
+pytestmark = pytest.mark.slow
+
 
 def _track_job_helper(client, job):
     """Helper to track a job from search results."""
@@ -24,6 +27,7 @@ def _track_job_helper(client, job):
     return track_response.json()
 
 
+@pytest.mark.slow  # Makes real API calls to Ollama
 @pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_endpoint_returns_all_jobs(client, mock_search_response):
     """Test that tracked jobs endpoint returns all tracked jobs."""
@@ -60,6 +64,7 @@ def test_tracked_jobs_endpoint_returns_all_jobs(client, mock_search_response):
     assert len(tracked["jobs"]) >= len(job_ids)
 
 
+@pytest.mark.slow  # Makes real API calls to Ollama
 @pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_includes_metadata(client, mock_search_response):
     """Test that tracked jobs include all necessary metadata."""

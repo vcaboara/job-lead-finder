@@ -4,6 +4,9 @@ from unittest.mock import patch
 
 import pytest
 
+# Mark all tests in this module as slow - they make real API calls to Ollama
+pytestmark = pytest.mark.slow
+
 from app.job_tracker import STATUS_APPLIED, STATUS_HIDDEN
 
 
