@@ -1,5 +1,5 @@
 # AI Provider Comparison Test Results
-**Date**: December 9, 2025  
+**Date**: December 9, 2025
 **Test Task**: Email Validation Function with Type Hints and Tests
 
 ## Test Task Definition
@@ -40,20 +40,20 @@ Create a Python function that validates email addresses with:
 def validate_email(email: str) -> bool:
     """
     Validate an email address based on basic structural rules.
-    
+
     [Comprehensive docstring with examples]
     """
     if email.count("@") != 1:
         return False
-    
+
     local, domain = email.split("@")
-    
+
     if len(local) < 1:
         return False
-    
+
     if "." not in domain:
         return False
-    
+
     return True
 ```
 

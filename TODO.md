@@ -1,95 +1,56 @@
-# Technical Debt & Future Improvements
+# TODO - Active Development Tasks
 
-## Performance Optimizations (Low Priority)
+## Immediate (Do Now)
 
-### PDF Text Cleaning (ui_server.py:771-777)
-**Issue**: Multiple string `.replace()` calls create new string objects repeatedly
-**Impact**: Minor performance hit on large PDFs (>100 pages)
-**Suggestion**: Use regex pattern with translation table for single-pass cleaning
-**Effort**: Medium (requires testing mojibake patterns)
-**Priority**: Low - Current implementation works fine for typical resume PDFs
+- [ ] Merge PR #119 - Version bump fix (ready to merge)
+- [ ] Merge PR #120 - Gemini instructions update (needs review)
+- [ ] Push PR monitor service (scripts/pr_monitor.py)
+- [ ] Set up GitHub PAT for autonomous version bumping
+- [ ] Test Cline autonomous task execution
 
-```python
-# Current: Multiple replace calls
-cleaned_text = cleaned_text.replace('â€”', '—')    # em dash
-cleaned_text = cleaned_text.replace('â€“', '–')    # en dash
-cleaned_text = cleaned_text.replace('â€˜', '‘')    # left single quote
-cleaned_text = cleaned_text.replace('â€™', '’')    # right single quote
-cleaned_text = cleaned_text.replace('â€œ', '“')    # left double quote
-cleaned_text = cleaned_text.replace('â€�', '”')    # right double quote
-cleaned_text = cleaned_text.replace('â€¢', '•')    # bullet
+## High Priority (This Week)
 
-# Proposed: Single-pass regex
-mojibake_map = {...}
-pattern = re.compile('|'.join(re.escape(k) for k in mojibake_map))
-cleaned_text = pattern.sub(lambda m: mojibake_map[m.group(0)], cleaned_text)
-```
+- [ ] Migrate job_tracker to framework fully
+  - [ ] Move job_tracker_new.py to framework/tracker/
+  - [ ] Update imports across codebase
+  - [ ] Remove old job_tracker.py
+  - [ ] Update tests
 
-**Decision**: Skip for now - adds complexity without meaningful benefit for resume-sized files
+- [ ] Add Slack notifications to PR monitor
+  - [ ] Configure Slack webhook URL
+  - [ ] Test notification on PR events
+  - [ ] Document setup in docs/PR_MONITOR.md
 
----
+- [ ] Clean up provider architecture
+  - [ ] Consolidate ollama_provider.py and gemini_provider.py
+  - [ ] Document provider interface in framework
+  - [ ] Add provider selection logic to config
 
-## Code Quality
+## Medium Priority (Next Sprint)
 
-### Mojibake Pattern Validation
-**Issue**: Some mojibake patterns may have incorrect byte sequences
-**Current Status**: Patterns work for common PDFs we've tested
-**Action**: Monitor for encoding issues in production, adjust patterns as needed
-**Priority**: Low - reactive fix if users report issues
+- [ ] Improve UI job tracking
+  - [ ] Add bulk actions (mark multiple as applied)
+  - [ ] Add filtering by date/status
+  - [ ] Export to CSV functionality
 
----
+- [ ] Enhance discovery system
+  - [ ] Add rate limiting per provider
+  - [ ] Implement retry logic with exponential backoff
+  - [ ] Add discovery result caching
 
-## Testing
+- [ ] Documentation improvements
+  - [ ] Update README with new framework structure
+  - [ ] Add architecture diagram
+  - [ ] Document all environment variables
 
-### Integration Test CI Isolation
-**Status**: ✅ COMPLETE - Tests marked with `@pytest.mark.integration`
-**File**: `tests/test_pdf_extraction.py`
-**Skip in CI**: `pytest -m "not integration"` or set `CI=true` environment variable
+## Low Priority (Future Enhancements)
 
----
-
-## Future Enhancements (Not for this PR)
-
-### Developer Experience
 - [ ] Cross-platform setup utility (`setup_dev.py`)
-  - Automated virtual environment creation
-  - Dependency installation (dev, web, test, gemini)
-  - Pre-commit hooks setup (pre-commit + pre-push)
-  - .env file creation from template
-  - Git configuration verification
-  - Works on Windows (PowerShell/CMD) and Unix (bash)
-
-### Resume Format Support
-- [ ] Support `.rtf` (Rich Text Format) - requires `striprtf` package
-- [ ] Support `.odt` (OpenDocument) - requires `odfpy` package
-- [ ] OCR for image-based PDFs - requires `pytesseract`
-
-### Security Hardening
-- [ ] Sandboxed parsing (run pypdf/docx in isolated subprocess)
-- [ ] File size limits per format (e.g., 2MB for PDF, 1MB for DOCX)
-- [ ] Rate limiting on upload endpoint
-
-### User Experience
-- [ ] Resume preview in UI before saving
-- [ ] Support multiple resumes (resume library)
-- [ ] Resume version history
+- [ ] Resume format support (RTF, ODT, OCR)
+- [ ] Security hardening (sandboxed parsing, file limits)
 
 ---
 
-## PR Scope Management Learnings
+## Technical Debt
 
-**This PR**: +820 -95 lines, 15+ files
-**Result**: 3 rounds of Copilot reviews with diminishing returns
-
-**Best Practices for Future PRs**:
-1. **Lines changed**: Keep under 300-400 lines total
-2. **Files modified**: 3-5 files maximum
-3. **Single responsibility**: One feature or fix per PR
-4. **Test-to-code ratio**: Aim for 1:1 or less
-
-**How this PR could have been split**:
-- PR #1: Basic PDF/DOCX upload support (file handling only)
-- PR #2: Security scanning layer (malicious content detection)
-- PR #3: GET/DELETE endpoints for resume management
-
-**Key Insight**: AI reviewers provide iterative feedback as code evolves. Large PRs create feedback loops where each fix generates new comments. Smaller PRs = faster convergence.
+See `docs/TECHNICAL_DEBT.md` for performance optimizations and code quality notes.
