@@ -27,14 +27,15 @@ function Show-Status {
     $branches = git branch | Select-String "auto/"
     if ($branches) {
         $branches | ForEach-Object { Write-Host "  🔧 $_" -ForegroundColor Green }
-    } else {
+    }
+    else {
         Write-Host "  ✨ No active branches" -ForegroundColor Gray
     }
 
     # Open PRs
     Write-Host ""
     Write-Host "OPEN PULL REQUESTS:" -ForegroundColor Yellow
-    $prs = gh pr list --state open --json number,title,statusCheckRollup 2>$null | ConvertFrom-Json
+    $prs = gh pr list --state open --json number, title, statusCheckRollup 2>$null | ConvertFrom-Json
     if ($prs) {
         foreach ($pr in $prs) {
             $status = "PENDING"
@@ -46,7 +47,8 @@ function Show-Status {
             $statusColor = if ($status -eq "PASS") { "Green" } elseif ($status -eq "FAIL") { "Red" } else { "Yellow" }
             Write-Host "  [$status] PR #$($pr.number): $($pr.title)" -ForegroundColor $statusColor
         }
-    } else {
+    }
+    else {
         Write-Host "  No open PRs" -ForegroundColor Gray
     }
 
@@ -77,7 +79,7 @@ function Show-Status {
     $services = @{
         'AI Monitor (9000)' = (Test-NetConnection localhost -Port 9000 -WarningAction SilentlyContinue).TcpTestSucceeded
         'Vibe Check (3000)' = (Test-NetConnection localhost -Port 3000 -WarningAction SilentlyContinue).TcpTestSucceeded
-        'Main UI (8000)' = (Test-NetConnection localhost -Port 8000 -WarningAction SilentlyContinue).TcpTestSucceeded
+        'Main UI (8000)'    = (Test-NetConnection localhost -Port 8000 -WarningAction SilentlyContinue).TcpTestSucceeded
     }
 
     foreach ($service in $services.GetEnumerator()) {
@@ -94,7 +96,8 @@ function Show-Status {
         $recentCommits | ForEach-Object {
             Write-Host "  $_" -ForegroundColor Gray
         }
-    } else {
+    }
+    else {
         Write-Host "  No recent AI commits" -ForegroundColor Gray
     }
 
@@ -126,7 +129,8 @@ try {
         Show-Status
         Start-Sleep $RefreshInterval
     }
-} catch {
+}
+catch {
     Write-Host ""
     Write-Host ""
     Write-Host "Monitor stopped." -ForegroundColor Yellow

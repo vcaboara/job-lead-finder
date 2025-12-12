@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+  # Existing services...
+
+  cline-autodev:
+    image: mcr.microsoft.com/powershell:lts-alpine-3.14
+    container_name: cline-autodev-service
+    restart: unless-stopped
+    working_dir: /workspace
+    volumes:
+      - .:/workspace
+      - ~/.vscode-server:/root/.vscode-server:ro
+    environment:
+      - CHECK_INTERVAL=300
+    command: >
+      sh -c "
+      apk add --no-cache nodejs npm &&
+      pwsh -File /workspace/scripts/cline_autodev_service.ps1
+      "
+    networks:
+      - job-lead-network
+    labels:
+      - "com.job-lead-finder.service=cline-autodev"
+      - "com.job-lead-finder.description=Autonomous Cline task manager"
