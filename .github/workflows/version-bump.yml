@@ -132,11 +132,19 @@ jobs:
 
       - name: Create and push tag
         run: |
+          TAG_NAME="v${{ steps.bump.outputs.version }}"
+
+          # Check if tag already exists
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "⚠️  Tag $TAG_NAME already exists, skipping tag creation"
+            exit 0
+          fi
+
           # Create new annotated tag
-          git tag -a "v${{ steps.bump.outputs.version }}" -m "Release v${{ steps.bump.outputs.version }}: ${{ github.event.pull_request.title }}"
+          git tag -a "$TAG_NAME" -m "Release $TAG_NAME: ${{ github.event.pull_request.title }}"
 
           # Push tag directly (tags bypass branch protection)
-          git push origin "v${{ steps.bump.outputs.version }}"
+          git push origin "$TAG_NAME"
 
       - name: Create version bump PR
         env:
