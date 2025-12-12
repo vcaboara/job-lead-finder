@@ -167,7 +167,7 @@ def query_llm(
         "deepseek": "deepseek-chat",
         "siliconflow": "deepseek-ai/DeepSeek-R1",
         "anthropic": "claude-3-7-sonnet-20250219",
-        "gemini": "gemini-2.0-flash-exp",
+        "gemini": "gemini-2.5-flash",
         "local": "Qwen/Qwen2.5-32B-Instruct-AWQ",
     }
 
@@ -262,7 +262,7 @@ def main():
         elif args.provider == "anthropic":
             args.model = "claude-3-7-sonnet-20250219"
         elif args.provider == "gemini":
-            args.model = "gemini-2.0-flash-exp"
+            args.model = "gemini-2.5-flash"
         elif args.provider == "azure":
             # Get from env with fallback
             args.model = os.getenv("AZURE_OPENAI_MODEL_DEPLOYMENT", "gpt-4o-ms")
