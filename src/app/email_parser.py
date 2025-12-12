@@ -81,6 +81,8 @@ class EmailParser:
 
     # Pattern components (DRY - reusable regex parts with ReDoS protection)
     _COMPANY_NAME = r"[A-Z][A-Za-z0-9\s&]{2,50}(?:Inc|LLC|Ltd|Corp)?"
+    # TODO: Make _JOB_ROLE and _SENIORITY user-configurable per industry
+    # e.g., Finance: "Trader|Analyst|Associate|VP", Healthcare: "Nurse|Doctor|Technician"
     _JOB_ROLE = r"Engineer|Developer|Manager|Designer|Analyst|Scientist"
     _TITLE_BASE = r"[A-Z][A-Za-z\s]{2,50}"
     _SENIORITY = r"Senior|Junior|Lead|Staff|Principal"
@@ -108,6 +110,8 @@ class EmailParser:
         r"(https?://[^\s]+\.(?:greenhouse|lever|workday)\.(?:io|com)[^\s]+)",
     ]
 
+    # TODO: Make JOB_BOARD_DOMAINS user-configurable via config.json
+    # Users may use niche job boards (e.g., AngelList, RemoteOK, We Work Remotely)
     # Known job board domains
     JOB_BOARD_DOMAINS = [
         "linkedin.com",
@@ -119,6 +123,8 @@ class EmailParser:
         "simplyhired.com",
     ]
 
+    # TODO: Make ATS_DOMAINS user-configurable via config.json
+    # Companies may use custom ATS (e.g., Taleo, SmartRecruiters, BambooHR)
     # Known ATS domains
     ATS_DOMAINS = [
         "greenhouse.io",

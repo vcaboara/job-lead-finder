@@ -1,8 +1,5 @@
 """Tests for email webhook integration."""
-import json
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -363,10 +360,10 @@ class TestSecurityFixes:
         """Test that script tags with whitespace variations are sanitized."""
         # Test various whitespace patterns in closing tags
         test_cases = [
-            '<script>alert(1)</script >',  # Space before >
-            '<script>alert(2)</script\t>',  # Tab before >
-            '<script>alert(3)</script\n>',  # Newline before >
-            '<iframe>content</iframe >',  # Space in iframe closing
+            "<script>alert(1)</script >",  # Space before >
+            "<script>alert(2)</script\t>",  # Tab before >
+            "<script>alert(3)</script\n>",  # Newline before >
+            "<iframe>content</iframe >",  # Space in iframe closing
         ]
 
         for html in test_cases:

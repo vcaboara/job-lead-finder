@@ -341,10 +341,13 @@ class TestGeminiCliOutput:
 
                     with patch.dict("sys.modules", {"google.genai": mock_genai, "google": MagicMock()}):
                         import importlib
+                        import sys
 
                         from app import gemini_cli
 
-                        importlib.reload(gemini_cli)
+                        # Ensure module is in sys.modules before reloading
+                        if "app.gemini_cli" in sys.modules:
+                            importlib.reload(gemini_cli)
                         gemini_cli.main()
 
                         # Verify the raw file was written

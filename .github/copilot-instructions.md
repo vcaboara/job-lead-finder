@@ -375,12 +375,12 @@ The screenshot verification workflow allows you to capture screenshots of web pa
 
 1. Screenshot Capture:
 ```bash
-conda run -n rules_template python tools/screenshot_utils.py URL [--output OUTPUT] [--width WIDTH] [--height HEIGHT]
+uv run python tools/screenshot_utils.py URL [--output OUTPUT] [--width WIDTH] [--height HEIGHT]
 ```
 
 2. LLM Verification with Images:
 ```bash
-conda run -n rules_template python tools/llm_api.py --prompt "Your verification question" --provider {openai|anthropic} --image path/to/screenshot.png
+uv run python tools/llm_api.py --prompt "Your verification question" --provider {openai|anthropic} --image path/to/screenshot.png
 ```
 
 Example workflow:
@@ -406,7 +406,7 @@ print(response)
 
 You always have an LLM at your side to help you with the task. For simple tasks, you could invoke the LLM by running the following command:
 ```bash
-conda run -n rules_template python ./tools/llm_api.py --prompt "What is the capital of France?" --provider "anthropic"
+uv run python tools/llm_api.py --prompt "What is the capital of France?" --provider "anthropic"
 ```
 
 The LLM API supports multiple providers:
@@ -423,7 +423,7 @@ But usually it's a better idea to check the content of the file and use the APIs
 
 You could use the `tools/web_scraper.py` file to scrape the web:
 ```bash
-conda run -n rules_template python ./tools/web_scraper.py --max-concurrent 3 URL1 URL2 URL3
+uv run python tools/web_scraper.py --max-concurrent 3 URL1 URL2 URL3
 ```
 This will output the content of the web pages.
 
@@ -431,7 +431,7 @@ This will output the content of the web pages.
 
 You could use the `tools/search_engine.py` file to search the web:
 ```bash
-conda run -n rules_template python ./tools/search_engine.py "your search keywords"
+uv run python tools/search_engine.py "your search keywords"
 ```
 This will output the search results in the following format:
 ```
