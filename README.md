@@ -85,7 +85,7 @@ AI-powered job search tool aggregating jobs from multiple providers including We
    docker compose up -d worker          # Background job discovery
    docker compose up -d ai-monitor      # AI resource tracking (port 9000)
    docker compose up -d vibe-check-mcp  # MCP server (port 3000)
-   
+
    # MCP stdio servers (use 'docker compose run' for interactive use)
    # See docs/MCP_SERVICES_GUIDE.md for configuration
    docker compose run --rm brave-search-mcp # Brave Search (requires BRAVE_API_KEY)
@@ -99,7 +99,7 @@ AI-powered job search tool aggregating jobs from multiple providers including We
    - 📋 Visual Kanban (AI tasks)
    - 🔌 Vibe Check MCP (port 3000)
    - 💚 Health Check (API endpoint)
-   
+
    **Note**: Brave Search and Fetch MCP are stdio-based and don't have web UIs. See [MCP Services Guide](docs/MCP_SERVICES_GUIDE.md) for usage.
 
 3. **Configure** (optional but recommended):
