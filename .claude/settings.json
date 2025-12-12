@@ -23,14 +23,6 @@
                 "quality-check",
                 "pre-commit"
             ]
-        },
-        "vibe-kanban": {
-            "url": "http://localhost:3001",
-            "enabled": true,
-            "useCases": [
-                "task-management",
-                "progress-tracking"
-            ]
         }
     },
     "taskSources": [
@@ -45,21 +37,6 @@
             "path": ".ai-tasks/*.md",
             "parser": "markdown",
             "priority": 2
-        },
-        {
-            "type": "kanban",
-            "url": "http://localhost:3001/api/tasks",
-            "filter": {
-                "status": [
-                    "backlog",
-                    "todo"
-                ],
-                "priority": [
-                    "P0",
-                    "P1"
-                ]
-            },
-            "priority": 1
         }
     ],
     "memoryBank": {
@@ -156,11 +133,6 @@
     },
     "monitoring": {
         "dashboards": [
-            {
-                "name": "Vibe Kanban",
-                "url": "http://localhost:3001",
-                "description": "Task progress and status"
-            },
             {
                 "name": "AI Resource Monitor",
                 "url": "http://localhost:9000",
