@@ -257,7 +257,7 @@ $models = @(
 foreach ($model in $models) {
     Write-Host "Updating $model..." -ForegroundColor Yellow
     ollama pull $model
-    
+
     if ($LASTEXITCODE -eq 0) {
         Write-Host "✅ $model updated successfully" -ForegroundColor Green
     } else {
@@ -293,21 +293,21 @@ def check_model_age():
         capture_output=True,
         text=True
     )
-    
+
     if result.returncode != 0:
         print("❌ Ollama not running")
         return
-        
+
     lines = result.stdout.strip().split("\n")[1:]  # Skip header
-    
+
     print("Model Update Check:")
     print("-" * 60)
-    
+
     for line in lines:
         parts = line.split()
         name = parts[0]
         modified = " ".join(parts[-2:])  # "X days/weeks ago"
-        
+
         # Parse age
         if "week" in modified or "month" in modified:
             status = "⚠️ Consider updating"
@@ -315,7 +315,7 @@ def check_model_age():
             status = "✅ Up to date"
         else:
             status = "❓ Check manually"
-            
+
         print(f"{status} {name:30} (modified: {modified})")
 
 if __name__ == "__main__":
