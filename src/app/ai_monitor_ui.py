@@ -640,6 +640,22 @@ class AIResourceMonitor:
 monitor = AIResourceMonitor()
 
 
+@app.after_request
+def add_cors_headers(response):
+    """Add CORS headers to all responses for cross-origin requests from dashboard.
+
+    Args:
+        response: Flask response object
+
+    Returns:
+        Response with CORS headers added
+    """
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
 @app.route("/")
 def dashboard() -> str:
     """Serve the dashboard HTML page.

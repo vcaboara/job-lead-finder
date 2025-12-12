@@ -15,7 +15,7 @@ The project had conflicting pytest configuration files that caused pytest to ign
    WARNING: ignoring pytest config in pytest.ini, pyproject.toml!
    ```
 
-3. **Mode Mismatch**: 
+3. **Mode Mismatch**:
    - `pytest.ini` specified `asyncio_mode = auto`
    - But pytest was using `mode=Mode.STRICT` (the default for pytest-asyncio >= 1.0.0)
    - This happened because pyproject.toml took precedence but didn't specify asyncio_mode
