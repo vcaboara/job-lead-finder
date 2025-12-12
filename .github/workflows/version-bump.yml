@@ -10,7 +10,8 @@ jobs:
     # Skip if PR is itself a version bump (prevent infinite loop)
     if: |
       github.event.pull_request.merged == true &&
-      !startsWith(github.event.pull_request.head.ref, 'auto/version-bump-')
+      !startsWith(github.event.pull_request.head.ref, 'auto/version-bump-') &&
+      !contains(github.event.pull_request.title, 'chore: bump version')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -20,7 +21,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # Use PAT if available (bypasses branch protection), fallback to GITHUB_TOKEN
+          token: ${{ secrets.VERSION_BUMP_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -130,9 +132,6 @@ jobs:
           ---
           AI-Generated-By: GitHub Actions Bot"
 
-          # Save commit SHA for PR creation
-          echo "commit_sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-
       - name: Create and push tag
         run: |
           TAG_NAME="v${{ steps.bump.outputs.version }}"
@@ -149,9 +148,9 @@ jobs:
           # Push tag directly (tags bypass branch protection)
           git push origin "$TAG_NAME"
 
-      - name: Create version bump PR
+      - name: Create version bump PR with auto-merge
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.VERSION_BUMP_PAT || secrets.GITHUB_TOKEN }}
         run: |
           # Create a new branch for version bump
           BRANCH_NAME="auto/version-bump-v${{ steps.bump.outputs.version }}"
@@ -161,23 +160,34 @@ jobs:
           git push origin "$BRANCH_NAME"
 
           # Create PR
-          gh pr create \
-            --title "[AI] chore: Version bump to v${{ steps.bump.outputs.version }}" \
+          PR_URL=$(gh pr create \
+            --title "[AI] chore: bump version to v${{ steps.bump.outputs.version }}" \
             --body "Automated version bump after merging PR #${{ github.event.pull_request.number }}.
 
           **Changes:**
           - Bumped version from v${{ steps.bump.outputs.old_version }} to v${{ steps.bump.outputs.version }}
           - Created release tag v${{ steps.bump.outputs.version }}
 
-          **Merge Instructions:**
-          This PR can be merged immediately as it only updates the version number in \`pyproject.toml\`.
+          **Status:**
+          This PR will auto-merge once CI checks pass.
 
           ---
           AI-Generated-By: GitHub Actions Bot" \
             --base main \
             --head "$BRANCH_NAME" \
             --label "automation" \
-            --label "version-bump"
+            --label "version-bump")
+
+          echo "Created PR: $PR_URL"
+
+          # Enable auto-merge if PAT is available (has required permissions)
+          if [ -n "${{ secrets.VERSION_BUMP_PAT }}" ]; then
+            echo "Enabling auto-merge with PAT..."
+            gh pr merge "$PR_URL" --auto --squash || echo "⚠️  Auto-merge failed, manual merge required"
+          else
+            echo "⚠️  VERSION_BUMP_PAT not set, manual merge required"
+            echo "To enable auto-merge, create a PAT with 'repo' permissions and add as VERSION_BUMP_PAT secret"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
