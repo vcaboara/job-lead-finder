@@ -243,7 +243,7 @@ def main():
         print("❌ Missing required environment variables")
         sys.exit(1)
 
-    print(f"🤖 Auto-Revert Monitor")
+    print("🤖 Auto-Revert Monitor")
     print(f"   PR: #{pr_number} - {pr_title}")
     print(f"   Author: @{pr_author}")
     print(f"   Repo: {repo_owner}/{repo_name}")
@@ -273,7 +273,7 @@ def main():
         )
 
         if result["success"]:
-            print(f"✅ Auto-revert complete:")
+            print("✅ Auto-revert complete:")
             print(f"   Revert PR: #{result['revert_pr']}")
             print(f"   Investigation: #{result['issue']}")
             sys.exit(0)
