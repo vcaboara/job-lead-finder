@@ -1,8 +1,5 @@
 """Tests for email webhook integration."""
-import json
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -243,3 +240,223 @@ class TestEmailWebhookManager:
 
         assert config is not None
         assert config.user_id == "user123"
+
+
+class TestSecurityFixes:
+    """Test security fixes for email webhook."""
+
+    def test_path_traversal_protection(self, tmp_path):
+        """Test that path traversal attacks are blocked."""
+        manager = EmailWebhookManager(data_dir=tmp_path)
+
+        # Test various path traversal attempts
+        attack_patterns = [
+            "../../../etc/passwd",
+            "..\\..\\..\\windows\\system32",
+            "abc/../../../etc/passwd",
+            "abcd",  # Too short
+            "abcdefghijklmnopqrstuvwxyz",  # Too long
+            "abc-def123456789",  # Contains invalid chars
+            "abc@def12345678",  # Contains invalid chars
+        ]
+
+        for attack in attack_patterns:
+            with pytest.raises(ValueError, match="Invalid email_id"):
+                manager.get_email(attack)
+
+    def test_email_address_validation(self):
+        """Test that invalid email addresses are rejected."""
+        # Invalid to_address
+        with pytest.raises(ValueError, match="Invalid to_address"):
+            InboundEmail(
+                to_address="not-an-email",
+                from_address="valid@example.com",
+                subject="Test",
+                body_text="Body",
+                body_html=None,
+                received_at=datetime.now(),
+            )
+
+        # Invalid from_address
+        with pytest.raises(ValueError, match="Invalid from_address"):
+            InboundEmail(
+                to_address="valid@example.com",
+                from_address="not-an-email",
+                subject="Test",
+                body_text="Body",
+                body_html=None,
+                received_at=datetime.now(),
+            )
+
+    def test_subject_length_validation(self):
+        """Test that too-long subjects are rejected."""
+        with pytest.raises(ValueError, match="Subject too long"):
+            InboundEmail(
+                to_address="valid@example.com",
+                from_address="sender@example.com",
+                subject="A" * 1500,  # Exceeds MAX_SUBJECT_LENGTH
+                body_text="Body",
+                body_html=None,
+                received_at=datetime.now(),
+            )
+
+    def test_email_size_validation(self):
+        """Test that too-large emails are rejected."""
+        with pytest.raises(ValueError, match="Email too large"):
+            InboundEmail(
+                to_address="valid@example.com",
+                from_address="sender@example.com",
+                subject="Test",
+                body_text="A" * 1000000,  # 1MB
+                body_html="B" * 100,  # Exceeds limit
+                received_at=datetime.now(),
+            )
+
+    def test_date_validation(self):
+        """Test that unreasonable dates are rejected."""
+        from datetime import timedelta
+
+        # Future date
+        with pytest.raises(ValueError, match="future"):
+            InboundEmail(
+                to_address="valid@example.com",
+                from_address="sender@example.com",
+                subject="Test",
+                body_text="Body",
+                body_html=None,
+                received_at=datetime.now() + timedelta(days=2),
+            )
+
+        # Very old date
+        with pytest.raises(ValueError, match="too old"):
+            InboundEmail(
+                to_address="valid@example.com",
+                from_address="sender@example.com",
+                subject="Test",
+                body_text="Body",
+                body_html=None,
+                received_at=datetime.now() - timedelta(days=400),
+            )
+
+    def test_html_sanitization(self):
+        """Test that dangerous HTML content is sanitized."""
+        email = InboundEmail(
+            to_address="valid@example.com",
+            from_address="sender@example.com",
+            subject="Test",
+            body_text="Body",
+            body_html='<script>alert("XSS")</script><p onclick="bad()">Text</p><iframe src="evil.com"></iframe>',
+            received_at=datetime.now(),
+        )
+
+        # Check that dangerous elements are removed
+        assert "<script>" not in email.body_html
+        assert "alert" not in email.body_html
+        assert "onclick" not in email.body_html
+        assert "<iframe>" not in email.body_html
+        assert "evil.com" not in email.body_html
+
+    def test_html_sanitization_with_whitespace(self):
+        """Test that script tags with whitespace variations are sanitized."""
+        # Test various whitespace patterns in closing tags
+        test_cases = [
+            "<script>alert(1)</script >",  # Space before >
+            "<script>alert(2)</script\t>",  # Tab before >
+            "<script>alert(3)</script\n>",  # Newline before >
+            "<iframe>content</iframe >",  # Space in iframe closing
+        ]
+
+        for html in test_cases:
+            email = InboundEmail(
+                to_address="valid@example.com",
+                from_address="sender@example.com",
+                subject="Test",
+                body_text="Body",
+                body_html=html,
+                received_at=datetime.now(),
+            )
+            # All variations should be removed
+            assert "<script>" not in email.body_html.lower()
+            assert "<iframe>" not in email.body_html.lower()
+            assert "alert" not in email.body_html
+
+    def test_rate_limiting(self, tmp_path):
+        """Test that rate limiting is enforced."""
+        manager = EmailWebhookManager(data_dir=tmp_path)
+        addr = manager.generate_forwarding_address("test_user")
+
+        # Send emails up to the limit
+        for i in range(100):
+            email = InboundEmail(
+                to_address=addr,
+                from_address=f"sender{i}@example.com",
+                subject=f"Test {i}",
+                body_text="Body",
+                body_html=None,
+                received_at=datetime.now(),
+            )
+            manager.store_inbound_email(email)
+
+        # 101st email should be rate limited
+        email = InboundEmail(
+            to_address=addr,
+            from_address="sender101@example.com",
+            subject="Test 101",
+            body_text="Body",
+            body_html=None,
+            received_at=datetime.now(),
+        )
+        with pytest.raises(ValueError, match="Rate limit exceeded"):
+            manager.store_inbound_email(email)
+
+    def test_address_generation_format(self, tmp_path):
+        """Test that generated addresses have correct format and entropy."""
+        manager = EmailWebhookManager(data_dir=tmp_path)
+
+        # Generate multiple addresses
+        addresses = set()
+        for i in range(10):
+            addr = manager.generate_forwarding_address(f"user{i}")
+            addresses.add(addr)
+
+            # Check format: user-{8hexchars}@domain
+            import string
+
+            parts = addr.split("@")
+            assert len(parts) == 2
+            local_parts = parts[0].split("-")
+            assert len(local_parts) == 2
+            assert local_parts[0] == "user"
+            assert len(local_parts[1]) == 8
+            assert all(c in string.hexdigits.lower() for c in local_parts[1])
+
+        # No collisions
+        assert len(addresses) == 10
+
+    def test_config_corruption_handling(self, tmp_path):
+        """Test that corrupt config files are handled properly."""
+        manager = EmailWebhookManager(data_dir=tmp_path)
+
+        # Create corrupt config file
+        with open(manager.config_file, "w") as f:
+            f.write("{ invalid json !@#$")
+
+        # Should recover by creating new manager
+        manager2 = EmailWebhookManager(data_dir=tmp_path)
+        assert len(manager2._configs) == 0
+
+    def test_no_config_for_address(self, tmp_path):
+        """Test that storing email without config raises error."""
+        manager = EmailWebhookManager(data_dir=tmp_path)
+
+        email = InboundEmail(
+            to_address="unknown@example.com",
+            from_address="sender@example.com",
+            subject="Test",
+            body_text="Body",
+            body_html=None,
+            received_at=datetime.now(),
+        )
+
+        with pytest.raises(ValueError, match="No config found"):
+            manager.store_inbound_email(email)
