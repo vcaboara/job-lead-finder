@@ -14,6 +14,8 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 - [AI Resource Monitor](http://localhost:9000) - Track Copilot, Gemini, Ollama, GPU usage (when running)
 - [Visual Kanban](http://localhost:8000/visual-kanban) - Monitor autonomous AI task progress
 - [Vibe Check MCP](http://localhost:3000) - Model Context Protocol server for AI integration
+- Brave Search MCP - High-quality search via Brave API (stdio-based, see [MCP Guide](docs/MCP_SERVICES_GUIDE.md))
+- Fetch MCP - Standardized web scraping (stdio-based, see [MCP Guide](docs/MCP_SERVICES_GUIDE.md))
 
 🏗️ **Architecture & Planning**
 - [Project Planning](docs/PLANNING.md) - Project overview, architecture, and structure
@@ -59,11 +61,14 @@ AI-powered job search tool aggregating jobs from multiple providers including We
 - **Resource Monitoring**: Real-time dashboard tracking GitHub Copilot, Gemini API, Ollama, and GPU usage
 - **Visual Kanban**: Monitor AI task progress (Backlog → In Progress → Review → Done)
 - **Free Local AI**: Ollama integration (qwen2.5-coder:14b, deepseek-r1:14b) for unlimited AI operations
-- **MCP Integration**: Vibe Check MCP server for AI context and resource management
+- **MCP Integration**: Multiple MCP servers for enhanced AI capabilities
+  - Vibe Check MCP (port 3000) - Code validation and quality checks
+  - Brave Search MCP (port 3002) - High-quality search via Brave API
+  - Fetch MCP (port 3003) - Standardized web scraping
 
 ### Infrastructure
 - **Web UI**: Modern lovable.dev dark theme with navigation dashboard
-- **Docker**: Fully containerized (5 services: ui, worker, ai-monitor, vibe-check-mcp, app)
+- **Docker**: Fully containerized (8 services: ui, worker, ai-monitor, vibe-check-mcp, brave-search-mcp, fetch-mcp, ollama-tunnel, app)
 - **Deployment**: Railway.app ready with railway.toml configuration
 
 ## Quick Start
@@ -76,10 +81,15 @@ AI-powered job search tool aggregating jobs from multiple providers including We
    docker compose up -d
 
    # Or individually:
-   docker compose up -d ui           # Job search UI (port 8000)
-   docker compose up -d worker       # Background job discovery
-   docker compose up -d ai-monitor   # AI resource tracking (port 9000)
-   docker compose up -d vibe-check-mcp # MCP server (port 3000)
+   docker compose up -d ui              # Job search UI (port 8000)
+   docker compose up -d worker          # Background job discovery
+   docker compose up -d ai-monitor      # AI resource tracking (port 9000)
+   docker compose up -d vibe-check-mcp  # MCP server (port 3000)
+   
+   # MCP stdio servers (use 'docker compose run' for interactive use)
+   # See docs/MCP_SERVICES_GUIDE.md for configuration
+   docker compose run --rm brave-search-mcp # Brave Search (requires BRAVE_API_KEY)
+   docker compose run --rm fetch-mcp        # Web scraping
    ```
 
 2. **Open navigation dashboard**: http://localhost:8000/nav
@@ -89,10 +99,13 @@ AI-powered job search tool aggregating jobs from multiple providers including We
    - 📋 Visual Kanban (AI tasks)
    - 🔌 Vibe Check MCP (port 3000)
    - 💚 Health Check (API endpoint)
+   
+   **Note**: Brave Search and Fetch MCP are stdio-based and don't have web UIs. See [MCP Services Guide](docs/MCP_SERVICES_GUIDE.md) for usage.
 
 3. **Configure** (optional but recommended):
    - `GEMINI_API_KEY` - AI job evaluation, cover letters, CompanyJobs search ([Get key](https://aistudio.google.com/app/apikey))
    - `RAPIDAPI_KEY` - Company discovery via JSearch ([Get key](https://rapidapi.com/letscrape-6bRBa3QguO5/api/jsearch))
+   - `BRAVE_API_KEY` - Enhanced search via Brave Search MCP ([Get key](https://brave.com/search/api/))
    - `GITHUB_TOKEN` - GitHub API access for autonomous AI features ([Get token](https://github.com/settings/tokens))
    - `OPENAI_API_KEY` - Fallback for AI PR reviews ([Get key](https://platform.openai.com/api-keys))
    - `OLLAMA_BASE_URL` - Local Ollama server (default: http://host.docker.internal:11434)

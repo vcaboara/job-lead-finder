@@ -82,25 +82,28 @@ services:
     # If you need dev mode with hot reload, use docker-compose.dev.yml override
 
   brave-search-mcp:
+    # NOTE: Official MCP servers use stdio (not HTTP ports)
+    # This service is for use with 'docker compose run' commands
+    # See docs/MCP_SERVICES_GUIDE.md for proper configuration
     image: node:20-alpine
-    ports:
-      - "3002:3002"
+    profiles: ["mcp"]  # Don't start automatically with 'docker compose up'
     environment:
       - BRAVE_API_KEY=${BRAVE_API_KEY}
-      - PORT=3002
     working_dir: /app
     command: sh -c "npx -y @modelcontextprotocol/server-brave-search"
-    restart: unless-stopped
+    stdin_open: true
+    tty: true
 
   fetch-mcp:
+    # NOTE: Official MCP servers use stdio (not HTTP ports)
+    # This service is for use with 'docker compose run' commands
+    # See docs/MCP_SERVICES_GUIDE.md for proper configuration
     image: node:20-alpine
-    ports:
-      - "3003:3003"
-    environment:
-      - PORT=3003
+    profiles: ["mcp"]  # Don't start automatically with 'docker compose up'
     working_dir: /app
     command: sh -c "npx -y @modelcontextprotocol/server-fetch"
-    restart: unless-stopped
+    stdin_open: true
+    tty: true
 
   ollama-tunnel:
     image: cloudflare/cloudflared:latest
