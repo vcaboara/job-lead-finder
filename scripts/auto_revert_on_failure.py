@@ -4,6 +4,7 @@ Auto-Revert on CI Failure
 Monitors CI after PR merge and automatically reverts if it fails.
 """
 
+import logging
 import os
 import sys
 import time
@@ -11,10 +12,16 @@ from datetime import UTC, datetime
 
 from github import Github, GithubException
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(message)s",
+)
+logger = logging.getLogger(__name__)
+
 
 def wait_for_ci(repo, max_wait_minutes=10):
     """Wait for CI to complete on main branch."""
-    print(f"⏳ Waiting for CI to complete (max {max_wait_minutes} minutes)...")
+    logger.info(f"⏳ Waiting for CI to complete (max {max_wait_minutes} minutes)...")
 
     main_branch = repo.get_branch("main")
     merge_sha = main_branch.commit.sha
@@ -34,8 +41,13 @@ def wait_for_ci(repo, max_wait_minutes=10):
                 break
 
         if ci_check:
-            print(f"   Check {i+1}/{max_checks}: {ci_check.status} - {ci_check.conclusion}")
-
+            logger.info(
+                "   Check %d/%d: %s - %s",
+                i + 1,
+                max_checks,
+                ci_check.status,
+                ci_check.conclusion,
+            )
             if ci_check.status == "completed":
                 return {
                     "conclusion": ci_check.conclusion,
@@ -55,7 +67,7 @@ def wait_for_ci(repo, max_wait_minutes=10):
 
 def create_revert_pr(repo, pr_number, pr_title, pr_author, merge_sha, ci_url):
     """Create revert PR and tracking issue."""
-    print(f"🚨 Creating revert for PR #{pr_number}...")
+    logger.info("🚨 Creating revert for PR #%d...", pr_number)
 
     revert_branch = f"auto/revert-pr-{pr_number}"
 
@@ -66,10 +78,10 @@ def create_revert_pr(repo, pr_number, pr_title, pr_author, merge_sha, ci_url):
         # Create revert branch
         try:
             repo.create_git_ref(f"refs/heads/{revert_branch}", main_ref.object.sha)
-            print(f"   ✓ Created branch: {revert_branch}")
+            logger.info("   ✓ Created branch: %s", revert_branch)
         except GithubException as e:
             if e.status == 422:  # Branch already exists
-                print(f"   ⚠️  Branch {revert_branch} already exists")
+                logger.warning("   ⚠️  Branch %s already exists", revert_branch)
                 revert_branch = f"{revert_branch}-{int(time.time())}"
                 repo.create_git_ref(f"refs/heads/{revert_branch}", main_ref.object.sha)
             else:
@@ -113,7 +125,7 @@ AI-Generated-By: Auto-Revert Workflow"""
             base="main",
         )
 
-        print(f"   ✓ Created revert PR: #{revert_pr.number}")
+        logger.info("   ✓ Created revert PR: #%d", revert_pr.number)
 
         # Add labels
         revert_pr.add_to_labels("auto-revert", "urgent", "bug")
@@ -161,7 +173,7 @@ original PR.
             assignees=[pr_author],
         )
 
-        print(f"   ✓ Created investigation issue: #{issue.number}")
+        logger.info("   ✓ Created investigation issue: #%d", issue.number)
 
         # Update revert PR with issue link
         revert_pr.edit(body=revert_body.replace("(will be linked)", f"#{issue.number}"))
@@ -185,7 +197,7 @@ original PR.
 The revert PR will be merged soon to restore main to a working state."""
         )
 
-        print(f"   ✓ Notified original PR #{pr_number}")
+        logger.info("   ✓ Notified original PR #%d", pr_number)
 
         return {
             "revert_pr": revert_pr.number,
@@ -194,7 +206,7 @@ The revert PR will be merged soon to restore main to a working state."""
         }
 
     except Exception as e:
-        print(f"   ❌ Failed to create revert: {e}")
+        logger.error("   ❌ Failed to create revert: %s", e)
 
         # Create manual action issue
         try:
@@ -222,10 +234,10 @@ Then create investigation issue for PR #{pr_number}.
                 assignees=["vcaboara"],
             )
 
-            print(f"   ✓ Created manual action issue: #{manual_issue.number}")
+            logger.info("   ✓ Created manual action issue: #%d", manual_issue.number)
 
         except Exception as e2:
-            print(f"   ❌ Failed to create manual action issue: {e2}")
+            logger.error("   ❌ Failed to create manual action issue: %s", e2)
 
         return {"success": False, "error": str(e)}
 
@@ -233,20 +245,23 @@ Then create investigation issue for PR #{pr_number}.
 def main():
     """Main execution."""
     token = os.environ.get("GITHUB_TOKEN")
-    pr_number = int(os.environ.get("PR_NUMBER"))
+    pr_number_str = os.environ.get("PR_NUMBER")
     pr_title = os.environ.get("PR_TITLE")
     pr_author = os.environ.get("PR_AUTHOR")
     repo_owner = os.environ.get("REPO_OWNER")
     repo_name = os.environ.get("REPO_NAME")
 
-    if not all([token, pr_number, pr_title, pr_author, repo_owner, repo_name]):
-        print("❌ Missing required environment variables")
+    if not all([token, pr_number_str, pr_title, pr_author, repo_owner, repo_name]):
+        logger.error("❌ Missing required environment variables")
         sys.exit(1)
 
-    print("🤖 Auto-Revert Monitor")
-    print(f"   PR: #{pr_number} - {pr_title}")
-    print(f"   Author: @{pr_author}")
-    print(f"   Repo: {repo_owner}/{repo_name}")
+    assert pr_number_str is not None  # Already validated above
+    pr_number = int(pr_number_str)
+
+    logger.info("🤖 Auto-Revert Monitor")
+    logger.info("   PR: #%d - %s", pr_number, pr_title)
+    logger.info("   Author: @%s", pr_author)
+    logger.info("   Repo: %s/%s", repo_owner, repo_name)
 
     # Initialize GitHub client
     g = Github(token)
@@ -256,11 +271,11 @@ def main():
     ci_result = wait_for_ci(repo)
 
     if ci_result["conclusion"] == "success":
-        print("✅ CI passed after merge. No action needed.")
+        logger.info("✅ CI passed after merge. No action needed.")
         sys.exit(0)
 
     elif ci_result["conclusion"] == "failure":
-        print(f"❌ CI failed after merge: {ci_result['url']}")
+        logger.error("❌ CI failed after merge: %s", ci_result["url"])
 
         # Create revert PR
         result = create_revert_pr(
@@ -273,20 +288,20 @@ def main():
         )
 
         if result["success"]:
-            print("✅ Auto-revert complete:")
-            print(f"   Revert PR: #{result['revert_pr']}")
-            print(f"   Investigation: #{result['issue']}")
+            logger.info("✅ Auto-revert complete:")
+            logger.info("   Revert PR: #%d", result["revert_pr"])
+            logger.info("   Investigation: #%d", result["issue"])
             sys.exit(0)
         else:
-            print(f"❌ Auto-revert failed: {result.get('error')}")
+            logger.error("❌ Auto-revert failed: %s", result.get("error"))
             sys.exit(1)
 
     elif ci_result["conclusion"] == "timeout":
-        print("⏱️  CI did not complete within timeout. Manual check needed.")
+        logger.warning("⏱️  CI did not complete within timeout. Manual check needed.")
         sys.exit(0)
 
     else:
-        print(f"⚠️  Unexpected CI conclusion: {ci_result['conclusion']}")
+        logger.warning("⚠️  Unexpected CI conclusion: %s", ci_result["conclusion"])
         sys.exit(0)
 
 
