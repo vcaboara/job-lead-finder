@@ -7,12 +7,12 @@
         "requireApproval": {
             "fileCreation": false,
             "fileModification": false,
-            "terminalCommands": true,
+            "terminalCommands": false,
             "apiCalls": false
         },
         "maxIterations": 50,
-        "autoCommit": false,
-        "autoPR": false
+        "autoCommit": true,
+        "autoPR": true
     },
     "mcpServers": {
         "vibe-check": {
