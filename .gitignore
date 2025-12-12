@@ -173,3 +173,4 @@ docker-compose.override.yml
 # Output files
 leads.json
 jsearch_discovery_results.json
+.aider*

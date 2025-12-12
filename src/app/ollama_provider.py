@@ -14,14 +14,16 @@ import json
 import logging
 import os
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 import httpx
+
+from app.framework.providers.base_provider import BaseAIProvider
 
 logger = logging.getLogger(__name__)
 
 
-class OllamaProvider:
+class OllamaProvider(BaseAIProvider):
     """Ollama local LLM provider for job evaluation.
 
     Runs models locally with no API costs or quotas.
@@ -31,13 +33,20 @@ class OllamaProvider:
         - llama3.1:8b (5GB VRAM, best balance)
     """
 
-    def __init__(self, base_url: str | None = None, model: str | None = None, request_timeout: int = 90):
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
+        model: Optional[str] = None,
+        request_timeout: int = 90,
+        base_url: Optional[str] = None,
+    ):
         """Initialize Ollama provider.
 
         Args:
-            base_url: Ollama server URL (default: http://localhost:11434)
+            api_key: Not used for Ollama (local provider)
             model: Model name to use (default: llama3.2:3b)
             request_timeout: Request timeout in seconds (default: 90)
+            base_url: Ollama server URL (default: http://localhost:11434)
         """
         self.base_url = base_url or os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
         self.model = model or os.getenv("OLLAMA_MODEL", "llama3.2:3b")
@@ -56,6 +65,38 @@ class OllamaProvider:
             return response.status_code == 200
         except Exception:
             return False
+
+    def query(self, prompt: str, **options: Any) -> str:
+        """Execute a query against the Ollama model.
+
+        Args:
+            prompt: The prompt text to send to the model
+            **options: Additional options (temperature, num_predict, etc.)
+
+        Returns:
+            The model's response text
+        """
+        try:
+            response = httpx.post(
+                f"{self.base_url}/api/generate",
+                json={
+                    "model": self.model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "options": options or {},
+                },
+                timeout=self.request_timeout,
+            )
+
+            if response.status_code != 200:
+                logger.error(f"Ollama query failed: {response.status_code} {response.text}")
+                return ""
+
+            result = response.json()
+            return result.get("response", "")
+        except Exception as e:
+            logger.error(f"Ollama query error: {e}")
+            return ""
 
     def evaluate(self, job: Dict[str, Any], resume_text: str) -> Dict[str, Any]:
         """Evaluate a job using Ollama.
