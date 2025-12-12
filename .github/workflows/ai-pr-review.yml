@@ -193,8 +193,8 @@ jobs:
 
           # Try Gemini first (you have credits), then OpenAI, then Ollama
           if [ -n "$GEMINI_API_KEY" ]; then
-            echo "Using Gemini Flash 2.0 for review..."
-            API_RESPONSE=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=$GEMINI_API_KEY" \
+            echo "Using Gemini Flash 2.5 for review..."
+            API_RESPONSE=$(curl -s "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$GEMINI_API_KEY" \
               -H "Content-Type: application/json" \
               -d "{
                 \"contents\": [{
@@ -219,7 +219,7 @@ jobs:
             else
               REVIEW_OUTPUT=$(echo "$API_RESPONSE" | jq -r '.candidates[0].content.parts[0].text' 2>&1 || echo "")
               if [ -n "$REVIEW_OUTPUT" ]; then
-                PROVIDER_USED="Gemini Flash 2.0"
+                PROVIDER_USED="Gemini Flash 2.5"
               fi
             fi
           fi
