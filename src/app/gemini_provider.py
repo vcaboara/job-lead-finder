@@ -7,7 +7,9 @@ import logging
 import os
 import time
 import traceback
-from typing import Any, Dict
+from typing import Any, Dict, Optional
+
+from app.framework.providers.base_provider import BaseAIProvider
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +35,7 @@ except Exception:
         genai_name = None
 
 
-class GeminiProvider:
+class GeminiProvider(BaseAIProvider):
     """Minimal Gemini provider wrapper.
 
     Usage:
@@ -41,7 +43,7 @@ class GeminiProvider:
       - Set `GOOGLE_API_KEY` environment variable
     """
 
-    def __init__(self, api_key: str | None = None, model: str | None = None, request_timeout: int = 90):
+    def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None, request_timeout: int = 90):
         """Initialize Gemini provider.
 
         Args:
@@ -67,6 +69,35 @@ class GeminiProvider:
         # Default to a modern model that supports google_search tool; allow overriding
         self.model = model or "gemini-2.5-flash-preview-09-2025"
         self.request_timeout = request_timeout
+
+    def query(self, prompt: str, **options: Any) -> str:
+        """Execute a query against the Gemini model.
+
+        Args:
+            prompt: The prompt text to send to the model
+            **options: Additional options (not used currently)
+
+        Returns:
+            The model's response text
+        """
+        try:
+            # Try google.genai Client first (newer SDK)
+            if genai_name == "google.genai" and hasattr(genai, "Client"):
+                client = genai.Client(api_key=self.api_key)
+                resp = client.models.generate_content(model=self.model, contents=prompt)
+                return resp.text
+
+            # Fallback to google.generativeai
+            elif genai_name == "google.generativeai" and hasattr(genai, "GenerativeModel"):
+                model_obj = genai.GenerativeModel(self.model)
+                resp = model_obj.generate_content(prompt)
+                return resp.text
+
+            logger.error(f"No compatible Gemini SDK method found (using {genai_name})")
+            return ""
+        except Exception as e:
+            logger.error(f"Gemini query error: {e}")
+            return ""
 
     def evaluate(self, job: Dict[str, Any], resume_text: str) -> Dict[str, Any]:
         """Evaluate a job using the Gemini client.
