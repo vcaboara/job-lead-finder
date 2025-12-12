@@ -1,7 +1,7 @@
 # TODO: Brave Search MCP Integration
 
-**Priority**: P2 (Enhancement)  
-**Complexity**: Low  
+**Priority**: P2 (Enhancement)
+**Complexity**: Low
 **Estimated Time**: 1-2 hours
 
 ## Context

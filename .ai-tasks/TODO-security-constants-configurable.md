@@ -71,15 +71,15 @@ _TITLE_BASE = rf"[A-Z][A-Za-z\s]{{{title_min},{title_max}}}"
 def validate_regex_bounds(config: dict) -> None:
     """Validate security configuration bounds."""
     bounds = config.get("security", {}).get("regex_bounds", {})
-    
+
     # Minimum values must be at least 1
     if bounds.get("company_name_min", 2) < 1:
         raise ValueError("company_name_min must be at least 1")
-    
+
     # Maximum values must be reasonable (prevent ReDoS)
     if bounds.get("company_name_max", 50) > 200:
         logger.warning("company_name_max > 200 may cause ReDoS issues")
-    
+
     # Min must be less than max
     if bounds.get("company_name_min", 2) >= bounds.get("company_name_max", 50):
         raise ValueError("company_name_min must be less than company_name_max")

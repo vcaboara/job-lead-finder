@@ -14,7 +14,7 @@ gh pr view <PR_NUMBER> --json reviewDecision,mergeable,mergeStateStatus
 ```json
 {
   "reviewDecision": "APPROVED",
-  "mergeable": "MERGEABLE", 
+  "mergeable": "MERGEABLE",
   "mergeStateStatus": "CLEAN"
 }
 ```
@@ -157,7 +157,7 @@ Write-Host "✅ PR #$PR_NUMBER merged and branch deleted" -ForegroundColor Green
 
 ### Main Branch CI Failing
 **Decision Tree:**
-1. Are failures related to PR changes? 
+1. Are failures related to PR changes?
    - YES: Don't merge, fix PR first
    - NO: Document in merge commit, merge anyway
 
