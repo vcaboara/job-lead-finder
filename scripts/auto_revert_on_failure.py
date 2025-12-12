@@ -27,13 +27,13 @@ def _find_ci_check(check_runs):
     return None
 
 
-def wait_for_ci(repo, max_wait_minutes=10):
+def wait_for_ci(repo, max_wait_minutes=20):
     """Wait for CI to complete on main branch."""
     logger.info("⏳ Waiting for CI to complete (max %d minutes)...", max_wait_minutes)
 
     main_branch = repo.get_branch("main")
     merge_sha = main_branch.commit.sha
-    check_interval = 30  # seconds
+    check_interval = 60  # seconds
     max_checks = (max_wait_minutes * 60) // check_interval
 
     for i in range(max_checks):
