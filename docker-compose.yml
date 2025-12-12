@@ -129,6 +129,24 @@ services:
     # Run: docker compose logs ollama-tunnel | grep "https://"
     # Then: gh secret set OLLAMA_BASE_URL --body "https://your-url.trycloudflare.com"
 
+  ai-coder:
+    build:
+      context: ./docker/ai-coder
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/workspace
+    working_dir: /workspace
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - OLLAMA_MODEL=qwen2.5-coder:32b
+      - CHECK_INTERVAL=30
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   job-data:
   job-logs:
