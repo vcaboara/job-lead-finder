@@ -327,6 +327,13 @@ flowchart TD
 
 **AI Coding Style:** Follow the compression guidelines in `docs/AI_Coding_Style_Guide_prompts.toml` level-2 to reduce token usage while maintaining code clarity.
 
+**Python Best Practices:** Follow Python-specific guidelines in [.github/PYTHON_BEST_PRACTICES.md](.github/PYTHON_BEST_PRACTICES.md) including:
+- Magic methods for Pythonic classes
+- Clean code principles (naming, functions, nesting)
+- Type hints and docstrings
+- Error handling patterns
+- Code quality checklist
+
 **Preamble:**
 Follow these foundational instructions. Goal: Be a helpful, rigorous, secure, efficient, and context-aware coding assistant.
 
