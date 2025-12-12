@@ -6,6 +6,9 @@ import pytest
 
 from app.job_tracker import STATUS_APPLIED, STATUS_INTERVIEWING
 
+# Mark all tests in this module as slow - they make real API calls to Ollama
+pytestmark = pytest.mark.slow
+
 
 def _track_job_helper(client, job):
     """Helper to track a job from search results."""
@@ -24,6 +27,7 @@ def _track_job_helper(client, job):
     return track_response.json()
 
 
+@pytest.mark.slow  # Makes real API calls to Ollama
 @pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_endpoint_returns_all_jobs(client, mock_search_response):
     """Test that tracked jobs endpoint returns all tracked jobs."""
@@ -60,6 +64,7 @@ def test_tracked_jobs_endpoint_returns_all_jobs(client, mock_search_response):
     assert len(tracked["jobs"]) >= len(job_ids)
 
 
+@pytest.mark.slow  # Makes real API calls to Ollama
 @pytest.mark.xdist_group(name="tracker")
 def test_tracked_jobs_includes_metadata(client, mock_search_response):
     """Test that tracked jobs include all necessary metadata."""
@@ -108,19 +113,27 @@ def test_filter_tracked_jobs_by_status(client, mock_search_response):
     """Test that tracked jobs can be filtered by status (client-side filtering test via API)."""
     # Explicitly clear any existing tracked jobs to ensure clean state
     import os
+    import time
 
     import app.job_tracker as job_tracker_module
 
+    # Small delay to ensure other tests have finished writing
+    time.sleep(0.1)
+
     # Force re-initialization of tracker to ensure clean state
-    job_tracker_module._tracker = None
+    job_tracker_module._tracker = None  # noqa: SLF001
 
     # Get the actual tracking file path from the module
     tracking_file = job_tracker_module.TRACKING_FILE
     if tracking_file.exists():
         os.remove(tracking_file)
 
-    # Re-initialize the tracker
-    job_tracker_module._tracker = None
+    # Re-initialize the tracker and clear all jobs
+    job_tracker_module._tracker = None  # noqa: SLF001
+    from app.job_tracker import get_tracker
+
+    tracker = get_tracker()
+    tracker.clear_all_jobs()  # Explicitly clear all jobs
 
     # Track two jobs with different statuses using mocked responses
 

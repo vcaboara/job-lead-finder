@@ -67,12 +67,21 @@ repos:
         types: [text]
         exclude: '^(\.git/|node_modules/|venv/|.*\.lock$|\.github/inclusive-language\.yaml|docs/INCLUSIVE_LANGUAGE\.md)'
         stages: [pre-commit]
-      - id: pytest
-        name: pytest (fast tests)
-        entry: python -m pytest
+      - id: pytest-commit
+        name: pytest (fast tests - commit)
+        entry: uv run pytest
         language: system
         pass_filenames: false
         types: [python]
         files: ^(src/|tests/)
-        args: [-m, "not slow", --maxfail=3, --tb=short, -q]
+        args: [-m, "not slow", --maxfail=1, --tb=line, -q, -p, "no:xdist", -p, "no:benchmark", --timeout=10]
         stages: [pre-commit]
+      - id: pytest-push
+        name: pytest (full suite - push)
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        types: [python]
+        files: ^(src/|tests/)
+        args: [-v, --tb=short, --maxfail=5, --timeout=30]
+        stages: [pre-push]

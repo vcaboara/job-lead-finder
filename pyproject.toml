@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "job-lead-starter"
-version = "0.14.0"
+version = "0.14.1"
 description = "Minimal, modular job-finder starter with Gemini template and CI"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,7 +19,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # Development tools
-dev = ["pytest>=7.0", "pytest-cov>=5.0", "pytest-asyncio>=0.21.0", "pre-commit", "black", "isort"]
+dev = ["pytest>=7.0", "pytest-cov>=5.0", "pytest-asyncio>=0.21.0", "pytest-timeout>=2.2.0", "pre-commit", "black", "isort"]
 # Web server dependencies (FastAPI + Uvicorn + Flask for AI monitor)
 web = ["fastapi>=0.100.0", "uvicorn[standard]>=0.23.0", "python-multipart>=0.0.6", "flask>=3.0.0"]
 # Test dependencies
@@ -27,6 +27,7 @@ test = [
   "pytest>=7.0",
   "pytest-cov>=5.0",
   "pytest-asyncio>=0.21.0",
+  "pytest-timeout>=2.2.0",
   "pytest-xdist>=3.0",
   "pytest-sugar",
   "pytest-benchmark",
@@ -86,24 +87,27 @@ markers = [
 ]
 
 # Default test options - Optimized for speed
-# -n auto: parallel execution (uses all CPU cores)
+# Note: xdist flags (-n auto, --dist loadgroup) are disabled in pre-commit hooks
+# Run with: uv run pytest (uses xdist) or pre-commit (no xdist)
+# -v: verbose output
+# --tb=short: shorter traceback format
+# -m 'not slow': skip slow tests by default
 # --maxfail=3: stop after 3 failures (fail fast)
 # --ff: run failed tests first
-# --dist loadgroup: use loadgroup distribution to respect xdist_group markers
 # -p no:benchmark: disable pytest-benchmark (incompatible with xdist)
-addopts = "-v --tb=short -m 'not slow' -n auto --dist loadgroup -p no:benchmark --maxfail=3 --ff"
+addopts = "-v --tb=short -m 'not slow' --maxfail=3 --ff -p no:benchmark"
 
-# Warning filters
-filterwarnings = [
-    "error",
-    "ignore::DeprecationWarning:google.*",
-    "ignore::DeprecationWarning:pkg_resources.*",
-    "ignore::pytest.PytestUnraisableExceptionWarning",
-    "ignore::ResourceWarning",
-    "ignore::pytest_benchmark.logger.PytestBenchmarkWarning",
-]
+  # Warning filters
+  filterwarnings = [
+      "error",
+      "ignore::DeprecationWarning:google.*",
+      "ignore::DeprecationWarning:pkg_resources.*",
+      "ignore::pytest.PytestUnraisableExceptionWarning",
+      "ignore::pytest.PytestConfigWarning:_pytest.config",
+      "ignore::ResourceWarning",
+  ]
 
-[tool.flake8]
+  [tool.flake8]
 max-line-length = 130
 
 [tool.setuptools]

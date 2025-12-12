@@ -1,0 +1,53 @@
+From: LinkedIn Jobs <jobs-noreply@linkedin.com>
+To: user-abc123@jobforge.com
+Subject: 10 new jobs matching Software Engineer
+Date: Wed, 11 Dec 2024 10:30:00 +0000
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="----=_Part_12345"
+
+------=_Part_12345
+Content-Type: text/plain; charset=UTF-8
+
+Here are jobs you might be interested in:
+
+Senior Software Engineer at Google
+Mountain View, CA
+https://www.linkedin.com/jobs/view/123456789
+
+Backend Engineer at Microsoft
+Redmond, WA
+https://www.linkedin.com/jobs/view/987654321
+
+Staff Engineer at Netflix
+Los Gatos, CA
+https://www.linkedin.com/jobs/view/555666777
+
+View all recommended jobs:
+https://www.linkedin.com/jobs/search/
+
+------=_Part_12345
+Content-Type: text/html; charset=UTF-8
+
+<html>
+<body>
+<h2>Here are jobs you might be interested in:</h2>
+<div>
+<h3>Senior Software Engineer at Google</h3>
+<p>Mountain View, CA</p>
+<a href="https://www.linkedin.com/jobs/view/123456789">View Job</a>
+</div>
+<div>
+<h3>Backend Engineer at Microsoft</h3>
+<p>Redmond, WA</p>
+<a href="https://www.linkedin.com/jobs/view/987654321">View Job</a>
+</div>
+<div>
+<h3>Staff Engineer at Netflix</h3>
+<p>Los Gatos, CA</p>
+<a href="https://www.linkedin.com/jobs/view/555666777">View Job</a>
+</div>
+<p><a href="https://www.linkedin.com/jobs/search/">View all recommended jobs</a></p>
+</body>
+</html>
+
+------=_Part_12345--
