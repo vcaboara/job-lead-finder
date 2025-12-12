@@ -1,0 +1,20 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install dependencies
+RUN pip install --no-cache-dir httpx
+
+# Copy monitor script
+COPY scripts/pr_monitor.py .
+
+# Run as non-root
+RUN useradd -m -u 1000 monitor && chown -R monitor:monitor /app
+USER monitor
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD python -c "import sys; sys.exit(0)"
+
+# Run monitor
+CMD ["python", "pr_monitor.py"]
