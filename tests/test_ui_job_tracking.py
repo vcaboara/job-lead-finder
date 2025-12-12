@@ -6,6 +6,9 @@ import pytest
 
 from app.job_tracker import STATUS_APPLIED, STATUS_HIDDEN
 
+# Mark all tests in this module as slow - they make real API calls to Ollama
+pytestmark = pytest.mark.slow
+
 
 def _track_job_from_search_result(client, job):
     """Helper to track a job from search results."""

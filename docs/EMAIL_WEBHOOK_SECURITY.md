@@ -1,8 +1,8 @@
 # Email Webhook Security Hardening
 
-**Status:** ✅ Complete  
-**Date:** 2025-12-11  
-**CodeQL Status:** 0 Alerts  
+**Status:** ✅ Complete
+**Date:** 2025-12-11
+**CodeQL Status:** 0 Alerts
 
 ## Overview
 
@@ -24,7 +24,7 @@ This document summarizes the security hardening implemented for the email webhoo
 def get_email(self, email_id: str) -> Optional[InboundEmail]:
     if not email_id or not email_id.isalnum() or len(email_id) != 16:
         raise ValueError(f"Invalid email_id format: {email_id}")
-    
+
     email_file = self.inbox_dir / f"{email_id}.json"
     resolved_path = email_file.resolve()
     inbox_resolved = self.inbox_dir.resolve()

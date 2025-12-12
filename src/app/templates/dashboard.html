@@ -390,7 +390,7 @@
     <script>
         // Constants for quota limits and task statuses
         const COPILOT_QUOTA_LIMIT = 1500;
-        const GEMINI_QUOTA_LIMIT = 20;
+        const GEMINI_QUOTA_LIMIT = 1500;  // Updated from 20 to match Gemini 2.5 Flash free tier limit
         const TOTAL_CONTAINERS = 6;
         const TASK_STATUS = {
             IN_PROGRESS: 'in-progress',
@@ -444,16 +444,25 @@
             copyToClipboard(cmd);
         }
 
-        async function checkServiceStatus(url, statusElementId) {
+        async function checkServiceStatus(url, statusElementId, accept404 = false) {
             const statusElement = document.getElementById(statusElementId);
             try {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 2000);
                 const response = await fetch(url, { signal: controller.signal, mode: 'cors' });
                 clearTimeout(timeoutId);
-                statusElement.textContent = 'Running';
-                statusElement.className = 'service-status running';
+
+                // 200 OK = service is running
+                // 404 for MCP services means they're running but don't have a root GET route
+                if (response.ok || (accept404 && response.status === 404)) {
+                    statusElement.textContent = 'Running';
+                    statusElement.className = 'service-status running';
+                } else {
+                    statusElement.textContent = 'Stopped';
+                    statusElement.className = 'service-status stopped';
+                }
             } catch (error) {
+                // Network error, timeout, or connection refused
                 statusElement.textContent = 'Stopped';
                 statusElement.className = 'service-status stopped';
             }
@@ -497,7 +506,7 @@
             checkServiceStatus('http://localhost:8000', 'ui-status');
             checkServiceStatus('http://localhost:9000', 'monitor-status');
             checkServiceStatus('http://localhost:3001', 'kanban-status');
-            checkServiceStatus('http://localhost:3000', 'vibe-status');
+            checkServiceStatus('http://localhost:3000', 'vibe-status', true); // MCP service, accept 404
         }
 
         // Add CSS animation for toast
