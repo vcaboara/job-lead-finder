@@ -71,6 +71,7 @@ services:
       - REPO_OWNER=vcaboara
       - REPO_NAME=job-lead-finder
       - CHECK_INTERVAL=${PR_CHECK_INTERVAL:-300} # 5 minutes default
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL}
     restart: unless-stopped
     logging:
       driver: "json-file"
