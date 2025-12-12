@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "job-lead-starter"
-version = "0.14.0"
+version = "0.14.1"
 description = "Minimal, modular job-finder starter with Gemini template and CI"
 requires-python = ">=3.12"
 dependencies = [
