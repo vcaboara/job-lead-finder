@@ -19,9 +19,17 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def _find_ci_check(check_runs):
+    """Find build-and-test check in check runs."""
+    for run in check_runs:
+        if run.name == "build-and-test":
+            return run
+    return None
+
+
 def wait_for_ci(repo, max_wait_minutes=10):
     """Wait for CI to complete on main branch."""
-    logger.info(f"⏳ Waiting for CI to complete (max {max_wait_minutes} minutes)...")
+    logger.info("⏳ Waiting for CI to complete (max %d minutes)...", max_wait_minutes)
 
     main_branch = repo.get_branch("main")
     merge_sha = main_branch.commit.sha
@@ -29,32 +37,29 @@ def wait_for_ci(repo, max_wait_minutes=10):
     max_checks = (max_wait_minutes * 60) // check_interval
 
     for i in range(max_checks):
-        # Get check runs for merge commit
         commit = repo.get_commit(merge_sha)
         check_runs = commit.get_check_runs()
 
-        # Find build-and-test check
-        ci_check = None
-        for run in check_runs:
-            if run.name == "build-and-test":
-                ci_check = run
-                break
+        ci_check = _find_ci_check(check_runs)
+        if not ci_check:
+            time.sleep(check_interval)
+            continue
 
-        if ci_check:
-            logger.info(
-                "   Check %d/%d: %s - %s",
-                i + 1,
-                max_checks,
-                ci_check.status,
-                ci_check.conclusion,
-            )
-            if ci_check.status == "completed":
-                return {
-                    "conclusion": ci_check.conclusion,
-                    "name": ci_check.name,
-                    "url": ci_check.html_url,
-                    "merge_sha": merge_sha,
-                }
+        logger.info(
+            "   Check %d/%d: %s - %s",
+            i + 1,
+            max_checks,
+            ci_check.status,
+            ci_check.conclusion,
+        )
+
+        if ci_check.status == "completed":
+            return {
+                "conclusion": ci_check.conclusion,
+                "name": ci_check.name,
+                "url": ci_check.html_url,
+                "merge_sha": merge_sha,
+            }
 
         time.sleep(check_interval)
 
@@ -65,27 +70,33 @@ def wait_for_ci(repo, max_wait_minutes=10):
     }
 
 
+def _create_revert_branch(repo, pr_number, base_sha):
+    """Create revert branch, handling name conflicts."""
+    revert_branch = f"auto/revert-pr-{pr_number}"
+
+    try:
+        repo.create_git_ref(f"refs/heads/{revert_branch}", base_sha)
+        logger.info("   ✓ Created branch: %s", revert_branch)
+        return revert_branch
+    except GithubException as e:
+        if e.status != 422:  # Not a conflict
+            raise
+
+        # Branch exists, add timestamp
+        logger.warning("   ⚠️  Branch %s already exists", revert_branch)
+        revert_branch = f"{revert_branch}-{int(time.time())}"
+        repo.create_git_ref(f"refs/heads/{revert_branch}", base_sha)
+        logger.info("   ✓ Created branch: %s", revert_branch)
+        return revert_branch
+
+
 def create_revert_pr(repo, pr_number, pr_title, pr_author, merge_sha, ci_url):
     """Create revert PR and tracking issue."""
     logger.info("🚨 Creating revert for PR #%d...", pr_number)
 
-    revert_branch = f"auto/revert-pr-{pr_number}"
-
     try:
-        # Get main branch
         main_ref = repo.get_git_ref("heads/main")
-
-        # Create revert branch
-        try:
-            repo.create_git_ref(f"refs/heads/{revert_branch}", main_ref.object.sha)
-            logger.info("   ✓ Created branch: %s", revert_branch)
-        except GithubException as e:
-            if e.status == 422:  # Branch already exists
-                logger.warning("   ⚠️  Branch %s already exists", revert_branch)
-                revert_branch = f"{revert_branch}-{int(time.time())}"
-                repo.create_git_ref(f"refs/heads/{revert_branch}", main_ref.object.sha)
-            else:
-                raise
+        revert_branch = _create_revert_branch(repo, pr_number, main_ref.object.sha)
 
         # Create revert PR description
         revert_body = f"""## 🚨 Automatic Revert
