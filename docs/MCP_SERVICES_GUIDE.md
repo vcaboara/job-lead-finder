@@ -161,7 +161,7 @@ BRAVE_API_KEY=your_brave_api_key_here
 
 **Cause**: Official MCP servers use stdio, not HTTP. Port mappings don't work.
 
-**Solution**: 
+**Solution**:
 1. Use `docker compose run` instead of `docker compose up`
 2. Configure in Claude Desktop config with stdio
 3. Or use Python tools as alternative
@@ -182,7 +182,7 @@ docker compose up -d
 
 **Issue**: Brave Search MCP fails with auth error
 
-**Solution**: 
+**Solution**:
 1. Get API key from https://brave.com/search/api/
 2. Add to `.env`: `BRAVE_API_KEY=your_key`
 3. Restart services: `docker compose restart brave-search-mcp`
