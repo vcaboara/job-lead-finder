@@ -2,7 +2,7 @@ name: Autonomous Task Execution
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # Every 6 hours
+    - cron: '0 */2 * * *'  # Every 2 hours (12 runs/day = 125 queries/run)
   workflow_dispatch:  # Manual trigger
 
 permissions:
