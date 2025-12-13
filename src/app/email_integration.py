@@ -92,8 +92,8 @@ class EmailIntegration:
             except Exception as e:
                 logger.error(f"Error disconnecting: {e}")
 
-    def fetch_recent_sent_emails(self, days: int = 7) -> List[ParsedEmail]:
-        """Fetch recent sent emails.
+    def fetch_recent_received_emails(self, days: int = 7) -> List[ParsedEmail]:
+        """Fetch recent received emails.
 
         Args:
             days: Number of days to look back
@@ -107,12 +107,12 @@ class EmailIntegration:
 
         try:
             # Select sent folder (Gmail uses "[Gmail]/Sent Mail")
-            sent_folders = ["INBOX.Sent", "[Gmail]/Sent Mail", "Sent", "Sent Items"]
+            received_folders = ["INBOX", "[Gmail]/All Mail", "All Mail"]
 
             folder_selected = False
             for folder in sent_folders:
                 try:
-                    self.connection.select(folder)
+                    self.connection.select(folder, readonly=True)
                     folder_selected = True
                     logger.info(f"Selected folder: {folder}")
                     break
@@ -120,14 +120,14 @@ class EmailIntegration:
                     continue
 
             if not folder_selected:
-                logger.error("Could not select sent folder")
+                logger.error("Could not select received folder")
                 return []
 
             # Search for emails from last N days
             from datetime import timedelta
 
             since_date = (datetime.now() - timedelta(days=days)).strftime("%d-%b-%Y")
-            _, message_ids = self.connection.search(None, f"SINCE {since_date}")
+            _, message_ids = self.connection.search(None, f"(SINCE {since_date} SUBJECT \"Job Posting\")")
 
             emails = []
             for msg_id in message_ids[0].split():
