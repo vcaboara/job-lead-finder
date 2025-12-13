@@ -1,0 +1,1 @@
+"""Patent claim drafting assistant."""
