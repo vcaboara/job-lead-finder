@@ -9,7 +9,7 @@ import time
 import traceback
 from typing import Any, Dict, Optional
 
-from app.framework.providers.base_provider import BaseAIProvider
+from smf.providers.base_provider import BaseAIProvider
 
 logger = logging.getLogger(__name__)
 
@@ -116,11 +116,19 @@ class GeminiProvider(BaseAIProvider):
         # Simple availability check - if we got this far, we're configured
         return True
 
-    def evaluate(self, job: Dict[str, Any], resume_text: str) -> Dict[str, Any]:
-        """Evaluate a job using the Gemini client.
+    def evaluate(self, item: Dict[str, Any], profile_text: str) -> Dict[str, Any]:
+        """Evaluate an item using the Gemini client.
 
-        Returns a dict with `score` (0-100) and `reasoning`.
+        Args:
+            item: Item dictionary (e.g., job) with title, company, description, etc.
+            profile_text: Profile text (e.g., resume)
+
+        Returns:
+            Dict with `score` (0-100) and `reasoning`.
         """
+        # For backward compatibility, support 'job' as item
+        job = item
+        resume_text = profile_text
         prompt = (
             "You are an expert career advisor evaluating job fit for a candidate.\n\n"
             "Analyze how well this job matches the candidate's profile based on:\n"

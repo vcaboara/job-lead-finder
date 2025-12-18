@@ -18,7 +18,7 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from app.framework.providers.base_provider import BaseAIProvider
+from smf.providers.base_provider import BaseAIProvider
 
 logger = logging.getLogger(__name__)
 
@@ -98,16 +98,19 @@ class OllamaProvider(BaseAIProvider):
             logger.error(f"Ollama query error: {e}")
             return ""
 
-    def evaluate(self, job: Dict[str, Any], resume_text: str) -> Dict[str, Any]:
-        """Evaluate a job using Ollama.
+    def evaluate(self, item: Dict[str, Any], profile_text: str) -> Dict[str, Any]:
+        """Evaluate an item using Ollama.
 
         Args:
-            job: Job dictionary with title, company, description, etc.
-            resume_text: Candidate's resume text
+            item: Item dictionary (e.g., job) with title, company, description, etc.
+            profile_text: Profile text (e.g., resume)
 
         Returns:
             Dict with 'score' (0-100) and 'reasoning'
         """
+        # For backward compatibility, support 'job' as item
+        job = item
+        resume_text = profile_text
         prompt = (
             "You are a career advisor. Evaluate this job-candidate match and respond with ONLY valid JSON.\n\n"
             f"CANDIDATE RESUME:\n{resume_text[:1500]}\n\n"
