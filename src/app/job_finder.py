@@ -2,7 +2,7 @@
 
 This module orchestrates job search across multiple sources:
 1. MCP providers (LinkedIn, Indeed, GitHub) - primary source
-2. AI providers for evaluation (Ollama > Gemini) - auto-selected
+2. AI providers for evaluation (Ollama > Gemini) - auto-selected via ASMF
 3. Local sample data - final fallback
 
 Priority: MCP > AI (Ollama/Gemini) > Local
@@ -12,17 +12,16 @@ import logging
 import os
 from typing import Any, Dict, List
 
-from .gemini_provider import GeminiProvider
+from smf.providers import get_factory
 from .main import fetch_jobs
-from .ollama_provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
 
 
 def _get_evaluation_provider():
-    """Get the best available AI provider for job evaluation.
+    """Get the best available AI provider for job evaluation using ASMF.
 
-    Priority:
+    Uses AIProviderFactory with automatic fallback:
     1. Ollama (if available and model pulled)
     2. Gemini (if API key configured)
     3. None (fallback to no evaluation)
@@ -30,25 +29,17 @@ def _get_evaluation_provider():
     Returns:
         Provider instance or None
     """
-    # Try Ollama first (local, no quota limits)
-    try:
-        provider = OllamaProvider()
-        if provider.is_available():
-            logger.info("Using Ollama provider for evaluation (%s)", provider.model)
-            return provider
-        else:
-            logger.info("Ollama not available (model not pulled), trying Gemini")
-    except Exception as e:
-        logger.debug("Ollama provider unavailable: %s", e)
-
-    # Try Gemini as fallback
-    try:
-        provider = GeminiProvider()
-        logger.info("Using Gemini provider for evaluation")
+    factory = get_factory()
+    
+    # Try to create provider with automatic fallback (Ollama -> Gemini)
+    provider = factory.create_with_fallback()
+    
+    if provider:
+        provider_name = provider.__class__.__name__
+        model = getattr(provider, 'model', 'unknown')
+        logger.info(f"Using {provider_name} for evaluation (model: {model})")
         return provider
-    except Exception as e:
-        logger.debug("Gemini provider unavailable: %s", e)
-
+    
     logger.warning("No AI providers available for evaluation")
     return None
 
