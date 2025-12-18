@@ -126,35 +126,38 @@ def generate_job_leads(
                 traceback.print_exc()
             print("job_finder: MCP unavailable, falling back to Gemini")
 
-    # 2. Try Gemini provider
-    try:
-        provider = GeminiProvider()
-        print("job_finder: Using GeminiProvider")
-    except Exception as e:
-        provider = None
-        if verbose:
-            print(f"job_finder: GeminiProvider unavailable ({e}); falling back to local search")
-
+    # 2. Try AI provider (via factory - Ollama -> Gemini)
+    factory = get_factory()
+    provider = factory.create_with_fallback()
+    
     if provider:
+        print(f"job_finder: Using {provider.__class__.__name__}")
         try:
-            leads = provider.generate_job_leads(query, resume_text, count=count, model=model, verbose=verbose)
-            print(f"job_finder: Gemini returned {len(leads)} leads")
-            # If Gemini returned results, use them
-            if leads:
-                # Evaluate each lead if requested
-                if evaluate:
-                    leads = _evaluate_leads(leads, resume_text, provider, verbose)
-                return leads
+            # Check if provider has generate_job_leads method (Gemini does)
+            if hasattr(provider, 'generate_job_leads'):
+                leads = provider.generate_job_leads(query, resume_text, count=count, model=model, verbose=verbose)
+                print(f"job_finder: AI provider returned {len(leads)} leads")
+                # If AI provider returned results, use them
+                if leads:
+                    # Evaluate each lead if requested
+                    if evaluate:
+                        leads = _evaluate_leads(leads, resume_text, provider, verbose)
+                    return leads
+                else:
+                    print("job_finder: AI provider returned 0 leads, using local fallback")
             else:
-                print("job_finder: Gemini returned 0 leads, using local fallback")
+                print(f"job_finder: Provider {provider.__class__.__name__} doesn't support job generation, using local fallback")
         except Exception as e:
             # Provide diagnostics when verbose
             if os.getenv("VERBOSE") or verbose:
                 import traceback
 
-                print("job_finder: Exception while calling GeminiProvider:", e)
+                print(f"job_finder: Exception while calling AI provider: {e}")
                 traceback.print_exc()
-            print("job_finder: Gemini failed, using local fallback")
+            print("job_finder: AI provider failed, using local fallback")
+    else:
+        if verbose:
+            print("job_finder: No AI provider available; falling back to local search")
 
     # 3. Fallback: use simple local search
     sample = fetch_jobs(query)
