@@ -63,20 +63,6 @@ class PDFParser(DocumentParser):
         # Fix multiple spaces between words
         cleaned = re.sub(r"  +", " ", text)
         
-        # Fix common mojibake (UTF-8 mis-decoded as Windows-1252)
-        mojibake_replacements = {
-            "â€"": "—",  # em dash
-            "â€"": "–",  # en dash
-            "â€™": "'",  # apostrophe
-            "â€œ": '"',  # left double quote
-            "â€\x9d": '"',  # right double quote
-            "â€": '"',  # right double quote (fallback)
-            "â€¢": "•",  # bullet
-        }
-        
-        pattern = re.compile("|".join(re.escape(k) for k in mojibake_replacements))
-        cleaned = pattern.sub(lambda m: mojibake_replacements[m.group(0)], cleaned)
-        
         # Normalize line breaks
         cleaned = re.sub(r"\n\s*\n\s*\n+", "\n\n", cleaned)
         
