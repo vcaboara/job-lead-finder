@@ -50,7 +50,10 @@ class DOCXParser(DocumentParser):
             doc = self.Document(docx_stream)
             text_parts = [para.text for para in doc.paragraphs]
 
-            # Also extract text from tables
+            # Extract text from tables
+            # Note: This iterates through all cells which is simple but may include duplicates
+            # for merged cells. For better efficiency with large documents, consider using
+            # doc.element.xpath() for direct cell access or caching cell references.
             for table in doc.tables:
                 for row in table.rows:
                     for cell in row.cells:

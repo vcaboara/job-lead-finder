@@ -80,6 +80,7 @@ class JobLeadAnalyzer(BaseAnalyzer):
         description = item.get('description', item.get('summary', ''))
         if description:
             # Simple keyword extraction (could be enhanced with NLP)
+            # TODO: Make configurable, not hard coded.
             keywords = [
                 'Python', 'Java', 'JavaScript', 'React', 'Node.js', 'AWS', 'Docker',
                 'Kubernetes', 'SQL', 'MongoDB', 'Machine Learning', 'AI', 'DevOps',

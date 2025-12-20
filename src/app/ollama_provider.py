@@ -108,14 +108,11 @@ class OllamaProvider(BaseAIProvider):
         Returns:
             Dict with 'score' (0-100) and 'reasoning'
         """
-        # For backward compatibility, support 'job' as item
-        job = item
-        resume_text = profile_text
         prompt = (
             "You are a career advisor. Evaluate this job-candidate match and respond with ONLY valid JSON.\n\n"
-            f"CANDIDATE RESUME:\n{resume_text[:1500]}\n\n"
-            f"JOB: {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}\n"
-            f"Description: {job.get('description', job.get('summary', ''))[:500]}\n\n"
+            f"CANDIDATE RESUME:\n{profile_text[:1500]}\n\n"
+            f"JOB: {item.get('title', 'Unknown')} at {item.get('company', 'Unknown')}\n"
+            f"Description: {item.get('description', item.get('summary', ''))[:500]}\n\n"
             "Scoring criteria (0-100 total):\n"
             "- Skills match (40pts): Required technical skills the candidate has\n"
             "- Experience level (25pts): Junior/Mid/Senior alignment\n"

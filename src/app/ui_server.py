@@ -38,10 +38,6 @@ pdf_parser = PDFParser()
 docx_parser = DOCXParser()
 txt_parser = TXTParser()
 
-# Legacy availability flags for backward compatibility
-PYPDF_AVAILABLE = pdf_parser._available
-PYTHON_DOCX_AVAILABLE = docx_parser._available
-
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 

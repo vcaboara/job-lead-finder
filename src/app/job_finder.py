@@ -107,8 +107,7 @@ def generate_job_leads(
                                 lead["reasoning"] = "AI provider unavailable"
                             leads = leads[:count]
                     except Exception as e:
-                        if verbose:
-                            print(f"job_finder: Batch ranking unavailable: {e}")
+                        logger.warning(f"Batch ranking unavailable: {e}", exc_info=verbose)
                         # Continue with unranked jobs
                         for lead in leads[:count]:
                             lead["score"] = 50
@@ -116,48 +115,37 @@ def generate_job_leads(
                         leads = leads[:count]
                 return leads
             else:
-                print("job_finder: No results from MCP providers, trying Gemini...")
+                logger.info("No results from MCP providers, trying AI provider")
 
         except Exception as e:
-            if verbose:
-                import traceback
-
-                print(f"job_finder: MCP providers failed: {e}")
-                traceback.print_exc()
-            print("job_finder: MCP unavailable, falling back to Gemini")
+            logger.error(f"MCP providers failed: {e}", exc_info=verbose)
+            logger.info("MCP unavailable, falling back to AI provider")
 
     # 2. Try AI provider (via factory - Ollama -> Gemini)
     factory = get_factory()
     provider = factory.create_with_fallback()
     
     if provider:
-        print(f"job_finder: Using {provider.__class__.__name__}")
+        logger.info(f"Using {provider.__class__.__name__} for job generation")
         try:
-            # Check if provider has generate_job_leads method (Gemini does)
+            # Check if provider supports job generation (Gemini has this method)
             if hasattr(provider, 'generate_job_leads'):
                 leads = provider.generate_job_leads(query, resume_text, count=count, model=model, verbose=verbose)
-                print(f"job_finder: AI provider returned {len(leads)} leads")
-                # If AI provider returned results, use them
+                logger.info(f"AI provider returned {len(leads)} leads")
                 if leads:
                     # Evaluate each lead if requested
                     if evaluate:
                         leads = _evaluate_leads(leads, resume_text, provider, verbose)
                     return leads
                 else:
-                    print("job_finder: AI provider returned 0 leads, using local fallback")
+                    logger.info("AI provider returned 0 leads, using local fallback")
             else:
-                print(f"job_finder: Provider {provider.__class__.__name__} doesn't support job generation, using local fallback")
+                logger.warning(f"Provider {provider.__class__.__name__} doesn't support job generation, using local fallback")
         except Exception as e:
-            # Provide diagnostics when verbose
-            if os.getenv("VERBOSE") or verbose:
-                import traceback
-
-                print(f"job_finder: Exception while calling AI provider: {e}")
-                traceback.print_exc()
-            print("job_finder: AI provider failed, using local fallback")
+            logger.error(f"Exception while calling AI provider: {e}", exc_info=verbose or os.getenv("VERBOSE"))
+            logger.info("AI provider failed, using local fallback")
     else:
-        if verbose:
-            print("job_finder: No AI provider available; falling back to local search")
+        logger.warning("No AI provider available, falling back to local search")
 
     # 3. Fallback: use simple local search
     sample = fetch_jobs(query)
@@ -174,7 +162,7 @@ def generate_job_leads(
                 "source": "Local",
             }
         )
-    print(f"job_finder: Fallback returned {len(leads)} leads")
+    logger.info(f"Fallback returned {len(leads)} leads")
     # Evaluate each lead if requested (requires Gemini)
     if evaluate and provider:
         leads = _evaluate_leads(leads, resume_text, provider, verbose)
@@ -212,8 +200,7 @@ def _evaluate_leads(
             lead["score"] = evaluation.get("score", 0)
             lead["reasoning"] = evaluation.get("reasoning", "")
         except Exception as e:
-            if verbose:
-                print(f"job_finder: evaluation failed for {lead.get('title', '?')}: {e}")
+            logger.warning(f"Evaluation failed for {lead.get('title', '?')}: {e}", exc_info=verbose)
             # Default to neutral score if evaluation fails
             lead["score"] = 50
             lead["reasoning"] = "Evaluation unavailable."
@@ -227,4 +214,4 @@ def save_to_file(leads: List[Dict[str, Any]], path: str) -> None:
 
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(leads, fh, indent=2)
-    print(f"job_finder: saved {len(leads)} leads to {path}")
+    logger.info(f"Saved {len(leads)} leads to {path}")
