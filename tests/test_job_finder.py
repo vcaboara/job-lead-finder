@@ -14,8 +14,13 @@ class TestGenerateJobLeads:
 
     @pytest.mark.slow
     def test_generate_job_leads_fallback_no_provider(self):
-        """Test fallback to local search when Gemini isn't configured."""
-        with patch("app.job_finder.GeminiProvider", side_effect=Exception("No API key")):
+        """Test fallback to local search when no AI provider is available."""
+        # Patch the factory to return None (no providers available)
+        with patch("app.job_finder.get_factory") as mock_factory:
+            mock_factory_instance = Mock()
+            mock_factory_instance.create_with_fallback.return_value = None
+            mock_factory.return_value = mock_factory_instance
+            
             leads = job_finder.generate_job_leads("python", "Skills: Python", count=2)
             assert isinstance(leads, list)
             # Should return fallback results from fetch_jobs
@@ -23,8 +28,8 @@ class TestGenerateJobLeads:
                 assert "title" in leads[0]
                 assert "company" in leads[0]
 
-    def test_generate_job_leads_with_gemini_provider(self):
-        """Test using GeminiProvider when available."""
+    def test_generate_job_leads_with_provider(self):
+        """Test using AI provider from factory when available."""
         mock_leads = [
             {
                 "title": "Python Dev",
@@ -38,7 +43,12 @@ class TestGenerateJobLeads:
         mock_provider = Mock(spec=GeminiProvider)
         mock_provider.generate_job_leads.return_value = mock_leads
 
-        with patch("app.job_finder.GeminiProvider", return_value=mock_provider):
+        # Patch the factory to return our mock provider
+        with patch("app.job_finder.get_factory") as mock_factory:
+            mock_factory_instance = Mock()
+            mock_factory_instance.create_with_fallback.return_value = mock_provider
+            mock_factory.return_value = mock_factory_instance
+            
             leads = job_finder.generate_job_leads("python", "Skills: Python", count=2, use_mcp=False)
             assert isinstance(leads, list)
             assert len(leads) == 1
@@ -58,7 +68,12 @@ class TestGenerateJobLeads:
         mock_provider = Mock(spec=GeminiProvider)
         mock_provider.generate_job_leads.return_value = []
 
-        with patch("app.job_finder.GeminiProvider", return_value=mock_provider):
+        # Patch the factory to return our mock provider
+        with patch("app.job_finder.get_factory") as mock_factory:
+            mock_factory_instance = Mock()
+            mock_factory_instance.create_with_fallback.return_value = mock_provider
+            mock_factory.return_value = mock_factory_instance
+            
             job_finder.generate_job_leads("python", "Skills: Python", count=10, use_mcp=False)
             # Verify count was passed to provider
             call_args = mock_provider.generate_job_leads.call_args
@@ -69,7 +84,12 @@ class TestGenerateJobLeads:
         mock_provider = Mock(spec=GeminiProvider)
         mock_provider.generate_job_leads.return_value = []
 
-        with patch("app.job_finder.GeminiProvider", return_value=mock_provider):
+        # Patch the factory to return our mock provider
+        with patch("app.job_finder.get_factory") as mock_factory:
+            mock_factory_instance = Mock()
+            mock_factory_instance.create_with_fallback.return_value = mock_provider
+            mock_factory.return_value = mock_factory_instance
+            
             job_finder.generate_job_leads("python", "Skills: Python", model="custom-model", use_mcp=False)
             call_args = mock_provider.generate_job_leads.call_args
             assert call_args[1]["model"] == "custom-model"
@@ -79,7 +99,12 @@ class TestGenerateJobLeads:
         mock_provider = Mock(spec=GeminiProvider)
         mock_provider.generate_job_leads.return_value = []
 
-        with patch("app.job_finder.GeminiProvider", return_value=mock_provider):
+        # Patch the factory to return our mock provider
+        with patch("app.job_finder.get_factory") as mock_factory:
+            mock_factory_instance = Mock()
+            mock_factory_instance.create_with_fallback.return_value = mock_provider
+            mock_factory.return_value = mock_factory_instance
+            
             job_finder.generate_job_leads("python", "Skills: Python", verbose=True, use_mcp=False)
             call_args = mock_provider.generate_job_leads.call_args
             assert call_args[1]["verbose"] is True

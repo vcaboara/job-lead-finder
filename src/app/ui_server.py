@@ -30,20 +30,13 @@ from .job_finder import generate_job_leads, save_to_file
 from .job_tracker import STATUS_NEW, VALID_STATUSES, get_tracker
 from .link_validator import validate_link
 
-# Optional imports for PDF/DOCX support
-try:
-    from pypdf import PdfReader
+# ASMF document parsers
+from smf.parsers import PDFParser, DOCXParser, TXTParser
 
-    PYPDF_AVAILABLE = True
-except ImportError:
-    PYPDF_AVAILABLE = False
-
-try:
-    from docx import Document
-
-    PYTHON_DOCX_AVAILABLE = True
-except ImportError:
-    PYTHON_DOCX_AVAILABLE = False
+# Initialize parsers
+pdf_parser = PDFParser()
+docx_parser = DOCXParser()
+txt_parser = TXTParser()
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -859,7 +852,7 @@ def _extract_pdf_text(content: bytes) -> str:
 
 
 def _extract_docx_text(content: bytes) -> str:
-    """Extract text from DOCX file.
+    """Extract text from DOCX file using ASMF DOCXParser.
 
     Args:
         content: DOCX file bytes
@@ -870,37 +863,7 @@ def _extract_docx_text(content: bytes) -> str:
     Raises:
         Exception: If DOCX extraction fails or contains macros
     """
-    if not PYTHON_DOCX_AVAILABLE:
-        raise Exception("python-docx not installed. Install with: pip install python-docx")
-
-    try:
-        # Use a single BytesIO object for both macro checking and text extraction
-        docx_stream = BytesIO(content)
-
-        # Check for macros (DOCM files have vbaProject.bin)
-        try:
-            with ZipFile(docx_stream) as docx_zip:
-                if "word/vbaProject.bin" in docx_zip.namelist():
-                    raise Exception("DOCX file contains macros and is not allowed for security reasons")
-        except BadZipFile:
-            raise Exception("Invalid DOCX file format")
-
-        # Seek back to the start for Document()
-        docx_stream.seek(0)
-        doc = Document(docx_stream)
-        text_parts = [para.text for para in doc.paragraphs]
-
-        # Also extract text from tables
-        for table in doc.tables:
-            for row in table.rows:
-                for cell in row.cells:
-                    text_parts.append(cell.text)
-
-        return "\n".join(text_parts)
-    except Exception as exc:
-        if "macros" in str(exc):
-            raise  # Re-raise macro security exceptions
-        raise Exception(f"Failed to extract DOCX text: {exc}") from exc
+    return docx_parser.parse(content)
 
 
 def _check_malicious_content(text: str) -> list[str]:
