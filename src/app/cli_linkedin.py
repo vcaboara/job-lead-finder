@@ -6,6 +6,7 @@ Usage:
     python -m app.cli_linkedin pipeline --industry "Steel Manufacturing" --output results.csv
     python -m app.cli_linkedin demo --output demo_results.json
 """
+
 import argparse
 import logging
 import sys
@@ -13,9 +14,7 @@ from pathlib import Path
 
 from app.linkedin_handler import LinkedInHandler
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -91,9 +90,7 @@ def extract_contacts(args):
 
 def run_pipeline(args):
     """Run the full LinkedIn handler pipeline."""
-    handler = LinkedInHandler(
-        mode=args.mode, esg_data_path=args.esg_data if hasattr(args, "esg_data") else None
-    )
+    handler = LinkedInHandler(mode=args.mode, esg_data_path=args.esg_data if hasattr(args, "esg_data") else None)
 
     logger.info("Running full pipeline...")
     results = handler.run_full_pipeline(
@@ -240,57 +237,35 @@ Modes:
 
     # Search command
     search_parser = subparsers.add_parser("search", help="Search for companies")
-    search_parser.add_argument(
-        "--industry", "-i", required=True, help="Target industry"
-    )
-    search_parser.add_argument(
-        "--limit", "-l", type=int, default=10, help="Number of companies to find"
-    )
+    search_parser.add_argument("--industry", "-i", required=True, help="Target industry")
+    search_parser.add_argument("--limit", "-l", type=int, default=10, help="Number of companies to find")
     search_parser.add_argument(
         "--mode", "-m", choices=["demo", "api", "scraping"], default="demo", help="Operation mode"
     )
 
     # Extract command
     extract_parser = subparsers.add_parser("extract", help="Extract contacts from a company")
-    extract_parser.add_argument(
-        "--industry", "-i", required=True, help="Industry sector"
-    )
-    extract_parser.add_argument(
-        "--company", "-c", required=True, help="Company name"
-    )
-    extract_parser.add_argument(
-        "--count", "-n", type=int, default=3, help="Number of contacts to extract"
-    )
+    extract_parser.add_argument("--industry", "-i", required=True, help="Industry sector")
+    extract_parser.add_argument("--company", "-c", required=True, help="Company name")
+    extract_parser.add_argument("--count", "-n", type=int, default=3, help="Number of contacts to extract")
     extract_parser.add_argument(
         "--mode", "-m", choices=["demo", "api", "scraping"], default="demo", help="Operation mode"
     )
 
     # Pipeline command
     pipeline_parser = subparsers.add_parser("pipeline", help="Run full pipeline")
-    pipeline_parser.add_argument(
-        "--industry", "-i", required=True, help="Target industry"
-    )
-    pipeline_parser.add_argument(
-        "--company-limit", type=int, default=50, help="Max companies to process"
-    )
-    pipeline_parser.add_argument(
-        "--contacts-per-company", type=int, default=3, help="Contacts per company"
-    )
-    pipeline_parser.add_argument(
-        "--output", "-o", help="Output file path (CSV or JSON)"
-    )
-    pipeline_parser.add_argument(
-        "--esg-data", help="Path to ESG penalty data file (JSON or CSV)"
-    )
+    pipeline_parser.add_argument("--industry", "-i", required=True, help="Target industry")
+    pipeline_parser.add_argument("--company-limit", type=int, default=50, help="Max companies to process")
+    pipeline_parser.add_argument("--contacts-per-company", type=int, default=3, help="Contacts per company")
+    pipeline_parser.add_argument("--output", "-o", help="Output file path (CSV or JSON)")
+    pipeline_parser.add_argument("--esg-data", help="Path to ESG penalty data file (JSON or CSV)")
     pipeline_parser.add_argument(
         "--mode", "-m", choices=["demo", "api", "scraping"], default="demo", help="Operation mode"
     )
 
     # Demo command
     demo_parser = subparsers.add_parser("demo", help="Run demonstration with mock data")
-    demo_parser.add_argument(
-        "--output", "-o", help="Output file path (CSV or JSON)"
-    )
+    demo_parser.add_argument("--output", "-o", help="Output file path (CSV or JSON)")
 
     args = parser.parse_args()
 

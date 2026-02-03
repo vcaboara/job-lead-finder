@@ -6,37 +6,37 @@ who are currently facing high ESG/Carbon penalty liabilities.
 
 ## Core Objective
 
-Build an automated search and extraction agent to identify **Technical Gatekeepers** 
-in "Hard-to-Abate" industries (Pulp/Paper, Steel, Heavy Ag) who are currently facing 
+Build an automated search and extraction agent to identify **Technical Gatekeepers**
+in "Hard-to-Abate" industries (Pulp/Paper, Steel, Heavy Ag) who are currently facing
 high ESG/Carbon penalty liabilities.
 
 ## Target Parameters (The Audit Filter)
 
-* **Industry Focus:** Pulp and Paper Mills, Industrial Heat Processing, 
+* **Industry Focus:** Pulp and Paper Mills, Industrial Heat Processing,
   Carbon-Intensive Manufacturing.
 * **Target Titles:**
   * *Primary:* Director of Process Engineering, Lead Thermal Engineer, CTO (Technical).
-  * *Secondary:* Sustainability Director (must have 'Engineer' in profile), 
+  * *Secondary:* Sustainability Director (must have 'Engineer' in profile),
     Head of Energy Procurement.
-* **Keywords:** Pyrolysis, Biochar, Biomass-to-Energy, Carbon Sequestration, 
+* **Keywords:** Pyrolysis, Biochar, Biomass-to-Energy, Carbon Sequestration,
   Closed-Loop Manufacturing, 12/17 Geometry.
 
 ## Operational Logic (The 7:3 Ratio)
 
 * **Step A (Scrape):** Identify the top 50 global firms in the Pulp and Paper sector.
-* **Step B (Cross-Reference):** Match firms against known **ESG Penalty Data** 
+* **Step B (Cross-Reference):** Match firms against known **ESG Penalty Data**
   (Companies with high carbon-credit expenditures).
 * **Step C (Extract):** Identify the 3 most senior technical individuals at each firm.
-* **Step D (Payload Prep):** Generate a "Sovereign Outreach" draft focused on 
+* **Step D (Payload Prep):** Generate a "Sovereign Outreach" draft focused on
   **Thermodynamic Efficiency** and **Patent 12/17**, avoiding "pitch" language.
 
 ## Technical Stack Requirements
 
-* **Integration:** Use LinkedIn API or LinkedIn Sales Navigator MCP 
+* **Integration:** Use LinkedIn API or LinkedIn Sales Navigator MCP
   (with fallback to mock/demo mode).
-* **Data Structure:** Output to a CSV/JSON file with columns: `Name`, `Title`, 
+* **Data Structure:** Output to a CSV/JSON file with columns: `Name`, `Title`,
   `Company`, `Estimated Carbon Liability`, `Technical Direct Contact (if available)`.
-* **Privacy:** Ensure all scraping adheres to rate-limiting to protect the 
+* **Privacy:** Ensure all scraping adheres to rate-limiting to protect the
   LinkedIn profile from detection/flagging.
 """
 
@@ -106,10 +106,10 @@ class OutreachDraft:
 
 class LinkedInHandler:
     """Handler for LinkedIn Technical Gatekeeper identification.
-    
+
     This class implements the complete workflow for identifying and extracting
     technical gatekeepers in hard-to-abate industries with ESG penalties.
-    
+
     Supports three modes:
     1. LinkedIn API (if credentials available)
     2. Web scraping with rate limiting (requires authentication)
@@ -166,7 +166,7 @@ class LinkedInHandler:
         esg_data_path: Optional[str] = None,
     ):
         """Initialize the LinkedIn Handler.
-        
+
         Args:
             mode: Operation mode - 'api', 'scraping', or 'demo'
             rate_limit_delay: Delay between requests in seconds (default: 3)
@@ -192,14 +192,11 @@ class LinkedInHandler:
         else:
             self._initialize_mock_esg_data()
 
-        logger.info(
-            f"LinkedInHandler initialized in {mode} mode with "
-            f"{len(self.esg_data)} ESG records"
-        )
+        logger.info(f"LinkedInHandler initialized in {mode} mode with " f"{len(self.esg_data)} ESG records")
 
     def _load_esg_data(self, filepath: str) -> None:
         """Load ESG penalty data from file.
-        
+
         Args:
             filepath: Path to JSON or CSV file containing ESG data
         """
@@ -224,13 +221,9 @@ class LinkedInHandler:
                             name=row["name"],
                             industry=row["industry"],
                             esg_score=float(row.get("esg_score", 0)),
-                            carbon_liability_estimate=float(
-                                row.get("carbon_liability_estimate", 0)
-                            ),
+                            carbon_liability_estimate=float(row.get("carbon_liability_estimate", 0)),
                             location=row.get("location"),
-                            employee_count=int(row["employee_count"])
-                            if row.get("employee_count")
-                            else None,
+                            employee_count=int(row["employee_count"]) if row.get("employee_count") else None,
                             website=row.get("website"),
                             linkedin_url=row.get("linkedin_url"),
                         )
@@ -290,10 +283,7 @@ class LinkedInHandler:
     def _apply_rate_limit(self) -> None:
         """Apply rate limiting to prevent API abuse."""
         if self.request_count >= self.daily_limit:
-            raise Exception(
-                f"Daily request limit ({self.daily_limit}) reached. "
-                "Please try again tomorrow."
-            )
+            raise Exception(f"Daily request limit ({self.daily_limit}) reached. " "Please try again tomorrow.")
 
         # Calculate time since last request
         current_time = time.time()
@@ -311,17 +301,15 @@ class LinkedInHandler:
         self.last_request_time = time.time()
         self.request_count += 1
 
-    def identify_target_companies(
-        self, industry: str, limit: int = 50
-    ) -> List[Company]:
+    def identify_target_companies(self, industry: str, limit: int = 50) -> List[Company]:
         """Identify top companies in target industry.
-        
+
         Step A: Scrape/Search for top firms in specified industry.
-        
+
         Args:
             industry: Target industry sector
             limit: Maximum number of companies to return
-            
+
         Returns:
             List of Company objects
         """
@@ -330,11 +318,7 @@ class LinkedInHandler:
 
         if self.mode == "demo":
             # Return mock data filtered by industry
-            companies = [
-                c
-                for c in self.esg_data.values()
-                if industry.lower() in c.industry.lower()
-            ]
+            companies = [c for c in self.esg_data.values() if industry.lower() in c.industry.lower()]
             return companies[:limit]
 
         elif self.mode == "api":
@@ -351,12 +335,12 @@ class LinkedInHandler:
 
     def cross_reference_esg_data(self, companies: List[Company]) -> List[Company]:
         """Match companies against ESG penalty database.
-        
+
         Step B: Cross-reference companies with known ESG penalty data.
-        
+
         Args:
             companies: List of companies to cross-reference
-            
+
         Returns:
             List of companies with ESG data, sorted by carbon liability
         """
@@ -370,29 +354,23 @@ class LinkedInHandler:
                 # Use ESG data from database
                 esg_company = self.esg_data[company_key]
                 company.esg_score = esg_company.esg_score
-                company.carbon_liability_estimate = (
-                    esg_company.carbon_liability_estimate
-                )
+                company.carbon_liability_estimate = esg_company.carbon_liability_estimate
                 enriched_companies.append(company)
             else:
                 # Estimate carbon liability based on industry if not in database
-                company.carbon_liability_estimate = self._estimate_carbon_liability(
-                    company
-                )
+                company.carbon_liability_estimate = self._estimate_carbon_liability(company)
                 enriched_companies.append(company)
 
         # Sort by carbon liability (highest first)
-        enriched_companies.sort(
-            key=lambda x: x.carbon_liability_estimate, reverse=True
-        )
+        enriched_companies.sort(key=lambda x: x.carbon_liability_estimate, reverse=True)
         return enriched_companies
 
     def _estimate_carbon_liability(self, company: Company) -> float:
         """Estimate carbon liability for a company not in ESG database.
-        
+
         Args:
             company: Company object
-            
+
         Returns:
             Estimated carbon liability in USD
         """
@@ -422,23 +400,19 @@ class LinkedInHandler:
 
         return estimate
 
-    def extract_technical_gatekeepers(
-        self, company: Company, count: int = 3
-    ) -> List[Contact]:
+    def extract_technical_gatekeepers(self, company: Company, count: int = 3) -> List[Contact]:
         """Extract senior technical contacts from a company.
-        
+
         Step C: Identify the most senior technical individuals at each firm.
-        
+
         Args:
             company: Target company
             count: Number of contacts to extract (default: 3)
-            
+
         Returns:
             List of Contact objects
         """
-        logger.info(
-            f"Extracting {count} technical gatekeepers from {company.name}"
-        )
+        logger.info(f"Extracting {count} technical gatekeepers from {company.name}")
         self._apply_rate_limit()
 
         if self.mode == "demo":
@@ -459,11 +433,11 @@ class LinkedInHandler:
 
     def _generate_mock_contacts(self, company: Company, count: int) -> List[Contact]:
         """Generate mock contacts for demonstration.
-        
+
         Args:
             company: Company to generate contacts for
             count: Number of contacts to generate
-            
+
         Returns:
             List of mock Contact objects
         """
@@ -479,9 +453,7 @@ class LinkedInHandler:
         ]
 
         for i in range(min(count, len(titles))):
-            keywords_matched = random.sample(
-                self.TARGET_KEYWORDS, k=random.randint(2, 4)
-            )
+            keywords_matched = random.sample(self.TARGET_KEYWORDS, k=random.randint(2, 4))
             contact = Contact(
                 name=names[i % len(names)],
                 title=titles[i],
@@ -497,13 +469,13 @@ class LinkedInHandler:
 
     def generate_outreach_draft(self, contact: Contact) -> OutreachDraft:
         """Generate outreach message for a contact.
-        
+
         Step D: Generate a "Sovereign Outreach" draft focused on
         Thermodynamic Efficiency and Patent 12/17.
-        
+
         Args:
             contact: Contact to generate outreach for
-            
+
         Returns:
             OutreachDraft object with subject, body, and notes
         """
@@ -512,10 +484,7 @@ class LinkedInHandler:
         # Format carbon liability as readable number
         liability_str = f"${contact.carbon_liability_estimate / 1_000_000:.1f}M"
 
-        subject = (
-            f"Thermodynamic Efficiency Opportunity for {contact.company} "
-            f"[Patent 12/17]"
-        )
+        subject = f"Thermodynamic Efficiency Opportunity for {contact.company} " f"[Patent 12/17]"
 
         body = f"""Dear {contact.name.split()[0]},
 
@@ -549,13 +518,11 @@ Best regards
             f"Recommended Follow-up: Technical white paper on 12/17 Geometry"
         )
 
-        return OutreachDraft(
-            contact=contact, subject=subject, body=body, notes=notes
-        )
+        return OutreachDraft(contact=contact, subject=subject, body=body, notes=notes)
 
     def export_to_csv(self, data: List[Contact], filepath: str) -> None:
         """Export contact data to CSV file.
-        
+
         Args:
             data: List of Contact objects to export
             filepath: Output CSV file path
@@ -594,7 +561,7 @@ Best regards
 
     def export_to_json(self, data: List[Contact], filepath: str) -> None:
         """Export contact data to JSON file.
-        
+
         Args:
             data: List of Contact objects to export
             filepath: Output JSON file path
@@ -612,18 +579,18 @@ Best regards
         self, industry: str, company_limit: int = 50, contacts_per_company: int = 3
     ) -> Dict[str, Any]:
         """Run the complete LinkedIn handler pipeline.
-        
+
         This executes all steps:
         A. Identify target companies
         B. Cross-reference ESG data
         C. Extract technical gatekeepers
         D. Generate outreach drafts
-        
+
         Args:
             industry: Target industry sector
             company_limit: Maximum companies to process
             contacts_per_company: Contacts to extract per company
-            
+
         Returns:
             Dictionary containing companies, contacts, and outreach drafts
         """
@@ -638,16 +605,12 @@ Best regards
 
         # Step B: Cross-reference ESG data
         companies_with_esg = self.cross_reference_esg_data(companies)
-        logger.info(
-            f"Step B: Enriched {len(companies_with_esg)} companies with ESG data"
-        )
+        logger.info(f"Step B: Enriched {len(companies_with_esg)} companies with ESG data")
 
         # Step C: Extract technical gatekeepers
         all_contacts = []
         for company in companies_with_esg[:10]:  # Limit to top 10 for demo
-            contacts = self.extract_technical_gatekeepers(
-                company, contacts_per_company
-            )
+            contacts = self.extract_technical_gatekeepers(company, contacts_per_company)
             all_contacts.extend(contacts)
 
         logger.info(f"Step C: Extracted {len(all_contacts)} technical contacts")

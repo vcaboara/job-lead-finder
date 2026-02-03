@@ -1,0 +1,102 @@
+[
+  {
+    "name": "International Paper",
+    "industry": "Pulp and Paper Mills",
+    "esg_score": 45.2,
+    "carbon_liability_estimate": 125000000,
+    "location": "Memphis, TN",
+    "employee_count": 50000,
+    "website": "https://www.internationalpaper.com",
+    "linkedin_url": "https://www.linkedin.com/company/international-paper"
+  },
+  {
+    "name": "Georgia-Pacific",
+    "industry": "Pulp and Paper Mills",
+    "esg_score": 42.8,
+    "carbon_liability_estimate": 98000000,
+    "location": "Atlanta, GA",
+    "employee_count": 35000,
+    "website": "https://www.gp.com",
+    "linkedin_url": "https://www.linkedin.com/company/georgia-pacific"
+  },
+  {
+    "name": "WestRock",
+    "industry": "Pulp and Paper Mills",
+    "esg_score": 48.3,
+    "carbon_liability_estimate": 72000000,
+    "location": "Atlanta, GA",
+    "employee_count": 51000,
+    "website": "https://www.westrock.com",
+    "linkedin_url": "https://www.linkedin.com/company/westrock"
+  },
+  {
+    "name": "ArcelorMittal",
+    "industry": "Steel Manufacturing",
+    "esg_score": 38.5,
+    "carbon_liability_estimate": 350000000,
+    "location": "Luxembourg",
+    "employee_count": 190000,
+    "website": "https://corporate.arcelormittal.com",
+    "linkedin_url": "https://www.linkedin.com/company/arcelormittal"
+  },
+  {
+    "name": "Nucor Corporation",
+    "industry": "Steel Manufacturing",
+    "esg_score": 52.1,
+    "carbon_liability_estimate": 85000000,
+    "location": "Charlotte, NC",
+    "employee_count": 25000,
+    "website": "https://www.nucor.com",
+    "linkedin_url": "https://www.linkedin.com/company/nucor-corporation"
+  },
+  {
+    "name": "United States Steel Corporation",
+    "industry": "Steel Manufacturing",
+    "esg_score": 41.7,
+    "carbon_liability_estimate": 165000000,
+    "location": "Pittsburgh, PA",
+    "employee_count": 22000,
+    "website": "https://www.ussteel.com",
+    "linkedin_url": "https://www.linkedin.com/company/u-s-steel"
+  },
+  {
+    "name": "Holcim",
+    "industry": "Cement Production",
+    "esg_score": 44.9,
+    "carbon_liability_estimate": 280000000,
+    "location": "Switzerland",
+    "employee_count": 70000,
+    "website": "https://www.holcim.com",
+    "linkedin_url": "https://www.linkedin.com/company/holcim"
+  },
+  {
+    "name": "Cemex",
+    "industry": "Cement Production",
+    "esg_score": 43.2,
+    "carbon_liability_estimate": 195000000,
+    "location": "Mexico",
+    "employee_count": 40000,
+    "website": "https://www.cemex.com",
+    "linkedin_url": "https://www.linkedin.com/company/cemex"
+  },
+  {
+    "name": "Bunge Limited",
+    "industry": "Heavy Agriculture",
+    "esg_score": 47.6,
+    "carbon_liability_estimate": 55000000,
+    "location": "St. Louis, MO",
+    "employee_count": 23000,
+    "website": "https://www.bunge.com",
+    "linkedin_url": "https://www.linkedin.com/company/bunge"
+  },
+  {
+    "name": "Archer Daniels Midland",
+    "industry": "Heavy Agriculture",
+    "esg_score": 49.1,
+    "carbon_liability_estimate": 68000000,
+    "location": "Chicago, IL",
+    "employee_count": 38000,
+    "website": "https://www.adm.com",
+    "linkedin_url": "https://www.linkedin.com/company/adm"
+  }
+]

@@ -1,4 +1,5 @@
 """Tests for LinkedIn handler and Technical Gatekeeper identification."""
+
 import json
 import tempfile
 from pathlib import Path
@@ -44,12 +45,8 @@ class TestDataModels:
 
     def test_outreach_draft_creation(self):
         """Test OutreachDraft creation."""
-        contact = Contact(
-            name="Jane Smith", title="Director of Process Engineering", company="Test Corp"
-        )
-        draft = OutreachDraft(
-            contact=contact, subject="Test Subject", body="Test Body", notes="Test Notes"
-        )
+        contact = Contact(name="Jane Smith", title="Director of Process Engineering", company="Test Corp")
+        draft = OutreachDraft(contact=contact, subject="Test Subject", body="Test Body", notes="Test Notes")
         assert draft.contact.name == "Jane Smith"
         assert draft.subject == "Test Subject"
         assert draft.body == "Test Body"
@@ -112,12 +109,8 @@ class TestLinkedInHandler:
         handler = LinkedInHandler(mode="demo")
 
         # Test with different industries
-        paper_company = Company(
-            name="Test Paper Co", industry="Pulp and Paper Mills", employee_count=50000
-        )
-        steel_company = Company(
-            name="Test Steel Co", industry="Steel Manufacturing", employee_count=100000
-        )
+        paper_company = Company(name="Test Paper Co", industry="Pulp and Paper Mills", employee_count=50000)
+        steel_company = Company(name="Test Steel Co", industry="Steel Manufacturing", employee_count=100000)
 
         paper_liability = handler._estimate_carbon_liability(paper_company)
         steel_liability = handler._estimate_carbon_liability(steel_company)
@@ -308,9 +301,7 @@ class TestLinkedInHandler:
     def test_full_pipeline(self):
         """Test complete pipeline execution."""
         handler = LinkedInHandler(mode="demo")
-        results = handler.run_full_pipeline(
-            industry="Pulp and Paper Mills", company_limit=5, contacts_per_company=2
-        )
+        results = handler.run_full_pipeline(industry="Pulp and Paper Mills", company_limit=5, contacts_per_company=2)
 
         assert "companies" in results
         assert "contacts" in results
