@@ -80,6 +80,8 @@ leads.json
 
 # Job search data (personal/private)
 data/
+# Exception: Allow sample ESG data for LinkedIn handler
+!data/esg_penalty_data.json
 config.json
 leads.json
 job_tracking.json
