@@ -2,7 +2,7 @@
 
 This module orchestrates job search across multiple sources:
 1. MCP providers (LinkedIn, Indeed, GitHub) - primary source
-2. AI providers for evaluation (Ollama > Gemini) - auto-selected
+2. AI providers for evaluation (Ollama > Gemini) - auto-selected via ASMF
 3. Local sample data - final fallback
 
 Priority: MCP > AI (Ollama/Gemini) > Local
@@ -12,17 +12,16 @@ import logging
 import os
 from typing import Any, Dict, List
 
-from .gemini_provider import GeminiProvider
+from smf.providers import get_factory
 from .main import fetch_jobs
-from .ollama_provider import OllamaProvider
 
 logger = logging.getLogger(__name__)
 
 
 def _get_evaluation_provider():
-    """Get the best available AI provider for job evaluation.
+    """Get the best available AI provider for job evaluation using ASMF.
 
-    Priority:
+    Uses AIProviderFactory with automatic fallback:
     1. Ollama (if available and model pulled)
     2. Gemini (if API key configured)
     3. None (fallback to no evaluation)
@@ -30,25 +29,17 @@ def _get_evaluation_provider():
     Returns:
         Provider instance or None
     """
-    # Try Ollama first (local, no quota limits)
-    try:
-        provider = OllamaProvider()
-        if provider.is_available():
-            logger.info("Using Ollama provider for evaluation (%s)", provider.model)
-            return provider
-        else:
-            logger.info("Ollama not available (model not pulled), trying Gemini")
-    except Exception as e:
-        logger.debug("Ollama provider unavailable: %s", e)
-
-    # Try Gemini as fallback
-    try:
-        provider = GeminiProvider()
-        logger.info("Using Gemini provider for evaluation")
+    factory = get_factory()
+    
+    # Try to create provider with automatic fallback (Ollama -> Gemini)
+    provider = factory.create_with_fallback()
+    
+    if provider:
+        provider_name = provider.__class__.__name__
+        model = getattr(provider, 'model', 'unknown')
+        logger.info(f"Using {provider_name} for evaluation (model: {model})")
         return provider
-    except Exception as e:
-        logger.debug("Gemini provider unavailable: %s", e)
-
+    
     logger.warning("No AI providers available for evaluation")
     return None
 
@@ -116,8 +107,7 @@ def generate_job_leads(
                                 lead["reasoning"] = "AI provider unavailable"
                             leads = leads[:count]
                     except Exception as e:
-                        if verbose:
-                            print(f"job_finder: Batch ranking unavailable: {e}")
+                        logger.warning(f"Batch ranking unavailable: {e}", exc_info=verbose)
                         # Continue with unranked jobs
                         for lead in leads[:count]:
                             lead["score"] = 50
@@ -125,45 +115,37 @@ def generate_job_leads(
                         leads = leads[:count]
                 return leads
             else:
-                print("job_finder: No results from MCP providers, trying Gemini...")
+                logger.info("No results from MCP providers, trying AI provider")
 
         except Exception as e:
-            if verbose:
-                import traceback
+            logger.error(f"MCP providers failed: {e}", exc_info=verbose)
+            logger.info("MCP unavailable, falling back to AI provider")
 
-                print(f"job_finder: MCP providers failed: {e}")
-                traceback.print_exc()
-            print("job_finder: MCP unavailable, falling back to Gemini")
-
-    # 2. Try Gemini provider
-    try:
-        provider = GeminiProvider()
-        print("job_finder: Using GeminiProvider")
-    except Exception as e:
-        provider = None
-        if verbose:
-            print(f"job_finder: GeminiProvider unavailable ({e}); falling back to local search")
-
+    # 2. Try AI provider (via factory - Ollama -> Gemini)
+    factory = get_factory()
+    provider = factory.create_with_fallback()
+    
     if provider:
+        logger.info(f"Using {provider.__class__.__name__} for job generation")
         try:
-            leads = provider.generate_job_leads(query, resume_text, count=count, model=model, verbose=verbose)
-            print(f"job_finder: Gemini returned {len(leads)} leads")
-            # If Gemini returned results, use them
-            if leads:
-                # Evaluate each lead if requested
-                if evaluate:
-                    leads = _evaluate_leads(leads, resume_text, provider, verbose)
-                return leads
+            # Check if provider supports job generation (Gemini has this method)
+            if hasattr(provider, 'generate_job_leads'):
+                leads = provider.generate_job_leads(query, resume_text, count=count, model=model, verbose=verbose)
+                logger.info(f"AI provider returned {len(leads)} leads")
+                if leads:
+                    # Evaluate each lead if requested
+                    if evaluate:
+                        leads = _evaluate_leads(leads, resume_text, provider, verbose)
+                    return leads
+                else:
+                    logger.info("AI provider returned 0 leads, using local fallback")
             else:
-                print("job_finder: Gemini returned 0 leads, using local fallback")
+                logger.warning(f"Provider {provider.__class__.__name__} doesn't support job generation, using local fallback")
         except Exception as e:
-            # Provide diagnostics when verbose
-            if os.getenv("VERBOSE") or verbose:
-                import traceback
-
-                print("job_finder: Exception while calling GeminiProvider:", e)
-                traceback.print_exc()
-            print("job_finder: Gemini failed, using local fallback")
+            logger.error(f"Exception while calling AI provider: {e}", exc_info=verbose or os.getenv("VERBOSE"))
+            logger.info("AI provider failed, using local fallback")
+    else:
+        logger.warning("No AI provider available, falling back to local search")
 
     # 3. Fallback: use simple local search
     sample = fetch_jobs(query)
@@ -180,7 +162,7 @@ def generate_job_leads(
                 "source": "Local",
             }
         )
-    print(f"job_finder: Fallback returned {len(leads)} leads")
+    logger.info(f"Fallback returned {len(leads)} leads")
     # Evaluate each lead if requested (requires Gemini)
     if evaluate and provider:
         leads = _evaluate_leads(leads, resume_text, provider, verbose)
@@ -218,8 +200,7 @@ def _evaluate_leads(
             lead["score"] = evaluation.get("score", 0)
             lead["reasoning"] = evaluation.get("reasoning", "")
         except Exception as e:
-            if verbose:
-                print(f"job_finder: evaluation failed for {lead.get('title', '?')}: {e}")
+            logger.warning(f"Evaluation failed for {lead.get('title', '?')}: {e}", exc_info=verbose)
             # Default to neutral score if evaluation fails
             lead["score"] = 50
             lead["reasoning"] = "Evaluation unavailable."
@@ -233,4 +214,4 @@ def save_to_file(leads: List[Dict[str, Any]], path: str) -> None:
 
     with open(path, "w", encoding="utf-8") as fh:
         json.dump(leads, fh, indent=2)
-    print(f"job_finder: saved {len(leads)} leads to {path}")
+    logger.info(f"Saved {len(leads)} leads to {path}")
