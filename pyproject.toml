@@ -28,6 +28,7 @@ skip-string-normalization = false
 [tool.isort]
 profile = "black"
 line_length = 120
+src_paths = ["src"]
 
 [tool.flake8]
 max-line-length = 130
