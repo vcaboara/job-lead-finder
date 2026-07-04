@@ -363,8 +363,7 @@ class TestJobTrackingAPIEndpoints:
             with patch("app.ui_server.RESUME_FILE") as mock_resume:
                 mock_resume.exists.return_value = True
                 mock_resume.read_text.return_value = "My resume text..."
-                with patch("app.gemini_provider.simple_gemini_query") as mock_query:
-                    mock_query.return_value = "Dear Hiring Manager..."
+                with patch("app.cover_letter_generator._ollama_generate", return_value="Dear Hiring Manager..."):
                     response = client.post(
                         "/api/jobs/abc123/cover-letter", json={"job_description": "Full job description..."}
                     )

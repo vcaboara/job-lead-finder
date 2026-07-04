@@ -1236,64 +1236,39 @@ def update_job_notes(job_id: str, req: JobNotesRequest):
 
 
 @app.post("/api/jobs/{job_id}/cover-letter")
-def generate_cover_letter(job_id: str, req: CoverLetterRequest):
-    """Generate a customized cover letter for a job using Gemini."""
+def generate_cover_letter_endpoint(job_id: str, req: CoverLetterRequest):
+    """Generate a customized cover letter for a job using Ollama (with Claude fallback)."""
+    from .cover_letter_generator import generate_cover_letter as _gen_cover_letter
+
     tracker = get_tracker()
     job = tracker.get_job(job_id)
 
     if not job:
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
 
-    # Get resume text
     resume_text = req.resume_text
     if not resume_text and RESUME_FILE.exists():
         resume_text = RESUME_FILE.read_text(encoding="utf-8")
 
     if not resume_text:
-        raise HTTPException(status_code=400, detail="No resume text provided")
+        raise HTTPException(status_code=400, detail="No resume text provided and no resume.txt found")
 
-    # Use provided job description or job summary
     job_description = req.job_description or job.get("summary", "")
-
     if not job_description:
         raise HTTPException(status_code=400, detail="No job description available")
 
-    # Generate cover letter using Gemini
-    try:
-        from .gemini_provider import simple_gemini_query
+    cover_letter = _gen_cover_letter(
+        job_description=job_description,
+        title=job.get("title", ""),
+        company=job.get("company", ""),
+        location=job.get("location", ""),
+        resume_text=resume_text,
+    )
 
-        prompt = f"""Generate a professional cover letter for this job application.
+    if not cover_letter:
+        raise HTTPException(status_code=500, detail="Cover letter generation failed — check Ollama is running")
 
-Job Title: {job.get('title', 'N/A')}
-Company: {job.get('company', 'N/A')}
-Location: {job.get('location', 'N/A')}
-
-Job Description:
-{job_description}
-
-Candidate Resume:
-{resume_text}
-
-Write a concise, professional cover letter (3-4 paragraphs) that:
-1. Expresses interest in the specific role
-2. Highlights relevant experience from the resume
-3. Explains why the candidate is a good fit
-4. Ends with a call to action
-
-Return ONLY the cover letter text, no additional commentary."""
-
-        cover_letter = simple_gemini_query(prompt)
-
-        if not cover_letter:
-            raise HTTPException(status_code=500, detail="Failed to generate cover letter")
-
-        return JSONResponse(
-            {"cover_letter": cover_letter, "job_title": job.get("title"), "company": job.get("company")}
-        )
-
-    except Exception as e:
-        print(f"Cover letter generation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate cover letter: {str(e)}") from e
+    return JSONResponse({"cover_letter": cover_letter, "job_title": job.get("title"), "company": job.get("company")})
 
 
 @app.post("/api/jobs/find-company-link/{job_id}")

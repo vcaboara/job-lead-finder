@@ -159,7 +159,7 @@ class BackgroundScheduler:
                             # Check if already tracked
                             job_id = self._generate_job_id(job)
                             if job_id not in tracker.jobs:
-                                tracker.track(job)
+                                tracker.track_job(job)
                                 new_jobs_count += 1
                                 logger.info(
                                     f"Auto-tracked: {job.get('title')} at {job.get('company')} (score: {score})"

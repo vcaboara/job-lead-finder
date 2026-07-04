@@ -138,7 +138,7 @@ class TestAutoDiscovery:
 
                             # Should track high-scoring jobs only
                             # 2 queries × 2 jobs each (score >= 60)
-                            assert mock_tracker.track.call_count == 4
+                            assert mock_tracker.track_job.call_count == 4
 
     def test_generate_job_id(self, scheduler):
         """Test job ID generation."""
