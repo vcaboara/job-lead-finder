@@ -34,6 +34,8 @@ from .providers.base import MCPProvider
 # Import modular providers from new structure
 from .providers.weworkremotely import WeWorkRemotelyMCP
 
+logger = logging.getLogger(__name__)
+
 
 class LinkedInMCP(MCPProvider):
     """LinkedIn MCP provider."""
@@ -614,7 +616,7 @@ class RemoteOKMCP(MCPProvider):
 
             return jobs
         except Exception as e:
-            print(f"RemoteOK MCP error: {e}")
+            logger.error("RemoteOK error: %s", e)
             return []
 
 
@@ -679,7 +681,7 @@ class RemotiveMCP(MCPProvider):
 
             return jobs
         except Exception as e:
-            print(f"Remotive MCP error: {e}")
+            logger.error("Remotive error: %s", e)
             return []
 
 
