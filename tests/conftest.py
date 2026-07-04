@@ -182,6 +182,19 @@ def create_test_docx():
 
 
 @pytest.fixture(autouse=True)
+def isolated_resume_file(tmp_path, monkeypatch):
+    """Redirect ui_server.RESUME_FILE to a temp path for every test.
+
+    Prevents any test that calls /api/resume/upload from writing to the
+    real data/resume.txt. Tests that explicitly use mock_resume_file will
+    override this with their own MagicMock (correct — monkeypatch last-wins).
+    """
+    import app.ui_server as ui_server
+
+    monkeypatch.setattr(ui_server, "RESUME_FILE", tmp_path / "resume.txt")
+
+
+@pytest.fixture(autouse=True)
 def cleanup_test_files():
     """Clean up test files after each test."""
     yield

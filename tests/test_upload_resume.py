@@ -1,4 +1,5 @@
 """Tests for resume upload endpoints."""
+
 from io import BytesIO
 
 import pytest

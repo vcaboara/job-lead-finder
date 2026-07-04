@@ -27,26 +27,29 @@
 - [x] Background scheduler skeleton
 - [x] FastAPI UI with job dashboard
 - [x] Docker 8-service stack
-- [ ] **Fix: background_scheduler.py tracker method name mismatch** (track() vs track_job())
-- [ ] **Fix: upgrade default Ollama model to gemma4:12b for generation tasks**
-- [ ] **Add: resume.txt loaded into repo** (blocking all generation — needs Vincent's resume)
-- [ ] **Fix: cover_letter_generator.py — implement with Ollama (gemma4:12b)**
-- [ ] **Fix: resume_generator.py — implement with Ollama (gemma4:12b)**
-- [ ] Wire cover letter endpoint in UI (POST /api/jobs/{job_id}/cover-letter)
-- [ ] Run full test suite clean on main
+- [x] Fix: background_scheduler.py tracker.track() → tracker.track_job()
+- [x] Fix: upgrade default Ollama model to gemma4:12b for generation tasks
+- [x] Fix: RESUME_FILE path mismatch (scheduler used root, UI used data/)
+- [x] Fix: upload tests write to real data/resume.txt → now redirected to tmp_path
+- [x] Add: resume.txt loaded — Vincent's full resume in data/resume.txt
+- [x] Fix: cover_letter_generator.py — Ollama gemma4:12b + Claude fallback (was stub)
+- [x] Fix: resume_generator.py — Ollama gemma4:12b + Claude fallback (was stub)
+- [x] Wire cover letter endpoint in UI (replaced Gemini with new generator)
+- [x] Full test suite clean (408 passing)
 
 ---
 
 ## Phase 1 — Autonomous Discovery & Scoring
 *Target: System wakes up daily, finds new jobs, scores them, surfaces top 10*
 
-- [ ] Scheduler: daily job discovery run (6am, configurable)
-- [ ] Score threshold filter: only surface jobs scoring ≥ 65 (configurable)
-- [ ] Duplicate detection: don't re-show jobs already tracked
+- [x] Scheduler: daily job discovery run (every 6h, configurable)
+- [x] Score threshold filter: AUTO_TRACK_MIN_SCORE=65 (was hardcoded 60)
+- [x] Duplicate detection: job ID hash check before tracking
+- [x] Role/keyword config: TARGET_SEARCH_QUERIES in .env (6 DevOps/CI/CD/Python queries)
+- [x] Salary range config: SALARY_FLOOR=120000 in .env
+- [x] Remote-only config: REMOTE_ONLY=true in .env
+- [x] Replace Gemini query extraction with Ollama + env-var override + hard fallback
 - [ ] Job source expansion: RemoteOK, Remotive scrapers (direct HTTP, no API key needed)
-- [ ] Role/keyword config: Vincent's target titles stored in config (not hardcoded)
-- [ ] Salary range filter (skip jobs below threshold)
-- [ ] Remote-only filter toggle
 - [ ] UI: "Today's leads" view sorted by score descending
 - [ ] Notification: write daily digest to `data/daily_digest.md` (readable without UI)
 

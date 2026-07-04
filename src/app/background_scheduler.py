@@ -22,8 +22,8 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 logger = logging.getLogger(__name__)
 
-# Resume file location (shared with UI server)
-RESUME_FILE = Path("resume.txt")
+# Resume file location — must match DATA_DIR / "resume.txt" in ui_server.py
+RESUME_FILE = Path("data") / "resume.txt"
 
 
 class BackgroundScheduler:
