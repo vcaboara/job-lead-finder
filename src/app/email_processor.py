@@ -7,7 +7,6 @@ Integrates EmailParser with JobTracker to automatically:
 - Handle recruiter outreach
 """
 import logging
-from datetime import datetime
 from typing import Dict, Optional
 
 from .email_parser import EmailParser, EmailType, ParsedEmail

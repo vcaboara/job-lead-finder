@@ -1,8 +1,6 @@
 """Tests for email parser and classifier."""
 from datetime import datetime
 
-import pytest
-
 from app.email_parser import EmailParser, EmailType
 
 

@@ -37,7 +37,7 @@ The email webhook integration allows you to:
 1. **SendGrid Account** (free tier works for MVP)
    - Sign up at https://sendgrid.com/
    - Free tier: 100 emails/day
-   
+
 2. **Domain or Subdomain** for receiving emails
    - Option 1: Use SendGrid's domain (e.g., `jobforge.sendgrid.net`)
    - Option 2: Configure your own subdomain (e.g., `email.jobforge.com`)
@@ -63,18 +63,18 @@ The email webhook integration allows you to:
    **Domain:**
    - If using SendGrid's domain: Select `sendgrid.net` from dropdown
    - If using your own: Enter your subdomain (e.g., `email.jobforge.com`)
-   
+
    **Subdomain:** (optional if using SendGrid domain)
    - Leave blank for SendGrid domain
    - Or specify subdomain prefix
-   
+
    **Destination URL:**
    ```
    https://your-jobforge-instance.railway.app/api/email/inbound
    ```
-   
+
    **Check Spam:** ✓ Enabled (recommended)
-   
+
    **Send Raw:** ✗ Disabled (we parse the body)
 
 3. Click **Add**

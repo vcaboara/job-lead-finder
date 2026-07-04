@@ -55,10 +55,10 @@ def bulk_update_jobs():
     data = request.json
     job_ids = data.get("job_ids", [])
     status = data.get("status")
-    
+
     for job_id in job_ids:
         tracker.update_status(job_id, status)
-    
+
     return jsonify({"success": True, "count": len(job_ids)})
 
 @app.route("/api/jobs/export-csv")
@@ -68,18 +68,18 @@ def export_jobs_csv():
     status = request.args.get("status")
     company = request.args.get("company")
     # ... apply filters
-    
+
     jobs = tracker.get_all_jobs(status_filter=status, include_hidden=False)
-    
+
     # Create CSV
     import csv
     from io import StringIO
-    
+
     output = StringIO()
     writer = csv.DictWriter(output, fieldnames=['company', 'title', 'location', 'salary', 'status', 'applied_date', 'notes'])
     writer.writeheader()
     writer.writerows(jobs)
-    
+
     response = Response(output.getvalue(), mimetype='text/csv')
     response.headers['Content-Disposition'] = 'attachment; filename=jobs.csv'
     return response

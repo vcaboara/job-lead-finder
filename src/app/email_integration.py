@@ -107,7 +107,7 @@ class EmailIntegration:
 
         try:
             # Select sent folder (Gmail uses "[Gmail]/Sent Mail")
-            received_folders = ["INBOX", "[Gmail]/All Mail", "All Mail"]
+            sent_folders = ["[Gmail]/Sent Mail", "Sent", "Sent Items", "Sent Messages"]
 
             folder_selected = False
             for folder in sent_folders:
@@ -127,7 +127,7 @@ class EmailIntegration:
             from datetime import timedelta
 
             since_date = (datetime.now() - timedelta(days=days)).strftime("%d-%b-%Y")
-            _, message_ids = self.connection.search(None, f"(SINCE {since_date} SUBJECT \"Job Posting\")")
+            _, message_ids = self.connection.search(None, f'(SINCE {since_date} SUBJECT "Job Posting")')
 
             emails = []
             for msg_id in message_ids[0].split():

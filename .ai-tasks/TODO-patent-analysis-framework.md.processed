@@ -31,16 +31,16 @@ from typing import Dict, Any, Optional
 
 class BaseAIProvider(ABC):
     """Base class for AI providers (Gemini, Ollama)."""
-    
+
     @abstractmethod
     def __init__(self, api_key: Optional[str] = None, model: Optional[str] = None):
         pass
-    
+
     @abstractmethod
     def analyze_text(self, prompt: str, context: Dict[str, Any] = None) -> str:
         """Analyze text with AI model."""
         pass
-    
+
     @abstractmethod
     def is_available(self) -> bool:
         """Check if provider is available."""
@@ -84,7 +84,7 @@ class PatentDocument:
 
 class PDFPatentParser:
     """Extract patent claims from PDF documents."""
-    
+
     def parse(self, pdf_path: str) -> PatentDocument:
         """Extract title, abstract, and claims from patent PDF."""
         # Use pypdf for basic extraction
@@ -94,12 +94,12 @@ class PDFPatentParser:
         # Detect independent vs dependent claims
         # Detect claim dependencies ("The system of claim 1, wherein...")
         pass
-    
+
     def extract_claims_section(self, text: str) -> str:
         """Find and extract the claims section."""
         # Look for "Claims", "What is claimed", "We claim"
         pass
-    
+
     def parse_claim_dependencies(self, claim_text: str) -> List[int]:
         """Extract which claims this claim depends on."""
         # Regex for "claim 1", "claims 1-3", "any of claims 1, 2, or 3"
@@ -115,22 +115,22 @@ from typing import List, Dict
 
 class GooglePatentsSearch:
     """Search Google Patents for prior art."""
-    
+
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key
         self.base_url = "https://patents.google.com"
-    
+
     def search(self, query: str, max_results: int = 50) -> List[Dict]:
         """Search for patents matching query."""
         # Use Google Patents public search
         # Extract patent numbers, titles, abstracts
         # Return structured results
         pass
-    
+
     def search_by_keywords(self, keywords: List[str], domain: str = "pyrolysis") -> List[Dict]:
         """Search using extracted keywords from claims."""
         pass
-    
+
     def get_patent_details(self, patent_number: str) -> Dict:
         """Fetch full patent details."""
         pass
@@ -143,11 +143,11 @@ from ..providers.base_provider import BaseAIProvider
 
 class PriorArtAnalyzer:
     """Analyze prior art for conflicts with claims."""
-    
+
     def __init__(self, ai_provider: BaseAIProvider, search_engine: GooglePatentsSearch):
         self.ai_provider = ai_provider
         self.search = search_engine
-    
+
     def find_conflicts(self, claim: PatentClaim) -> List[Dict]:
         """Find prior art that conflicts with claim."""
         # Extract key concepts from claim using AI
@@ -155,7 +155,7 @@ class PriorArtAnalyzer:
         # Use AI to assess similarity/conflict
         # Return ranked list of conflicts
         pass
-    
+
     def assess_novelty(self, claim: PatentClaim, prior_art: List[Dict]) -> Dict:
         """AI assessment of claim novelty given prior art."""
         pass
@@ -167,22 +167,22 @@ class PriorArtAnalyzer:
 ```python
 class PyrolysisKnowledge:
     """Domain expertise for pyrolysis systems."""
-    
+
     TEMPERATURE_RANGES = {
         "slow_pyrolysis": (300, 500),
         "fast_pyrolysis": (450, 650),
         "flash_pyrolysis": (800, 1000),
     }
-    
+
     REACTOR_TYPES = [
         "fixed_bed",
-        "fluidized_bed", 
+        "fluidized_bed",
         "rotary_kiln",
         "ablative",
         "microwave",
         "vacuum"
     ]
-    
+
     FEEDSTOCKS = [
         "biomass",
         "plastics",
@@ -190,23 +190,23 @@ class PyrolysisKnowledge:
         "agricultural_waste",
         "municipal_solid_waste"
     ]
-    
+
     PRODUCTS = {
         "bio_oil": "liquid fuel, chemical feedstock",
         "syngas": "H2, CO, CH4 for power generation",
         "biochar": "carbon sequestration, soil amendment"
     }
-    
+
     @staticmethod
     def validate_temperature_claim(claim_text: str) -> Dict:
         """Check if temperature claims are technically feasible."""
         pass
-    
+
     @staticmethod
     def validate_reactor_design(claim_text: str) -> Dict:
         """Assess reactor design claims for engineering validity."""
         pass
-    
+
     @staticmethod
     def identify_pyrolysis_type(claim_text: str) -> str:
         """Classify pyrolysis process from claim description."""
@@ -234,38 +234,38 @@ class ClaimAnalysisResult:
 
 class ClaimAnalyzer:
     """Analyze patent claims for validity and quality."""
-    
+
     def __init__(self, ai_provider: BaseAIProvider):
         self.ai = ai_provider
         self.pyrolysis_expert = PyrolysisKnowledge()
-    
+
     def analyze(self, claims: List[PatentClaim], domain: str = "pyrolysis") -> ClaimAnalysisResult:
         """Comprehensive claim analysis."""
         result = ClaimAnalysisResult()
-        
+
         for claim in claims:
             # Technical feasibility check
             tech_issues = self._check_technical_feasibility(claim)
             result.technical_issues.extend(tech_issues)
-            
+
             # Clarity and enablement check
             clarity = self._check_claim_clarity(claim)
             result.clarity_issues.extend(clarity)
-            
+
             # Scope assessment
             scope = self._assess_claim_scope(claim)
             result.scope_assessment[claim.number] = scope
-        
+
         # Overall patentability score
         result.patentability_score = self._calculate_score(result)
         result.recommendations = self._generate_recommendations(result)
-        
+
         return result
-    
+
     def _check_technical_feasibility(self, claim: PatentClaim) -> List[Dict]:
         """Validate claim against pyrolysis engineering principles."""
         issues = []
-        
+
         # Temperature validation
         temp_check = self.pyrolysis_expert.validate_temperature_claim(claim.text)
         if not temp_check["valid"]:
@@ -274,7 +274,7 @@ class ClaimAnalyzer:
                 "type": "temperature_infeasible",
                 "detail": temp_check["reason"]
             })
-        
+
         # Reactor design validation
         reactor_check = self.pyrolysis_expert.validate_reactor_design(claim.text)
         if not reactor_check["valid"]:
@@ -283,27 +283,27 @@ class ClaimAnalyzer:
                 "type": "reactor_design_issue",
                 "detail": reactor_check["reason"]
             })
-        
+
         # Use AI for complex feasibility questions
         ai_prompt = f"""
         Analyze this pyrolysis patent claim for technical feasibility:
-        
+
         Claim {claim.number}: {claim.text}
-        
+
         Consider:
         - Material and energy balance
         - Thermodynamic constraints
         - Safety and containment
         - Scalability
-        
+
         Identify any technical impossibilities or implausibilities.
         """
-        
+
         ai_response = self.ai.analyze_text(ai_prompt)
         # Parse AI response for issues
-        
+
         return issues
-    
+
     def _check_claim_clarity(self, claim: PatentClaim) -> List[Dict]:
         """Check for claim clarity and definiteness issues."""
         # Use AI to assess:
@@ -312,18 +312,18 @@ class ClaimAnalyzer:
         # - Missing structural details
         # - Enablement concerns
         pass
-    
+
     def _assess_claim_scope(self, claim: PatentClaim) -> Dict:
         """Assess if claim scope is appropriate."""
         # Too broad: covers prior art
         # Too narrow: easy to design around
         # Use AI to evaluate
         pass
-    
+
     def _calculate_score(self, result: ClaimAnalysisResult) -> float:
         """Calculate overall patentability score 0-1."""
         pass
-    
+
     def _generate_recommendations(self, result: ClaimAnalysisResult) -> List[str]:
         """Generate actionable recommendations for attorney."""
         pass
@@ -352,30 +352,30 @@ def upload_patent():
     """Upload patent PDF for analysis."""
     if 'file' not in request.files:
         return jsonify({'error': 'No file uploaded'}), 400
-    
+
     file = request.files['file']
     if file.filename == '':
         return jsonify({'error': 'No file selected'}), 400
-    
+
     if not file.filename.endswith('.pdf'):
         return jsonify({'error': 'Only PDF files allowed'}), 400
-    
+
     filename = secure_filename(file.filename)
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
     file.save(filepath)
-    
+
     # Trigger analysis
     from ..parsers.pdf_parser import PDFPatentParser
     from ..analyzers.claim_analyzer import ClaimAnalyzer
     from ..providers.gemini_provider import GeminiProvider
-    
+
     parser = PDFPatentParser()
     patent = parser.parse(filepath)
-    
+
     ai_provider = GeminiProvider()
     analyzer = ClaimAnalyzer(ai_provider)
     result = analyzer.analyze(patent.claims)
-    
+
     return jsonify({
         'filename': filename,
         'claims_found': len(patent.claims),
@@ -396,10 +396,10 @@ def search_prior_art():
     """Search for prior art for specific claims."""
     data = request.json
     claims = data.get('claims', [])
-    
+
     from ..search.google_patents import GooglePatentsSearch
     from ..search.prior_art_analyzer import PriorArtAnalyzer
-    
+
     # Perform search and return results
     pass
 
@@ -423,13 +423,13 @@ if __name__ == '__main__':
 </head>
 <body>
     <h1>Patent Analysis Framework - Pyrolysis Systems</h1>
-    
+
     <div class="upload-area">
         <h2>Upload Patent Draft (PDF)</h2>
         <input type="file" id="fileInput" accept=".pdf">
         <button onclick="uploadFile()">Analyze Patent</button>
     </div>
-    
+
     <div id="results" class="results" style="display:none;">
         <h2>Analysis Results</h2>
         <div id="summary"></div>
@@ -440,7 +440,7 @@ if __name__ == '__main__':
         <h3>Recommendations</h3>
         <div id="recommendations"></div>
     </div>
-    
+
     <script>
         async function uploadFile() {
             const fileInput = document.getElementById('fileInput');
@@ -449,23 +449,23 @@ if __name__ == '__main__':
                 alert('Please select a PDF file');
                 return;
             }
-            
+
             const formData = new FormData();
             formData.append('file', file);
-            
+
             try {
                 const response = await fetch('/upload', {
                     method: 'POST',
                     body: formData
                 });
-                
+
                 const result = await response.json();
                 displayResults(result);
             } catch (error) {
                 alert('Error analyzing patent: ' + error);
             }
         }
-        
+
         function displayResults(data) {
             document.getElementById('results').style.display = 'block';
             document.getElementById('summary').innerHTML = `
@@ -473,7 +473,7 @@ if __name__ == '__main__':
                 <p><strong>Claims Found:</strong> ${data.claims_found}</p>
                 <p><strong>Patentability Score:</strong> ${(data.patentability_score * 100).toFixed(0)}%</p>
             `;
-            
+
             // Display issues and recommendations
             // ... populate divs with data
         }
