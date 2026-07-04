@@ -1,6 +1,7 @@
 """Tests for automated job discovery from resume."""
 
-from unittest.mock import patch
+import os
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -41,63 +42,68 @@ SKILLS:
 class TestAutoDiscovery:
     """Test automated job discovery functionality."""
 
+    def test_get_search_queries_uses_env_var(self, scheduler):
+        """TARGET_SEARCH_QUERIES env var takes priority over Ollama extraction."""
+        with patch.dict(os.environ, {"TARGET_SEARCH_QUERIES": "Sr DevOps Engineer remote,CI/CD Engineer remote"}):
+            queries = scheduler._get_search_queries("some resume text")
+        assert queries == ["Sr DevOps Engineer remote", "CI/CD Engineer remote"]
+
+    def test_get_search_queries_ollama_fallback(self, scheduler):
+        """Falls back to Ollama extraction when no env var is set."""
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.json.return_value = {"response": '["Sr Python Engineer remote", "DevOps Engineer remote"]'}
+
+        with patch.dict(os.environ, {}, clear=False):
+            env_without_target = {k: v for k, v in os.environ.items() if k != "TARGET_SEARCH_QUERIES"}
+            with patch.dict(os.environ, env_without_target, clear=True):
+                with patch("app.background_scheduler.httpx.post", return_value=mock_resp):
+                    queries = scheduler._get_search_queries("some resume text")
+
+        assert "Sr Python Engineer remote" in queries
+
+    def test_get_search_queries_hard_fallback(self, scheduler):
+        """Returns sensible defaults when env var and Ollama both unavailable."""
+        fail_resp = MagicMock()
+        fail_resp.status_code = 500
+
+        with patch.dict(os.environ, {}, clear=True):
+            with patch("app.background_scheduler.httpx.post", return_value=fail_resp):
+                queries = scheduler._get_search_queries("some resume")
+
+        assert len(queries) >= 3
+        assert all(isinstance(q, str) for q in queries)
+
     @pytest.mark.asyncio
-    async def test_extract_search_queries_from_resume(self, scheduler, mock_resume):
-        """Test that search queries can be extracted from resume."""
+    async def test_extract_search_queries_from_resume_deprecated_wrapper(self, scheduler, mock_resume):
+        """_extract_search_queries_from_resume delegates to _get_search_queries."""
         resume_text = mock_resume.read_text()
-
-        with patch("app.gemini_provider.GeminiProvider") as MockProvider:
-            mock_provider = MockProvider.return_value
-            mock_provider.call_llm.return_value = (
-                '["Senior Python Engineer", "Python Backend Developer", "Senior Software Engineer Python"]'
-            )
-
+        with patch.dict(os.environ, {"TARGET_SEARCH_QUERIES": "Sr DevOps Engineer remote"}):
             queries = await scheduler._extract_search_queries_from_resume(resume_text)
-
-            assert len(queries) == 3
-            assert "Senior Python Engineer" in queries
-            assert all(isinstance(q, str) for q in queries)
-            mock_provider.call_llm.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_extract_search_queries_handles_invalid_json(self, scheduler):
-        """Test handling of invalid JSON response from AI."""
-        with patch("app.gemini_provider.GeminiProvider") as MockProvider:
-            mock_provider = MockProvider.return_value
-            mock_provider.call_llm.return_value = "This is not JSON"
-
-            queries = await scheduler._extract_search_queries_from_resume("Sample resume text")
-
-            assert queries == []
+        assert "Sr DevOps Engineer remote" in queries
 
     @pytest.mark.asyncio
     async def test_discover_jobs_skips_if_no_resume(self, scheduler, tmp_path):
         """Test that discovery is skipped if resume file doesn't exist."""
         with patch("app.background_scheduler.RESUME_FILE", tmp_path / "nonexistent.txt"):
-            # Should return early without errors
             await scheduler.discover_jobs_from_resume()
-            # No exception means test passes
 
     @pytest.mark.asyncio
     async def test_discover_jobs_skips_short_resume(self, scheduler, tmp_path):
         """Test that discovery is skipped if resume is too short."""
         short_resume = tmp_path / "short.txt"
         short_resume.write_text("Too short")
-
         with patch("app.background_scheduler.RESUME_FILE", short_resume):
             await scheduler.discover_jobs_from_resume()
-            # Should complete without errors
 
     @pytest.mark.asyncio
     async def test_discover_jobs_full_workflow(self, scheduler, mock_resume):
-        """Test complete auto-discovery workflow."""
+        """Test complete auto-discovery workflow with configured queries."""
         with patch("app.background_scheduler.RESUME_FILE", mock_resume):
-            with patch("app.gemini_provider.GeminiProvider") as MockProvider:
-                mock_provider = MockProvider.return_value
-                mock_provider.call_llm.return_value = '["Python Developer", "Django Engineer"]'
-
+            with patch.dict(
+                os.environ, {"TARGET_SEARCH_QUERIES": "Python Developer,Django Engineer", "AUTO_TRACK_MIN_SCORE": "60"}
+            ):
                 with patch("app.job_finder.generate_job_leads") as mock_search:
-                    # Mock job search results
                     mock_search.return_value = [
                         {
                             "title": "Senior Python Developer",
@@ -129,16 +135,13 @@ class TestAutoDiscovery:
                         mock_tracker = MockTracker.return_value
                         mock_tracker.jobs = {}
 
-                        # Mock asyncio.sleep to speed up test
                         with patch("asyncio.sleep"):
                             await scheduler.discover_jobs_from_resume()
 
-                            # Should search for extracted queries
-                            assert mock_search.call_count == 2  # Two queries
-
-                            # Should track high-scoring jobs only
-                            # 2 queries × 2 jobs each (score >= 60)
-                            assert mock_tracker.track_job.call_count == 4
+                        # 2 configured queries, limited to 3 → runs both
+                        assert mock_search.call_count == 2
+                        # 2 queries × 2 jobs each scoring >= 60
+                        assert mock_tracker.track_job.call_count == 4
 
     def test_generate_job_id(self, scheduler):
         """Test job ID generation."""

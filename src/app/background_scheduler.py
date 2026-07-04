@@ -9,11 +9,14 @@ This module handles background tasks that run when the container is idle:
 """
 
 import asyncio
+import json
 import logging
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+import httpx
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -126,14 +129,13 @@ class BackgroundScheduler:
                 logger.info("Resume too short - skipping automated discovery")
                 return
 
-            # Extract search queries from resume using Gemini
-            search_queries = await self._extract_search_queries_from_resume(resume_text)
-
+            # Use configured queries first, fall back to Ollama extraction from resume
+            search_queries = self._get_search_queries(resume_text)
             if not search_queries:
-                logger.warning("Could not extract search queries from resume")
+                logger.warning("No search queries available — set TARGET_SEARCH_QUERIES in .env")
                 return
 
-            logger.info(f"Extracted {len(search_queries)} search queries: {search_queries}")
+            logger.info(f"Using {len(search_queries)} search queries: {search_queries}")
 
             # Perform searches for each query
             from app.job_finder import generate_job_leads
@@ -152,10 +154,11 @@ class BackgroundScheduler:
                         query=query, resume_text=resume_text, count=5, evaluate=True, use_mcp=True, verbose=False
                     )
 
-                    # Track new jobs (score >= 60 only)
+                    # Track new jobs (score >= configured threshold)
+                    min_score = int(os.getenv("AUTO_TRACK_MIN_SCORE", "65"))
                     for job in jobs:
                         score = job.get("score", 0)
-                        if score >= 60:
+                        if score >= min_score:
                             # Check if already tracked
                             job_id = self._generate_job_id(job)
                             if job_id not in tracker.jobs:
@@ -180,61 +183,77 @@ class BackgroundScheduler:
         except Exception as e:
             logger.error(f"Error in automated job discovery: {e}", exc_info=True)
 
-    async def _extract_search_queries_from_resume(self, resume_text: str) -> list[str]:
-        """Extract relevant job search queries from resume using AI.
+    def _get_search_queries(self, resume_text: str) -> list[str]:
+        """Return search queries from env config, falling back to Ollama extraction.
 
-        Args:
-            resume_text: The user's resume text
-
-        Returns:
-            List of search query strings
+        Priority:
+          1. TARGET_SEARCH_QUERIES env var (comma-separated) — deterministic, no LLM cost
+          2. Ollama extraction from resume — free, local
+          3. Hard-coded DevOps/Python defaults — always works
         """
+        configured = os.getenv("TARGET_SEARCH_QUERIES", "").strip()
+        if configured:
+            queries = [q.strip() for q in configured.split(",") if q.strip()]
+            logger.info(f"Using {len(queries)} configured search queries from TARGET_SEARCH_QUERIES")
+            return queries
+
+        # Try Ollama extraction
+        ollama_queries = self._extract_queries_via_ollama(resume_text)
+        if ollama_queries:
+            return ollama_queries
+
+        # Hard fallback
+        logger.warning("Falling back to default search queries")
+        return [
+            "Sr DevOps Engineer remote",
+            "CI/CD Engineer remote",
+            "Sr Python Automation Engineer remote",
+            "Platform Engineer Python Docker remote",
+        ]
+
+    def _extract_queries_via_ollama(self, resume_text: str) -> list[str]:
+        """Extract job search queries from resume using local Ollama."""
+        base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+        model = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+
+        prompt = (
+            "Analyze this resume and return 4-6 job search queries as a JSON array.\n"
+            "Each query should combine a job title and 'remote'.\n"
+            "Focus on CI/CD, DevOps, Python automation, and platform engineering.\n\n"
+            f"Resume:\n{resume_text[:2000]}\n\n"
+            'Return ONLY a JSON array, e.g.: ["Sr DevOps Engineer remote", "CI/CD Engineer remote"]'
+        )
+
         try:
-            from app.gemini_provider import GeminiProvider
+            resp = httpx.post(
+                f"{base_url}/api/generate",
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "stream": False,
+                    "format": "json",
+                    "options": {"temperature": 0.2, "num_predict": 256},
+                },
+                timeout=60,
+            )
+            if resp.status_code != 200:
+                return []
 
-            provider = GeminiProvider()
+            text = resp.json().get("response", "")
+            start, end = text.find("["), text.rfind("]")
+            if start == -1 or end == -1:
+                return []
 
-            # Prompt to extract search queries
-            prompt = f"""Analyze this resume and extract 3-5 job search queries for relevant positions.
-
-Resume:
-{resume_text[:3000]}
-
-Generate search queries that combine:
-- Job titles the person is qualified for
-- Key technical skills or domains
-- Seniority level if applicable
-
-Return ONLY a JSON array of strings (no other text):
-["query 1", "query 2", "query 3"]
-
-Example for a senior Python developer:
-["Senior Python Developer", "Python Backend Engineer", "Senior Engineer Python"]
-"""
-
-            response = provider.call_llm(prompt, timeout=30)
-
-            # Try to parse JSON response
-            import json
-
-            # Extract JSON array from response
-            text = response.strip()
-            start = text.find("[")
-            end = text.rfind("]")
-
-            if start != -1 and end != -1:
-                json_str = text[start : end + 1]
-                queries = json.loads(json_str)
-
-                if isinstance(queries, list) and all(isinstance(q, str) for q in queries):
-                    return [q.strip() for q in queries if len(q.strip()) > 3]
-
-            logger.warning(f"Could not parse search queries from AI response: {response[:200]}")
-            return []
-
+            queries = json.loads(text[start : end + 1])
+            if isinstance(queries, list) and all(isinstance(q, str) for q in queries):
+                return [q.strip() for q in queries if len(q.strip()) > 3]
         except Exception as e:
-            logger.error(f"Error extracting search queries: {e}")
-            return []
+            logger.warning(f"Ollama query extraction failed: {e}")
+        return []
+
+    async def _extract_search_queries_from_resume(self, resume_text: str) -> list[str]:
+        """Deprecated: use _get_search_queries instead."""
+        return self._get_search_queries(resume_text)
 
     def _generate_job_id(self, job: dict) -> str:
         """Generate a unique job ID (same logic as JobTracker)."""
