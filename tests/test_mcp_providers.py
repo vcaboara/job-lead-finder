@@ -8,6 +8,8 @@ from app.mcp_providers import (
     LinkedInMCP,
     MCPAggregator,
     MCPProvider,
+    RemoteOKMCP,
+    RemotiveMCP,
     WeWorkRemotelyMCP,
     generate_job_leads_via_mcp,
 )
@@ -509,3 +511,306 @@ class TestGenerateJobLeadsViaMCP:
         assert len(jobs) == 1
         assert jobs[0]["title"] == "Python Developer"
         mock_search.assert_called_once()
+
+
+class TestRemoteOKMCP:
+    """Test RemoteOK public API provider."""
+
+    def test_initialization(self):
+        provider = RemoteOKMCP()
+        assert provider.name == "RemoteOK"
+        assert provider.is_available() is True
+
+    @patch("httpx.get")
+    def test_search_jobs_success(self, mock_get):
+        """Parse RemoteOK JSON response and filter by query."""
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = [
+            {"id": "legal", "legal": "..."},  # metadata entry, must be skipped
+            {
+                "id": "123",
+                "position": "Senior Python Developer",
+                "company": "TechCorp",
+                "location": "Remote",
+                "description": "Build APIs with Python and FastAPI",
+                "tags": ["python", "fastapi", "remote"],
+                "url": "https://remoteok.com/remote-jobs/123",
+                "slug": "techcorp-python-dev",
+            },
+            {
+                "id": "456",
+                "position": "Go Backend Engineer",
+                "company": "GoStartup",
+                "location": "Worldwide",
+                "description": "Build services in Go",
+                "tags": ["go", "backend", "remote"],
+                "url": "https://remoteok.com/remote-jobs/456",
+                "slug": "gostartup-go-eng",
+            },
+        ]
+        mock_get.return_value = mock_response
+
+        provider = RemoteOKMCP()
+        jobs = provider.search_jobs("python", count=5)
+
+        assert len(jobs) == 1
+        job = jobs[0]
+        assert job["title"] == "Senior Python Developer"
+        assert job["company"] == "TechCorp"
+        assert job["source"] == "RemoteOK"
+        assert job["link"] == "https://remoteok.com/remote-jobs/123"
+        assert "title" in job and "summary" in job and "location" in job
+
+    @patch("httpx.get")
+    def test_metadata_entry_skipped(self, mock_get):
+        """Legal metadata entry (id=legal) is not treated as a job."""
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = [
+            {"id": "legal", "legal": "Do not scrape"},
+            {
+                "id": "1",
+                "position": "Python Dev",
+                "company": "Co",
+                "location": "Remote",
+                "description": "python",
+                "tags": ["python"],
+                "url": "https://remoteok.com/1",
+                "slug": "co-python",
+            },
+        ]
+        mock_get.return_value = mock_response
+
+        provider = RemoteOKMCP()
+        jobs = provider.search_jobs("python", count=5)
+
+        assert len(jobs) == 1
+        assert jobs[0]["title"] == "Python Dev"
+
+    @patch("httpx.get")
+    def test_query_filtering(self, mock_get):
+        """Only jobs matching query terms are returned."""
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = [
+            {
+                "id": "1",
+                "position": "Python Developer",
+                "company": "PyCo",
+                "location": "Remote",
+                "description": "Python work",
+                "tags": ["python"],
+                "url": "https://remoteok.com/1",
+                "slug": "pyco-python",
+            },
+            {
+                "id": "2",
+                "position": "Java Developer",
+                "company": "JavaCo",
+                "location": "Remote",
+                "description": "Java work",
+                "tags": ["java"],
+                "url": "https://remoteok.com/2",
+                "slug": "javaco-java",
+            },
+        ]
+        mock_get.return_value = mock_response
+
+        provider = RemoteOKMCP()
+        jobs = provider.search_jobs("python", count=5)
+
+        assert len(jobs) == 1
+        assert jobs[0]["title"] == "Python Developer"
+
+    @patch("httpx.get")
+    def test_tag_match(self, mock_get):
+        """Query term matching against tags field works."""
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = [
+            {
+                "id": "1",
+                "position": "Infrastructure Engineer",
+                "company": "Co",
+                "location": "Remote",
+                "description": "Cloud infrastructure",
+                "tags": ["devops", "terraform", "aws"],
+                "url": "https://remoteok.com/1",
+                "slug": "co-infra",
+            },
+        ]
+        mock_get.return_value = mock_response
+
+        provider = RemoteOKMCP()
+        jobs = provider.search_jobs("devops", count=5)
+
+        assert len(jobs) == 1
+
+    @patch("httpx.get")
+    def test_count_limit(self, mock_get):
+        """Results are capped at the requested count."""
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = [
+            {
+                "id": str(i),
+                "position": f"Python Dev {i}",
+                "company": "Co",
+                "location": "Remote",
+                "description": "python",
+                "tags": ["python"],
+                "url": f"https://remoteok.com/{i}",
+                "slug": f"co-{i}",
+            }
+            for i in range(10)
+        ]
+        mock_get.return_value = mock_response
+
+        provider = RemoteOKMCP()
+        jobs = provider.search_jobs("python", count=3)
+
+        assert len(jobs) == 3
+
+    @patch("httpx.get")
+    def test_error_handling(self, mock_get):
+        """Network errors return empty list without raising."""
+        mock_get.side_effect = Exception("Network error")
+
+        provider = RemoteOKMCP()
+        jobs = provider.search_jobs("python", count=5)
+
+        assert jobs == []
+
+
+class TestRemotiveMCP:
+    """Test Remotive public API provider."""
+
+    def test_initialization(self):
+        provider = RemotiveMCP()
+        assert provider.name == "Remotive"
+        assert provider.is_available() is True
+
+    @patch("httpx.get")
+    def test_search_jobs_success(self, mock_get):
+        """Parse Remotive JSON response and filter by query."""
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "jobs": [
+                {
+                    "title": "Senior DevOps Engineer",
+                    "company_name": "CloudCo",
+                    "candidate_required_location": "Worldwide",
+                    "description": "CI/CD pipelines and Docker",
+                    "category": "DevOps / Sysadmin",
+                    "tags": ["devops", "docker", "ci-cd"],
+                    "url": "https://remotive.com/remote-jobs/devops/senior-devops-123",
+                },
+                {
+                    "title": "React Frontend Developer",
+                    "company_name": "WebCo",
+                    "candidate_required_location": "USA Only",
+                    "description": "React and TypeScript",
+                    "category": "Software Development",
+                    "tags": ["react", "typescript"],
+                    "url": "https://remotive.com/remote-jobs/dev/react-456",
+                },
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        provider = RemotiveMCP()
+        jobs = provider.search_jobs("devops", count=5)
+
+        assert len(jobs) == 1
+        job = jobs[0]
+        assert job["title"] == "Senior DevOps Engineer"
+        assert job["company"] == "CloudCo"
+        assert job["source"] == "Remotive"
+        assert job["link"] == "https://remotive.com/remote-jobs/devops/senior-devops-123"
+        assert "title" in job and "summary" in job and "location" in job
+
+    @patch("httpx.get")
+    def test_query_filtering(self, mock_get):
+        """Matches against title, category, description, and tags."""
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "jobs": [
+                {
+                    "title": "Platform Engineer",
+                    "company_name": "PlatformCo",
+                    "candidate_required_location": "Remote",
+                    "description": "Kubernetes and Terraform",
+                    "category": "DevOps / Sysadmin",
+                    "tags": ["kubernetes", "terraform"],
+                    "url": "https://remotive.com/1",
+                },
+                {
+                    "title": "iOS Developer",
+                    "company_name": "AppCo",
+                    "candidate_required_location": "Remote",
+                    "description": "Swift mobile development",
+                    "category": "Software Development",
+                    "tags": ["ios", "swift"],
+                    "url": "https://remotive.com/2",
+                },
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        provider = RemotiveMCP()
+        jobs = provider.search_jobs("kubernetes", count=5)
+
+        assert len(jobs) == 1
+        assert jobs[0]["title"] == "Platform Engineer"
+
+    @patch("httpx.get")
+    def test_count_limit(self, mock_get):
+        """Results are capped at the requested count."""
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {
+            "jobs": [
+                {
+                    "title": f"Python Dev {i}",
+                    "company_name": "Co",
+                    "candidate_required_location": "Remote",
+                    "description": "python work",
+                    "category": "Software Development",
+                    "tags": ["python"],
+                    "url": f"https://remotive.com/{i}",
+                }
+                for i in range(10)
+            ]
+        }
+        mock_get.return_value = mock_response
+
+        provider = RemotiveMCP()
+        jobs = provider.search_jobs("python", count=2)
+
+        assert len(jobs) == 2
+
+    @patch("httpx.get")
+    def test_error_handling(self, mock_get):
+        """Network errors return empty list without raising."""
+        mock_get.side_effect = Exception("Network error")
+
+        provider = RemotiveMCP()
+        jobs = provider.search_jobs("python", count=5)
+
+        assert jobs == []
+
+    @patch("httpx.get")
+    def test_empty_jobs_list(self, mock_get):
+        """Empty API response returns empty list."""
+        mock_response = Mock()
+        mock_response.raise_for_status = Mock()
+        mock_response.json.return_value = {"jobs": []}
+        mock_get.return_value = mock_response
+
+        provider = RemotiveMCP()
+        jobs = provider.search_jobs("python", count=5)
+
+        assert jobs == []
