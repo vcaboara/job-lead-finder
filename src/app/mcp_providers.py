@@ -616,7 +616,7 @@ class RemoteOKMCP(MCPProvider):
 
             return jobs
         except Exception as e:
-            logger.error("RemoteOK error: %s", e)
+            logger.exception("RemoteOK error: %s", e)
             return []
 
 
@@ -681,7 +681,7 @@ class RemotiveMCP(MCPProvider):
 
             return jobs
         except Exception as e:
-            logger.error("Remotive error: %s", e)
+            logger.exception("Remotive error: %s", e)
             return []
 
 

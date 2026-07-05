@@ -672,15 +672,17 @@ class TestRemoteOKMCP:
 
         assert len(jobs) == 3
 
+    @patch("app.mcp_providers.logger")
     @patch("httpx.get")
-    def test_error_handling(self, mock_get):
-        """Network errors return empty list without raising."""
+    def test_error_handling(self, mock_get, mock_logger):
+        """Network errors return empty list and log with traceback."""
         mock_get.side_effect = Exception("Network error")
 
         provider = RemoteOKMCP()
         jobs = provider.search_jobs("python", count=5)
 
         assert jobs == []
+        mock_logger.exception.assert_called_once()
 
 
 class TestRemotiveMCP:
@@ -792,15 +794,17 @@ class TestRemotiveMCP:
 
         assert len(jobs) == 2
 
+    @patch("app.mcp_providers.logger")
     @patch("httpx.get")
-    def test_error_handling(self, mock_get):
-        """Network errors return empty list without raising."""
+    def test_error_handling(self, mock_get, mock_logger):
+        """Network errors return empty list and log with traceback."""
         mock_get.side_effect = Exception("Network error")
 
         provider = RemotiveMCP()
         jobs = provider.search_jobs("python", count=5)
 
         assert jobs == []
+        mock_logger.exception.assert_called_once()
 
     @patch("httpx.get")
     def test_empty_jobs_list(self, mock_get):
