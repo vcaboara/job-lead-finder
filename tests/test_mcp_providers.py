@@ -556,11 +556,13 @@ class TestRemoteOKMCP:
 
         assert len(jobs) == 1
         job = jobs[0]
-        assert job["title"] == "Senior Python Developer"
-        assert job["company"] == "TechCorp"
-        assert job["source"] == "RemoteOK"
-        assert job["link"] == "https://remoteok.com/remote-jobs/123"
-        assert "title" in job and "summary" in job and "location" in job
+        assert {k: job[k] for k in ["title", "company", "source", "link"]} == {
+            "title": "Senior Python Developer",
+            "company": "TechCorp",
+            "source": "RemoteOK",
+            "link": "https://remoteok.com/remote-jobs/123",
+        }
+        assert {"title", "summary", "location"}.issubset(job)
 
     @patch("httpx.get")
     def test_metadata_entry_skipped(self, mock_get):
@@ -727,11 +729,13 @@ class TestRemotiveMCP:
 
         assert len(jobs) == 1
         job = jobs[0]
-        assert job["title"] == "Senior DevOps Engineer"
-        assert job["company"] == "CloudCo"
-        assert job["source"] == "Remotive"
-        assert job["link"] == "https://remotive.com/remote-jobs/devops/senior-devops-123"
-        assert "title" in job and "summary" in job and "location" in job
+        assert {k: job[k] for k in ["title", "company", "source", "link"]} == {
+            "title": "Senior DevOps Engineer",
+            "company": "CloudCo",
+            "source": "Remotive",
+            "link": "https://remotive.com/remote-jobs/devops/senior-devops-123",
+        }
+        assert {"title", "summary", "location"}.issubset(job)
 
     @patch("httpx.get")
     def test_query_filtering(self, mock_get):
