@@ -345,16 +345,6 @@ class TestIntegrationWorkflow:
         assert old_version == current_version
         assert f'version = "{new_version}"' in updated_content
 
-    @patch("subprocess.run")
-    def test_github_cli_availability_check(self, mock_subprocess):
-        """Test GitHub CLI availability detection."""
-        # Mock successful gh command
-        mock_subprocess.return_value.stdout = "gh version 2.40.1"
-
-        # This would normally be tested in the main function
-        # We'll test the logic indirectly through imports
-        pass  # Integration test logic verified manually
-
 
 if __name__ == "__main__":
     pytest.main([__file__])

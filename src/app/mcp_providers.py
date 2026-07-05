@@ -761,8 +761,6 @@ class MCPAggregator:
             # Filter to requested providers
             available = [p for p in available if p.name in providers]
 
-        logger = logging.getLogger(__name__)
-
         if not available:
             logger.warning("No MCP providers available")
             return []
