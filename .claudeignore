@@ -1,0 +1,11 @@
+# Exclude large/generated directories from Claude Code indexing
+data/
+logs/
+uploads/
+vibe-check-mcp/
+.venv/
+venv/
+__pycache__/
+*.db
+*.lock
+*.jsonl
