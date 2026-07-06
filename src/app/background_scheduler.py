@@ -20,7 +20,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 logger = logging.getLogger(__name__)
 
 # Resume file location (shared with UI server)
-RESUME_FILE = Path("resume.txt")
+RESUME_FILE = Path("data/resume.txt")
 
 
 class BackgroundScheduler:
@@ -166,10 +166,10 @@ class BackgroundScheduler:
                         by_provider[src]["found"] += 1
 
                         score = job.get("score", 0)
-                        if score >= 60:
+                        if score >= 70:
                             job_id = self._generate_job_id(job)
                             if job_id not in tracker.jobs:
-                                tracker.track(job)
+                                tracker.track_job(job)
                                 new_jobs_count += 1
                                 by_provider[src]["new"] += 1
                                 logger.info(
@@ -237,7 +237,14 @@ Example for a senior Python developer:
 ["Senior Python Developer", "Python Backend Engineer", "Senior Engineer Python"]
 """
 
-            response = provider.call_llm(prompt, timeout=30)
+            try:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(provider.query, prompt),
+                    timeout=30.0,
+                )
+            except asyncio.TimeoutError:
+                logger.warning("Gemini query timed out after 30s during resume extraction")
+                return []
 
             # Try to parse JSON response
             import json

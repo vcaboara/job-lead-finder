@@ -48,7 +48,7 @@ class GeminiProvider(BaseAIProvider):
 
         Args:
             api_key: Google API key for Gemini (falls back to env vars)
-            model: Model name to use (default: gemini-2.5-flash-preview-09-2025)
+            model: Model name to use (default: gemini-2.5-flash)
             request_timeout: Request timeout in seconds (default: 90)
         """
         # Accept either GEMINI_API_KEY (preferred) or GOOGLE_API_KEY for backward compatibility
@@ -67,7 +67,7 @@ class GeminiProvider(BaseAIProvider):
             # fallback to passing the key directly to client constructors.
             pass
         # Default to a modern model that supports google_search tool; allow overriding
-        self.model = model or "gemini-2.5-flash-preview-09-2025"
+        self.model = model or "gemini-2.5-flash"
         self.request_timeout = request_timeout
 
     def query(self, prompt: str, **options: Any) -> str:
@@ -123,22 +123,23 @@ class GeminiProvider(BaseAIProvider):
         """
         prompt = (
             "You are an expert career advisor evaluating job fit for a candidate.\n\n"
-            "Analyze how well this job matches the candidate's profile based on:\n"
+            "FIRST: Is this a technical/engineering/DevOps/software role? "
+            "If the job is primarily in sales, customer support, marketing, HR, finance, or any "
+            "non-technical domain, assign a score of 20 or below and stop — do not apply the criteria below.\n\n"
+            "FOR TECHNICAL ROLES, score based on:\n"
             "1. REQUIRED SKILLS MATCH (40 points): How many required skills does the candidate have?\n"
             "2. EXPERIENCE LEVEL (25 points): Does the seniority level match (junior/mid/senior)?\n"
-            "3. DOMAIN KNOWLEDGE (20 points): Relevant industry/domain experience?\n"
-            "4. ROLE FIT (15 points): Does the role align with career trajectory?\n\n"
+            "3. DOMAIN KNOWLEDGE (20 points): CI/CD, DevOps, automation, infrastructure experience?\n"
+            "4. ROLE FIT (15 points): Does the role align with the candidate's career trajectory?\n\n"
             f"CANDIDATE RESUME:\n{resume_text}\n\n"
             f"JOB POSTING:\n"
             f"Title: {job.get('title', '')}\n"
             f"Company: {job.get('company', '')}\n"
             f"Location: {job.get('location', '')}\n"
             f"Description: {job.get('description', job.get('summary', ''))}\n\n"
-            "Provide a score (0-100) and detailed reasoning explaining:\n"
-            "- Which key skills match (list 3-5 specific skills)\n"
-            "- Experience level alignment\n"
-            "- Any significant gaps or mismatches\n\n"
-            'Return ONLY this JSON: {"score": <0-100>, "reasoning": "<detailed explanation>"}'
+            "Provide a score (0-100) and brief reasoning. "
+            "Be strict: generic Python roles without DevOps/CI-CD context score ≤50.\n\n"
+            'Return ONLY this JSON: {"score": <0-100>, "reasoning": "<explanation>"}'
         )
 
         try:
@@ -236,11 +237,14 @@ class GeminiProvider(BaseAIProvider):
 
         prompt = (
             f"You are an expert career advisor. Rank these {len(jobs)} jobs for this candidate based on:\n\n"
-            "EVALUATION CRITERIA (total 100 points):\n"
-            "1. Required Skills Match (40 pts): Technical skills, tools, languages\n"
-            "2. Experience Level Fit (25 pts): Junior/Mid/Senior alignment\n"
-            "3. Domain/Industry Match (20 pts): Relevant sector experience\n"
-            "4. Role Alignment (15 pts): Career growth and trajectory fit\n\n"
+            "FIRST: Filter out non-technical roles. Sales, customer support, marketing, HR, and other "
+            "non-engineering roles should score 20 or below regardless of other criteria.\n\n"
+            "FOR TECHNICAL ROLES, score based on:\n"
+            "1. Required Skills Match (40 pts): CI/CD tools, Python, Docker, Jenkins, cloud platforms\n"
+            "2. Experience Level Fit (25 pts): Senior/Staff alignment\n"
+            "3. DevOps/Infrastructure Match (20 pts): Build systems, automation, pipelines — candidate's core domain\n"
+            "4. Role Alignment (15 pts): Career growth fit\n\n"
+            "Be strict: a generic Python web dev role without DevOps context scores ≤50.\n\n"
             f"CANDIDATE RESUME:\n{resume_text[:3000]}\n\n"
             f"JOBS TO RANK:{jobs_text}\n\n"
             f"Return the top {min(top_n, len(jobs))} jobs as a JSON array. For each job, explain:\n"
@@ -694,7 +698,7 @@ def simple_gemini_query(
     if genai is None:
         raise RuntimeError("No supported Gemini SDK (google.genai or google.generativeai) is installed")
 
-    use_model = model or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash-preview-09-2025"
+    use_model = model or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash"
 
     # Try legacy client call first if present
     if hasattr(genai, "Client"):
