@@ -12,7 +12,7 @@ RUN_STATUS_COMPLETED = "completed"
 RUN_STATUS_FAILED = "failed"
 RUN_STATUS_SKIPPED = "skipped"
 
-_DATA_DIR = Path("/app/data") if Path("/app/data").exists() else Path(".")
+_DATA_DIR = Path("/app/data") if Path("/app/data").exists() else Path("data")
 DB_PATH = _DATA_DIR / "job_runs.db"
 
 _SCHEMA = """
