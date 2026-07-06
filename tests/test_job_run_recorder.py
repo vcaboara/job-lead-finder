@@ -138,6 +138,15 @@ class TestGetSummary:
         }
 
 
+class TestSetQuery:
+    def test_query_updated_after_start(self, recorder):
+        run_id = recorder.start_run("scheduler")
+        recorder.set_query(run_id, "python developer, backend engineer")
+        runs = recorder.get_recent_runs()
+        run = next(r for r in runs if r["run_id"] == run_id)
+        assert run["query"] == "python developer, backend engineer"
+
+
 class TestPersistence:
     def test_data_persists_across_instances(self, tmp_path):
         db = tmp_path / "persist.db"

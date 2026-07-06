@@ -329,10 +329,71 @@ Provide output in JSON format:
             return {"raw_analysis": response}
 
 
+class TestDrivenImplementer:
+    """Generate implementations that satisfy an existing test suite, anchored to codebase conventions.
+
+    Strategy 1: provide a reference implementation so the model inherits project style.
+    Strategy 2: provide the test file as the spec — the model must make the tests pass.
+    Both together eliminate the two most common local-model failure modes:
+    invented conventions and hallucinated APIs.
+    """
+
+    def __init__(self, assistant: OllamaAssistant):
+        self.assistant = assistant
+
+    def implement_from_tests(
+        self,
+        test_file: Path,
+        reference_file: Optional[Path] = None,
+        output_file: Optional[Path] = None,
+    ) -> str:
+        with open(test_file, "r", encoding="utf-8") as f:
+            test_code = f.read()
+
+        reference_section = ""
+        if reference_file and reference_file.exists():
+            with open(reference_file, "r", encoding="utf-8") as f:
+                reference_code = f.read()
+            reference_section = (
+                "## Reference implementation — match this structure and conventions exactly:\n\n"
+                f"```python\n{reference_code}\n```\n\n"
+            )
+
+        prompt = (
+            "Your task: write a Python implementation that makes ALL of the following tests pass.\n\n"
+            f"{reference_section}"
+            "## Tests to satisfy:\n\n"
+            f"```python\n{test_code}\n```\n\n"
+            "Rules:\n"
+            "- Match the import path used in the tests exactly.\n"
+            '- Use the same constant naming pattern shown in the reference (e.g. STATUS_X = "x").\n'
+            "- Do NOT invent attributes, methods, or values not implied by the tests.\n"
+            "- Return ONLY the complete implementation file. No explanation, no markdown fences."
+        )
+
+        system_prompt = (
+            "You are a Python expert. You write correct, minimal implementations "
+            "that satisfy a given test suite. You never invent APIs not evidenced by the tests."
+        )
+
+        response = self.assistant.query(prompt, system_prompt)
+
+        if "```python" in response:
+            response = response.split("```python")[1].split("```")[0].strip()
+        elif "```" in response:
+            response = response.split("```")[1].split("```")[0].strip()
+
+        if output_file:
+            output_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(output_file, "w", encoding="utf-8") as f:
+                f.write(response)
+            logger.info(f"Implementation written to {output_file}")
+
+        return response
+
+
 @dataclass
 class ModelUpdateStatus:
-    """Status of a model's update state"""
-
     status_icon: str
     recommendation: str
     category: str  # 'up_to_date', 'needs_check', 'updates_available'
@@ -537,6 +598,10 @@ Examples:
   # Generate tests for module
   python ollama_code_assistant.py test src/app/email_processor.py -o tests/
 
+  # Generate implementation from tests (strategies 1+2: conventions + test-driven)
+  python ollama_code_assistant.py implement tests/test_my_module.py \\
+    --reference src/app/similar_module.py -o src/app/my_module.py
+
   # Analyze for refactoring
   python ollama_code_assistant.py refactor src/app/ui_server.py
 
@@ -547,14 +612,15 @@ Examples:
 
     parser.add_argument(
         "command",
-        choices=["review", "docstring", "test", "refactor", "recommend", "check-updates"],
+        choices=["review", "docstring", "test", "refactor", "recommend", "check-updates", "implement"],
         help="Command to execute",
     )
     parser.add_argument("target", nargs="?", help="File or directory to process (not needed for check-updates)")
     parser.add_argument(
         "-m", "--model", default="qwen2.5-coder:32b", help="Ollama model to use (default: qwen2.5-coder:32b)"
     )
-    parser.add_argument("-o", "--output", help="Output directory for generated files")
+    parser.add_argument("-o", "--output", help="Output file or directory for generated files")
+    parser.add_argument("--reference", help="Reference implementation file for conventions (used with implement)")
     parser.add_argument("--batch", action="store_true", help="Process all files in directory")
     parser.add_argument("--vram", type=float, default=12.0, help="Available VRAM in GB (default: 12)")
     parser.add_argument("--format", choices=["json", "text"], default="text", help="Output format")
@@ -613,6 +679,14 @@ Examples:
 
         output = json.dumps(results, indent=2) if args.format == "json" else str(results)
         print(output)
+
+    elif args.command == "implement":
+        implementer = TestDrivenImplementer(assistant)
+        ref = Path(args.reference) if args.reference else None
+        out = Path(args.output) if args.output else None
+        result = implementer.implement_from_tests(target_path, reference_file=ref, output_file=out)
+        if not out:
+            print(result)
 
 
 if __name__ == "__main__":

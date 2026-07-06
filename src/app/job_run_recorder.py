@@ -51,6 +51,7 @@ class JobRunRecorder:
         if self._conn is None:
             self._conn = sqlite3.connect(str(self.db_path))
             self._conn.row_factory = sqlite3.Row
+            self._conn.execute("PRAGMA foreign_keys = ON")
         return self._conn
 
     def _initialize(self) -> None:
@@ -67,6 +68,11 @@ class JobRunRecorder:
         conn.commit()
         logger.debug("Started run %s trigger=%s query=%s", run_id, trigger, query)
         return run_id
+
+    def set_query(self, run_id: str, query: str) -> None:
+        conn = self._connect()
+        conn.execute("UPDATE job_runs SET query=? WHERE run_id=?", (query, run_id))
+        conn.commit()
 
     def record_provider(
         self,
