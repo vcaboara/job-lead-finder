@@ -21,8 +21,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Use PAT if available (bypasses branch protection), fallback to GITHUB_TOKEN
-          token: ${{ secrets.VERSION_BUMP_PAT || secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN always works for checkout; PAT is only needed for gh push/merge steps
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -150,7 +150,7 @@ jobs:
 
       - name: Create version bump PR with auto-merge
         env:
-          GH_TOKEN: ${{ secrets.VERSION_BUMP_PAT || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Create a new branch for version bump
           BRANCH_NAME="auto/version-bump-v${{ steps.bump.outputs.version }}"
@@ -159,7 +159,7 @@ jobs:
           # Push the branch
           git push origin "$BRANCH_NAME"
 
-          # Create PR
+          # Create PR with GITHUB_TOKEN (no bypass needed)
           PR_URL=$(gh pr create \
             --title "[AI] chore: bump version to v${{ steps.bump.outputs.version }}" \
             --body "Automated version bump after merging PR #${{ github.event.pull_request.number }}.
@@ -180,10 +180,10 @@ jobs:
 
           echo "Created PR: $PR_URL"
 
-          # Enable auto-merge if PAT is available (has required permissions)
+          # Enable auto-merge if PAT is available (has required permissions for branch protection bypass)
           if [ -n "${{ secrets.VERSION_BUMP_PAT }}" ]; then
             echo "Enabling auto-merge with PAT..."
-            gh pr merge "$PR_URL" --auto --squash --delete-branch || echo "⚠️  Auto-merge failed, manual merge required"
+            GH_TOKEN="${{ secrets.VERSION_BUMP_PAT }}" gh pr merge "$PR_URL" --auto --squash --delete-branch || echo "⚠️  Auto-merge failed, manual merge required"
           else
             echo "⚠️  VERSION_BUMP_PAT not set, manual merge required"
             echo "To enable auto-merge, create a PAT with 'repo' permissions and add as VERSION_BUMP_PAT secret"
