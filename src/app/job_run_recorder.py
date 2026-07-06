@@ -7,6 +7,11 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+RUN_STATUS_RUNNING = "running"
+RUN_STATUS_COMPLETED = "completed"
+RUN_STATUS_FAILED = "failed"
+RUN_STATUS_SKIPPED = "skipped"
+
 _DATA_DIR = Path("/app/data") if Path("/app/data").exists() else Path(".")
 DB_PATH = _DATA_DIR / "job_runs.db"
 
@@ -56,8 +61,8 @@ class JobRunRecorder:
         run_id = str(uuid.uuid4())
         conn = self._connect()
         conn.execute(
-            "INSERT INTO job_runs (run_id, started_at, trigger, query, status) VALUES (?, ?, ?, ?, 'running')",
-            (run_id, datetime.now(timezone.utc).isoformat(), trigger, query),
+            "INSERT INTO job_runs (run_id, started_at, trigger, query, status) VALUES (?, ?, ?, ?, ?)",
+            (run_id, datetime.now(timezone.utc).isoformat(), trigger, query, RUN_STATUS_RUNNING),
         )
         conn.commit()
         logger.debug("Started run %s trigger=%s query=%s", run_id, trigger, query)
@@ -80,7 +85,7 @@ class JobRunRecorder:
         )
         conn.commit()
 
-    def finish_run(self, run_id: str, status: str = "completed", error: Optional[str] = None) -> None:
+    def finish_run(self, run_id: str, status: str = RUN_STATUS_COMPLETED, error: Optional[str] = None) -> None:
         conn = self._connect()
         conn.execute(
             "UPDATE job_runs SET finished_at=?, status=?, error=? WHERE run_id=?",
@@ -112,7 +117,7 @@ class JobRunRecorder:
     def get_summary(self) -> dict:
         conn = self._connect()
 
-        total = conn.execute("SELECT COUNT(*) FROM job_runs WHERE status = 'completed'").fetchone()[0]
+        total = conn.execute("SELECT COUNT(*) FROM job_runs WHERE status = ?", (RUN_STATUS_COMPLETED,)).fetchone()[0]
 
         cutoff = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
         jobs_7d = conn.execute(

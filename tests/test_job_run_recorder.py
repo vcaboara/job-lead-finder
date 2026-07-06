@@ -2,7 +2,7 @@ import time
 
 import pytest
 
-from app.job_run_recorder import JobRunRecorder
+from app.job_run_recorder import RUN_STATUS_COMPLETED, RUN_STATUS_FAILED, RUN_STATUS_RUNNING, JobRunRecorder
 
 
 @pytest.fixture
@@ -26,7 +26,7 @@ class TestStartRun:
         run_id = recorder.start_run("manual")
         runs = recorder.get_recent_runs()
         run = next(r for r in runs if r["run_id"] == run_id)
-        assert run["status"] == "running"
+        assert run["status"] == RUN_STATUS_RUNNING
 
     def test_query_stored(self, recorder):
         run_id = recorder.start_run("scheduler", query="senior python")
@@ -41,15 +41,15 @@ class TestFinishRun:
         recorder.finish_run(run_id)
         runs = recorder.get_recent_runs()
         run = next(r for r in runs if r["run_id"] == run_id)
-        assert run["status"] == "completed"
+        assert run["status"] == RUN_STATUS_COMPLETED
 
     def test_failed_status_with_error(self, recorder):
         run_id = recorder.start_run("scheduler")
-        recorder.finish_run(run_id, status="failed", error="network timeout")
+        recorder.finish_run(run_id, status=RUN_STATUS_FAILED, error="network timeout")
         runs = recorder.get_recent_runs()
         run = next(r for r in runs if r["run_id"] == run_id)
         assert {"status", "error"} <= run.keys()
-        assert run["status"] == "failed"
+        assert run["status"] == RUN_STATUS_FAILED
         assert run["error"] == "network timeout"
 
     def test_finished_at_is_set(self, recorder):
@@ -105,9 +105,9 @@ class TestGetSummary:
     def test_summary_counts_completed_runs(self, recorder):
         for _ in range(3):
             run_id = recorder.start_run("scheduler")
-            recorder.finish_run(run_id)
+            recorder.finish_run(run_id, status=RUN_STATUS_COMPLETED)
         run_id = recorder.start_run("scheduler")
-        recorder.finish_run(run_id, status="failed")
+        recorder.finish_run(run_id, status=RUN_STATUS_FAILED)
 
         summary = recorder.get_summary()
         assert summary["total_completed_runs"] == 3
