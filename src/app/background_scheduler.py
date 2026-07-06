@@ -166,7 +166,7 @@ class BackgroundScheduler:
                         by_provider[src]["found"] += 1
 
                         score = job.get("score", 0)
-                        if score >= 60:
+                        if score >= 70:
                             job_id = self._generate_job_id(job)
                             if job_id not in tracker.jobs:
                                 tracker.track_job(job)
@@ -237,7 +237,14 @@ Example for a senior Python developer:
 ["Senior Python Developer", "Python Backend Engineer", "Senior Engineer Python"]
 """
 
-            response = provider.query(prompt)
+            try:
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(provider.query, prompt),
+                    timeout=30.0,
+                )
+            except asyncio.TimeoutError:
+                logger.warning("Gemini query timed out after 30s during resume extraction")
+                return []
 
             # Try to parse JSON response
             import json
