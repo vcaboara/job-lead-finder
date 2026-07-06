@@ -112,18 +112,24 @@ class BackgroundScheduler:
         3. Performs automated job searches
         4. Tracks new jobs automatically
         """
-        logger.info("Starting automated job discovery from resume...")
+        from app.job_run_recorder import RUN_STATUS_COMPLETED, RUN_STATUS_FAILED, RUN_STATUS_SKIPPED, JobRunRecorder
 
-        # Check if resume exists
-        if not RESUME_FILE.exists():
-            logger.info("No resume file found - skipping automated discovery")
-            return
-
+        recorder = JobRunRecorder()
+        run_id = recorder.start_run(trigger="scheduler")
         try:
+            logger.info("Starting automated job discovery from resume...")
+
+            # Check if resume exists
+            if not RESUME_FILE.exists():
+                logger.info("No resume file found - skipping automated discovery")
+                recorder.finish_run(run_id, status=RUN_STATUS_SKIPPED)
+                return
+
             # Read resume
             resume_text = RESUME_FILE.read_text(encoding="utf-8")
             if len(resume_text.strip()) < 100:
                 logger.info("Resume too short - skipping automated discovery")
+                recorder.finish_run(run_id, status=RUN_STATUS_SKIPPED)
                 return
 
             # Extract search queries from resume using Gemini
@@ -131,8 +137,10 @@ class BackgroundScheduler:
 
             if not search_queries:
                 logger.warning("Could not extract search queries from resume")
+                recorder.finish_run(run_id, status=RUN_STATUS_FAILED, error="no search queries extracted")
                 return
 
+            recorder.set_query(run_id, ", ".join(search_queries[:3]))
             logger.info(f"Extracted {len(search_queries)} search queries: {search_queries}")
 
             # Perform searches for each query
@@ -147,29 +155,41 @@ class BackgroundScheduler:
                 try:
                     logger.info(f"Searching for: {query}")
 
-                    # Search for jobs (5 per query, with evaluation)
                     jobs = generate_job_leads(
                         query=query, resume_text=resume_text, count=5, evaluate=True, use_mcp=True, verbose=False
                     )
 
-                    # Track new jobs (score >= 60 only)
+                    by_provider: dict[str, dict] = {}
                     for job in jobs:
+                        src = job.get("source", "unknown")
+                        by_provider.setdefault(src, {"found": 0, "new": 0})
+                        by_provider[src]["found"] += 1
+
                         score = job.get("score", 0)
                         if score >= 60:
-                            # Check if already tracked
                             job_id = self._generate_job_id(job)
                             if job_id not in tracker.jobs:
                                 tracker.track(job)
                                 new_jobs_count += 1
+                                by_provider[src]["new"] += 1
                                 logger.info(
                                     f"Auto-tracked: {job.get('title')} at {job.get('company')} (score: {score})"
                                 )
+
+                    for provider, counts in by_provider.items():
+                        recorder.record_provider(
+                            run_id,
+                            provider=provider,
+                            jobs_found=counts["found"],
+                            jobs_new=counts["new"],
+                        )
 
                     # Rate limiting between searches
                     await asyncio.sleep(5)
 
                 except Exception as e:
                     logger.error(f"Error searching for '{query}': {e}")
+                    recorder.record_provider(run_id, provider="unknown", jobs_found=0, jobs_new=0, error=str(e))
                     continue
 
             if new_jobs_count > 0:
@@ -177,8 +197,13 @@ class BackgroundScheduler:
             else:
                 logger.info("Automated discovery complete: no new high-scoring jobs found")
 
+            recorder.finish_run(run_id, status=RUN_STATUS_COMPLETED)
+
         except Exception as e:
             logger.error(f"Error in automated job discovery: {e}", exc_info=True)
+            recorder.finish_run(run_id, status=RUN_STATUS_FAILED, error=str(e))
+        finally:
+            recorder.close()
 
     async def _extract_search_queries_from_resume(self, resume_text: str) -> list[str]:
         """Extract relevant job search queries from resume using AI.
