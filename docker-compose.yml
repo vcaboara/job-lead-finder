@@ -79,25 +79,6 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  vibe-check-mcp:
-    build:
-      context: ./vibe-check-mcp
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    environment:
-      - GOOGLE_CLOUD_PROJECT=${GOOGLE_CLOUD_PROJECT:-mcp-vibetest}
-      - DEFAULT_MODEL=${DEFAULT_MODEL:-gemini-2.5-flash}
-      - DEFAULT_LLM_PROVIDER=${DEFAULT_LLM_PROVIDER:-ollama}
-      - OLLAMA_BASE_URL=${OLLAMA_BASE_URL:-http://host.docker.internal:11434}
-      - OLLAMA_MODEL=${OLLAMA_MODEL:-deepseek-coder:6.7b}
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - USE_LEARNING_HISTORY=${USE_LEARNING_HISTORY:-false}
-    restart: unless-stopped
-    # Volume mount removed - built files are in the image
-    # If you need dev mode with hot reload, use docker-compose.dev.yml override
-
   brave-search-mcp:
     # NOTE: Official MCP servers use stdio (not HTTP ports)
     # This service is for use with 'docker compose run' commands

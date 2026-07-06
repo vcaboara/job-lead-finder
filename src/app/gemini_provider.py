@@ -48,7 +48,7 @@ class GeminiProvider(BaseAIProvider):
 
         Args:
             api_key: Google API key for Gemini (falls back to env vars)
-            model: Model name to use (default: gemini-2.5-flash-preview-09-2025)
+            model: Model name to use (default: gemini-2.5-flash)
             request_timeout: Request timeout in seconds (default: 90)
         """
         # Accept either GEMINI_API_KEY (preferred) or GOOGLE_API_KEY for backward compatibility
@@ -67,7 +67,7 @@ class GeminiProvider(BaseAIProvider):
             # fallback to passing the key directly to client constructors.
             pass
         # Default to a modern model that supports google_search tool; allow overriding
-        self.model = model or "gemini-2.5-flash-preview-09-2025"
+        self.model = model or "gemini-2.5-flash"
         self.request_timeout = request_timeout
 
     def query(self, prompt: str, **options: Any) -> str:
@@ -694,7 +694,7 @@ def simple_gemini_query(
     if genai is None:
         raise RuntimeError("No supported Gemini SDK (google.genai or google.generativeai) is installed")
 
-    use_model = model or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash-preview-09-2025"
+    use_model = model or os.getenv("GEMINI_MODEL") or "gemini-2.5-flash"
 
     # Try legacy client call first if present
     if hasattr(genai, "Client"):

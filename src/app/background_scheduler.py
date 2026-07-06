@@ -20,7 +20,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 logger = logging.getLogger(__name__)
 
 # Resume file location (shared with UI server)
-RESUME_FILE = Path("resume.txt")
+RESUME_FILE = Path("data/resume.txt")
 
 
 class BackgroundScheduler:
@@ -169,7 +169,7 @@ class BackgroundScheduler:
                         if score >= 60:
                             job_id = self._generate_job_id(job)
                             if job_id not in tracker.jobs:
-                                tracker.track(job)
+                                tracker.track_job(job)
                                 new_jobs_count += 1
                                 by_provider[src]["new"] += 1
                                 logger.info(
@@ -237,7 +237,7 @@ Example for a senior Python developer:
 ["Senior Python Developer", "Python Backend Engineer", "Senior Engineer Python"]
 """
 
-            response = provider.call_llm(prompt, timeout=30)
+            response = provider.query(prompt)
 
             # Try to parse JSON response
             import json

@@ -48,7 +48,7 @@ class TestAutoDiscovery:
 
         with patch("app.gemini_provider.GeminiProvider") as MockProvider:
             mock_provider = MockProvider.return_value
-            mock_provider.call_llm.return_value = (
+            mock_provider.query.return_value = (
                 '["Senior Python Engineer", "Python Backend Developer", "Senior Software Engineer Python"]'
             )
 
@@ -57,14 +57,14 @@ class TestAutoDiscovery:
             assert len(queries) == 3
             assert "Senior Python Engineer" in queries
             assert all(isinstance(q, str) for q in queries)
-            mock_provider.call_llm.assert_called_once()
+            mock_provider.query.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_extract_search_queries_handles_invalid_json(self, scheduler):
         """Test handling of invalid JSON response from AI."""
         with patch("app.gemini_provider.GeminiProvider") as MockProvider:
             mock_provider = MockProvider.return_value
-            mock_provider.call_llm.return_value = "This is not JSON"
+            mock_provider.query.return_value = "This is not JSON"
 
             queries = await scheduler._extract_search_queries_from_resume("Sample resume text")
 
@@ -94,7 +94,7 @@ class TestAutoDiscovery:
         with patch("app.background_scheduler.RESUME_FILE", mock_resume):
             with patch("app.gemini_provider.GeminiProvider") as MockProvider:
                 mock_provider = MockProvider.return_value
-                mock_provider.call_llm.return_value = '["Python Developer", "Django Engineer"]'
+                mock_provider.query.return_value = '["Python Developer", "Django Engineer"]'
 
                 with patch("app.job_finder.generate_job_leads") as mock_search:
                     # Mock job search results
@@ -138,7 +138,7 @@ class TestAutoDiscovery:
 
                             # Should track high-scoring jobs only
                             # 2 queries × 2 jobs each (score >= 60)
-                            assert mock_tracker.track.call_count == 4
+                            assert mock_tracker.track_job.call_count == 4
 
     def test_generate_job_id(self, scheduler):
         """Test job ID generation."""

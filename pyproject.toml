@@ -49,5 +49,5 @@ norecursedirs = [ "scripts", ".git", "__pycache__", ".pytest_cache",]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 markers = [ "slow: marks tests as slow (deselected by default, use --slow to run)", "integration: marks tests that make real API calls or external integrations (skip in CI)", "asyncio: marks tests as async (handled by pytest-asyncio)", "unit: marks pure unit tests (no I/O, no network, <0.1s)", "fast: marks tests optimized for quick feedback", "xdist_group: marks tests that must run in the same worker group (pytest-xdist)",]
-addopts = "-v --tb=short -m 'not slow' --maxfail=3 --ff -p no:benchmark"
+addopts = "-v --tb=short -m 'not slow and not integration' --maxfail=3 --ff -p no:benchmark"
 filterwarnings = [ "error", "ignore::DeprecationWarning:google.*", "ignore::DeprecationWarning:pkg_resources.*", "ignore::pytest.PytestUnraisableExceptionWarning", "ignore::pytest.PytestConfigWarning:_pytest.config", "ignore::ResourceWarning",]

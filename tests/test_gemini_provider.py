@@ -5,6 +5,7 @@ import pytest
 from app import gemini_provider
 
 
+@pytest.mark.integration
 def test_gemini_provider_skipped_if_missing():
     """This test ensures the provider can be imported but skips if SDK/key missing."""
     genai = getattr(gemini_provider, "genai", None)
