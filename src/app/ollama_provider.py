@@ -28,9 +28,9 @@ class OllamaProvider(BaseAIProvider):
 
     Runs models locally with no API costs or quotas.
     Recommended models:
-        - llama3.2:3b (2GB VRAM, fast, good quality)
-        - qwen2.5:7b (4GB VRAM, better quality)
-        - llama3.1:8b (5GB VRAM, best balance)
+        - qwen3:latest (5GB VRAM, best quality, thinking+tools support)
+        - qwen2.5:7b (4GB VRAM, good quality)
+        - llama3.2:3b (2GB VRAM, fast fallback)
     """
 
     def __init__(
@@ -110,16 +110,19 @@ class OllamaProvider(BaseAIProvider):
         """
         prompt = (
             "You are a career advisor. Evaluate this job-candidate match and respond with ONLY valid JSON.\n\n"
+            "FIRST: Is this a technical/engineering/DevOps/software role? "
+            "If the job is primarily in sales, customer support, marketing, HR, or any non-technical domain, "
+            "assign score 20 or below and stop.\n\n"
             f"CANDIDATE RESUME:\n{resume_text[:1500]}\n\n"
             f"JOB: {job.get('title', 'Unknown')} at {job.get('company', 'Unknown')}\n"
             f"Description: {job.get('description', job.get('summary', ''))[:500]}\n\n"
-            "Scoring criteria (0-100 total):\n"
-            "- Skills match (40pts): Required technical skills the candidate has\n"
-            "- Experience level (25pts): Junior/Mid/Senior alignment\n"
-            "- Domain knowledge (20pts): Industry experience\n"
+            "FOR TECHNICAL ROLES — scoring criteria (0-100 total):\n"
+            "- Skills match (40pts): CI/CD, Python, Docker, Jenkins, cloud platforms\n"
+            "- Experience level (25pts): Senior/Staff alignment\n"
+            "- DevOps/infrastructure domain (20pts): Build systems, automation, pipelines\n"
             "- Role fit (15pts): Career trajectory match\n\n"
             "CRITICAL: Respond with ONLY this exact JSON format, nothing else:\n"
-            '{"score": 75, "reasoning": "Python, AWS, Docker match. Senior level fits. Missing Kubernetes."}\n\n'
+            '{"score": 75, "reasoning": "Python, Docker, CI/CD match. Senior level fits. Missing Kubernetes."}\n\n'
             "Your JSON response:"
         )
 
@@ -130,10 +133,11 @@ class OllamaProvider(BaseAIProvider):
                     "model": self.model,
                     "prompt": prompt,
                     "stream": False,
-                    "format": "json",  # Request JSON format output
+                    "format": "json",
+                    "think": False,  # disable thinking mode (qwen3) for speed
                     "options": {
-                        "temperature": 0.2,  # Lower temperature for more consistent scoring
-                        "num_predict": 256,  # Shorter responses for JSON
+                        "temperature": 0.2,
+                        "num_predict": 256,
                     },
                 },
                 timeout=self.request_timeout,
